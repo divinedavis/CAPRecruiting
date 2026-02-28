@@ -13,17 +13,14 @@
             <p class="page-sub">Browse all registered players</p>
             {% endif %}
         </div>
+        {% if user %}
         <div class="header-actions">
-            {% if user %}
-                <a href="/profile/{{ user.username }}" class="btn btn-outline">My Profile</a>
-                {% if user.role == "player" %}
-                <a href="/profile/edit" class="btn btn-primary">Edit Profile</a>
-                {% endif %}
-            {% else %}
-                <a href="/login" class="btn btn-outline">Sign In</a>
-                <a href="/signup" class="btn btn-primary">Sign Up</a>
+            <a href="/profile/{{ user.username }}" class="btn btn-outline">My Profile</a>
+            {% if user.role == "player" %}
+            <a href="/profile/edit" class="btn btn-primary">Edit Profile</a>
             {% endif %}
         </div>
+        {% endif %}
     </div>
 
     {% if user and teams %}
