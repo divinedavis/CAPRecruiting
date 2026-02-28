@@ -67,9 +67,10 @@
             {% endif %}
             {% if p and p.hudl_url %}
             <div class="player-card-hudl">
-                <a href="{{ p.hudl_url }}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="hudl-logo-btn" title="View Hudl Highlights">
+                <div class="hudl-logo-btn" title="View Hudl Highlights"
+                     onclick="event.preventDefault(); event.stopPropagation(); window.open('{{ p.hudl_url }}', '_blank');">
                     <img src="/static/hudl.png" alt="Hudl Highlights">
-                </a>
+                </div>
             </div>
             {% endif %}
         </a>

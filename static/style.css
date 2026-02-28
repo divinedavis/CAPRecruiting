@@ -729,7 +729,7 @@ textarea { resize: vertical; }
     width: 52px; height: 52px;
     border-radius: 50%;
     overflow: hidden;
-    text-decoration: none;
+    cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
     box-shadow: 0 2px 8px rgba(249,107,43,0.35);
 }
