@@ -65,6 +65,13 @@
             {% if p and p.school %}
             <div class="player-location">🏫 {{ p.school }}{% if p.city or p.state %} — {{ p.city }}{{ ", " if p.city and p.state else "" }}{{ p.state }}{% endif %}</div>
             {% endif %}
+            {% if p and p.hudl_url %}
+            <div class="player-card-hudl">
+                <a href="{{ p.hudl_url }}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="hudl-btn">
+                    <img src="/static/hudl.png" alt="Hudl" class="hudl-logo"> Hudl Highlights
+                </a>
+            </div>
+            {% endif %}
         </a>
         {% endfor %}
     </div>

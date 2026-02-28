@@ -721,3 +721,16 @@ textarea { resize: vertical; }
     .admin-panel { grid-template-columns: 1fr; }
     .team-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Hudl button on player card ──────────────────────────────── */
+.player-card-hudl { padding: 0 16px 14px; }
+.hudl-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 14px; border-radius: 8px;
+    background: #f96b2b; color: #fff;
+    font-size: 13px; font-weight: 600;
+    text-decoration: none; border: none;
+    transition: opacity 0.15s, transform 0.15s;
+}
+.hudl-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.hudl-logo { width: 20px; height: 20px; object-fit: contain; border-radius: 4px; }

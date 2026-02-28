@@ -133,8 +133,18 @@
 
             <div class="form-section">
                 <h2>External Links</h2>
-                <p class="section-hint">Add links to Hudl, MaxPreps, highlight reels, or any other site</p>
+                <p class="section-hint">Add your Hudl profile and other links so coaches can find your highlights</p>
                 <div class="link-input-group">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <img src="/static/hudl.png" alt="Hudl" style="height:18px; vertical-align:middle; margin-right:6px; border-radius:4px;">
+                                Hudl Profile URL
+                            </label>
+                            <input type="url" name="hudl_url" value="{{ profile.hudl_url if profile else '' }}" placeholder="https://www.hudl.com/profile/...">
+                            <span class="field-hint">Your Hudl highlight reel will appear on your player card</span>
+                        </div>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Link 1 Label</label>
