@@ -36,6 +36,18 @@
                 </div>
             </div>
 
+            <div class="form-group" id="team-group" style="display:none;">
+                <label>High School Team</label>
+                <select name="team_id" id="team-select">
+                    <option value="">— Select your team —</option>
+                    {% for t in teams %}
+                    <option value="{{ t.id }}" {% if selected_team_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                <span class="field-hint">Select the team you play for</span>
+                <span class="field-error" id="team-error"></span>
+            </div>
+
             <div class="form-group">
                 <label>Username <span class="field-hint">Letters, numbers, _ . - only (no spaces)</span></label>
                 <input type="text" name="username" id="username"
@@ -63,6 +75,30 @@
 <script>
 const usernameInput = document.getElementById('username');
 const usernameError = document.getElementById('username-error');
+const teamGroup = document.getElementById('team-group');
+const teamSelect = document.getElementById('team-select');
+const teamError = document.getElementById('team-error');
+
+// Show/hide team dropdown based on role
+document.querySelectorAll('input[name="role"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        if (this.value === 'player') {
+            teamGroup.style.display = 'block';
+            teamSelect.required = true;
+        } else {
+            teamGroup.style.display = 'none';
+            teamSelect.required = false;
+            teamSelect.value = '';
+        }
+    });
+});
+
+// Pre-select player if role was previously chosen (e.g. on error)
+const checkedRole = document.querySelector('input[name="role"]:checked');
+if (checkedRole && checkedRole.value === 'player') {
+    teamGroup.style.display = 'block';
+    teamSelect.required = true;
+}
 
 usernameInput.addEventListener('keypress', function(e) {
     if (e.key === ' ') {

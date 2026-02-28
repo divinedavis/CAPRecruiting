@@ -92,10 +92,12 @@ db.add(PlayerProfile(user_id=player.id, first_name='Comp', last_name='Test',
     position='WR', year='2027', height="5'11\"", weight='175',
     forty_yard='4.4', bench_press='185', gpa='3.9',
     school='Test High', city='Austin', state='TX',
-    bio='Comprehensive test player'))
+    bio='Comprehensive test player', team_id=1))
 db.add(CoachProfile(user_id=coach.id, first_name='Coach', last_name='Test',
     school='Test University', title='Head Coach', division='FBS'))
 db.commit()
+player_id = player.id
+coach_id = coach.id
 db.close()
 
 anon  = make_session()
@@ -119,17 +121,23 @@ test('Home page has feature cards', 'feature-card' in c)
 r = get(anon, '/dashboard')
 c = r.read().decode()
 test('Dashboard loads for visitors (200)', r.status == 200)
-test('Dashboard shows player cards', 'player-card' in c)
-test('Dashboard shows Sign Up button for visitors', 'Sign Up' in c)
-test('Dashboard shows Sign In / Login for visitors', 'Login' in c or 'Sign In' in c)
+test('Visitor sees team selection page (not players)', 'team-card' in c or 'Browse Players' in c or 'Select' in c)
+test('Visitor team page does NOT show player cards directly', 'player-card' not in c)
+test('Team select page has Sign Up link', 'Sign Up' in c or '/signup' in c)
+test('Team select page has Login link', '/login' in c)
 test('Dashboard does NOT show Messages to visitors', 'msg-link' not in c)
-test('Dashboard does NOT show Edit Profile to visitors', 'Edit Profile' not in c)
-test('Dashboard shows player name', 'Comp Test' in c)
-test('Dashboard shows position', 'WR' in c)
-test('Dashboard shows height', "5'11" in c or 'HT' in c)
-test('Dashboard shows weight', '175' in c or 'WT' in c)
-test('Dashboard shows class year', '2027' in c or 'Class of' in c)
-test('Dashboard shows school', 'Test High' in c)
+
+r = get(anon, '/dashboard?team_id=1')
+c = r.read().decode()
+test('Team dashboard loads for visitors with team_id (200)', r.status == 200)
+test('Team dashboard shows player cards', 'player-card' in c)
+test('Team dashboard shows player name', 'Comp Test' in c)
+test('Team dashboard shows position', 'WR' in c)
+test('Team dashboard shows height', "5'11" in c or 'HT' in c)
+test('Team dashboard shows weight', '175' in c or 'WT' in c)
+test('Team dashboard shows class year', '2027' in c or 'Class of' in c)
+test('Team dashboard shows school', 'Test High' in c)
+test('Team dashboard shows back link to all teams', '← All Teams' in c or 'All Teams' in c)
 
 r = get(anon, '/profile/ct_player')
 c = r.read().decode()
@@ -182,12 +190,13 @@ test('Signup has player role card', 'value="player"' in c)
 test('Signup has coach role card', 'value="coach"' in c)
 test('Signup has username field with no-spaces hint', 'no spaces' in c.lower() or 'field-hint' in c)
 test('Signup has username pattern attribute', 'pattern' in c)
+test('Signup has team dropdown for players', 'team_id' in c or 'team-group' in c)
 
-r = post_form(anon, '/signup', {'username': 'bad user', 'email': 'x@x.com', 'password': '123456', 'role': 'player'})
+r = post_form(anon, '/signup', {'username': 'bad user', 'email': 'x@x.com', 'password': '123456', 'role': 'player', 'team_id': '1'})
 c = r.read().decode()
 test('Signup rejects username with spaces', 'error' in c.lower())
 
-r = post_form(anon, '/signup', {'username': 'ct_player', 'email': 'dupe@x.com', 'password': '123456', 'role': 'player'})
+r = post_form(anon, '/signup', {'username': 'ct_player', 'email': 'dupe@x.com', 'password': '123456', 'role': 'player', 'team_id': '1'})
 c = r.read().decode()
 test('Signup rejects duplicate username', 'error' in c.lower() or 'taken' in c.lower())
 
@@ -255,7 +264,7 @@ r = post_multipart(s_p, '/profile/upload-photo', {'photo': ('big.jpg', b'x' * (6
 test('Oversized file rejected (400)', r.status == 400)
 
 db = SessionLocal()
-p = db.query(PlayerProfile).filter(PlayerProfile.user_id == player.id).first()
+p = db.query(PlayerProfile).filter(PlayerProfile.user_id == player_id).first()
 test('Photo path saved in database', bool(p and p.photo))
 if p and p.photo:
     full = '/home/recruiting/bearcats' + p.photo
@@ -319,7 +328,7 @@ test('HTTP POST fallback still works (redirects)', 'messages' in r.url)
 # Unread badge = unique senders
 db = SessionLocal()
 from main import unread_sender_count
-uc = unread_sender_count(db, player.id)
+uc = unread_sender_count(db, player_id)
 test('Unread badge counts unique senders not total messages', isinstance(uc, int))
 db.close()
 

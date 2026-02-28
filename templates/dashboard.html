@@ -1,11 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Player Directory — Bearcats Recruiting{% endblock %}
+{% block title %}{% if team %}{{ team.name }} Players{% else %}Player Directory{% endif %} — Bearcats Recruiting{% endblock %}
 {% block content %}
 <div class="container page-top">
     <div class="page-header">
         <div>
+            {% if team %}
+            <a href="/dashboard" class="back-link">← All Teams</a>
+            <h1>{{ team.name }}</h1>
+            <p class="page-sub">{{ player_data|length }} player{{ 's' if player_data|length != 1 else '' }} registered</p>
+            {% else %}
             <h1>Player Directory</h1>
             <p class="page-sub">Browse all registered players</p>
+            {% endif %}
         </div>
         <div class="header-actions">
             {% if user %}
@@ -19,6 +25,16 @@
             {% endif %}
         </div>
     </div>
+
+    {% if user and teams %}
+    <div class="team-filter-bar">
+        <span class="filter-label">Filter:</span>
+        <a href="/dashboard" class="team-pill {% if not active_team_id %}active{% endif %}">All Teams</a>
+        {% for t in teams %}
+        <a href="/dashboard?team_id={{ t.id }}" class="team-pill {% if active_team_id == t.id %}active{% endif %}">{{ t.name }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     {% if player_data %}
     <div class="player-grid">
@@ -59,7 +75,7 @@
     <div class="empty-state">
         <div class="empty-icon">🏈</div>
         <h3>No players yet</h3>
-        <p>Players who sign up will appear here.</p>
+        <p>{% if team %}No players have joined {{ team.name }} yet.{% else %}Players who sign up will appear here.{% endif %}</p>
     </div>
     {% endif %}
 </div>

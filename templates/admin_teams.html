@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Manage Teams — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header">
+        <div>
+            <h1>Manage Teams</h1>
+            <p class="page-sub">Admin panel — add new high school teams</p>
+        </div>
+        <a href="/dashboard" class="btn btn-outline">← Back to Dashboard</a>
+    </div>
+
+    {% if success %}
+    <div class="alert alert-success">Team created successfully.</div>
+    {% endif %}
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <div class="admin-panel">
+        <div class="admin-form-card">
+            <h2>Add New Team</h2>
+            <form method="post" action="/admin/teams/create">
+                <div class="form-group">
+                    <label>Team Name</label>
+                    <input type="text" name="name" placeholder="e.g. Lincoln High Eagles" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Team</button>
+            </form>
+        </div>
+
+        <div class="admin-teams-list">
+            <h2>Existing Teams</h2>
+            {% if teams %}
+            <table class="teams-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Team Name</th>
+                        <th>Players</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in teams %}
+                    <tr>
+                        <td>{{ t.id }}</td>
+                        <td>{{ t.name }}</td>
+                        <td>{{ t.player_count }}</td>
+                        <td><a href="/dashboard?team_id={{ t.id }}" target="_blank">View →</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No teams yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

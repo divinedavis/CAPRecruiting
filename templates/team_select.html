@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Select a Team — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header" style="justify-content:center; text-align:center; flex-direction:column; gap:0.5rem;">
+        <h1>Browse Players by Team</h1>
+        <p class="page-sub">Select a high school team to view their players</p>
+    </div>
+
+    <div class="team-grid">
+        {% for team in teams %}
+        <a href="/dashboard?team_id={{ team.id }}" class="team-card">
+            <div class="team-card-icon">🏈</div>
+            <div class="team-card-name">{{ team.name }}</div>
+            <div class="team-card-arrow">Browse Players →</div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="team-select-footer">
+        <p>Want to join or sign your team up? <a href="/signup">Create an account</a> or <a href="/login">sign in</a>.</p>
+    </div>
+</div>
+{% endblock %}

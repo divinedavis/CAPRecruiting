@@ -55,6 +55,12 @@ Base = declarative_base()
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 
+class Team(Base):
+    __tablename__ = "teams"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -62,12 +68,14 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)  # 'player' or 'coach'
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class PlayerProfile(Base):
     __tablename__ = "player_profiles"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     first_name = Column(String, default="")
     last_name = Column(String, default="")
     position = Column(String, default="")
@@ -154,8 +162,9 @@ async def home(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("home.html", {"request": request})
 
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_get(request: Request):
-    return templates.TemplateResponse("signup.html", {"request": request, "error": None})
+async def signup_get(request: Request, db: Session = Depends(get_db)):
+    teams = db.query(Team).order_by(Team.name).all()
+    return templates.TemplateResponse("signup.html", {"request": request, "error": None, "teams": teams, "selected_team_id": None})
 
 @app.post("/signup", response_class=HTMLResponse)
 async def signup_post(
@@ -164,19 +173,32 @@ async def signup_post(
     email: str = Form(...),
     password: str = Form(...),
     role: str = Form(...),
+    team_id: Optional[int] = Form(None),
     db: Session = Depends(get_db)
 ):
     username = username.strip()
+    teams = db.query(Team).order_by(Team.name).all()
+
+    def err(msg):
+        return templates.TemplateResponse("signup.html", {
+            "request": request, "error": msg,
+            "teams": teams, "selected_team_id": team_id
+        })
+
     if role not in ("player", "coach"):
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Invalid role selected."})
+        return err("Invalid role selected.")
+    if role == "player" and not team_id:
+        return err("Players must select a high school team.")
+    if role == "player" and not db.query(Team).filter(Team.id == team_id).first():
+        return err("Invalid team selected.")
     if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces)."})
+        return err("Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces).")
     if db.query(User).filter(User.username == username).first():
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Username already taken."})
+        return err("Username already taken.")
     if db.query(User).filter(User.email == email).first():
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Email already registered."})
+        return err("Email already registered.")
     if len(password) < 6:
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Password must be at least 6 characters."})
+        return err("Password must be at least 6 characters.")
 
     user = User(username=username, email=email, password_hash=hash_password(password), role=role)
     db.add(user)
@@ -184,7 +206,7 @@ async def signup_post(
     db.refresh(user)
 
     if role == "player":
-        db.add(PlayerProfile(user_id=user.id))
+        db.add(PlayerProfile(user_id=user.id, team_id=team_id))
     else:
         db.add(CoachProfile(user_id=user.id))
     db.commit()
@@ -215,22 +237,46 @@ async def logout(request: Request):
     return RedirectResponse("/", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, db: Session = Depends(get_db)):
+async def dashboard(request: Request, team_id: Optional[int] = None, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    teams = db.query(Team).order_by(Team.name).all()
 
-    players = db.query(User).filter(User.role == "player").all()
+    # Visitors must pick a team first
+    if not user_id and team_id is None:
+        return templates.TemplateResponse("team_select.html", {
+            "request": request,
+            "teams": teams,
+            "unread_count": 0
+        })
+
+    # Filter by team when team_id is given
+    if team_id:
+        team = db.query(Team).filter(Team.id == team_id).first()
+        player_users = (
+            db.query(User)
+            .join(PlayerProfile, User.id == PlayerProfile.user_id)
+            .filter(User.role == "player", PlayerProfile.team_id == team_id)
+            .all()
+        )
+    else:
+        team = None
+        player_users = db.query(User).filter(User.role == "player").all()
+
     player_data = []
-    for p in players:
+    for p in player_users:
         prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
         player_data.append({"user": p, "profile": prof})
 
-    unread_count = unread_sender_count(db, user_id)
+    unread_count = unread_sender_count(db, user_id) if user_id else 0
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
         "player_data": player_data,
-        "unread_count": unread_count
+        "unread_count": unread_count,
+        "team": team,
+        "teams": teams,
+        "active_team_id": team_id
     })
 
 @app.get("/profile/edit", response_class=HTMLResponse)
@@ -317,6 +363,49 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "current_user": current_user,
         "unread_count": unread_count
     })
+
+@app.get("/admin/teams", response_class=HTMLResponse)
+async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    teams_raw = db.query(Team).order_by(Team.name).all()
+    teams = []
+    for t in teams_raw:
+        count = db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()
+        teams.append({"id": t.id, "name": t.name, "player_count": count})
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("admin_teams.html", {
+        "request": request, "user": user,
+        "teams": teams, "unread_count": unread_count,
+        "success": False, "error": None
+    })
+
+@app.post("/admin/teams/create", response_class=HTMLResponse)
+async def admin_teams_create(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    form = await request.form()
+    name = form.get("name", "").strip()
+    teams_raw = db.query(Team).order_by(Team.name).all()
+    teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
+    unread_count = unread_sender_count(db, user_id)
+    if not name:
+        return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "unread_count": unread_count, "success": False, "error": "Team name cannot be empty."})
+    if db.query(Team).filter(Team.name == name).first():
+        return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "unread_count": unread_count, "success": False, "error": f'A team named "{name}" already exists.'})
+    db.add(Team(name=name))
+    db.commit()
+    teams_raw = db.query(Team).order_by(Team.name).all()
+    teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
+    return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "unread_count": unread_count, "success": True, "error": None})
 
 @app.get("/messages", response_class=HTMLResponse)
 async def messages_inbox(request: Request, db: Session = Depends(get_db)):
