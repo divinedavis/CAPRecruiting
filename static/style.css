@@ -723,14 +723,20 @@ textarea { resize: vertical; }
 }
 
 /* ── Hudl button on player card ──────────────────────────────── */
-.player-card-hudl { padding: 0 16px 14px; }
-.hudl-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 6px 14px; border-radius: 8px;
-    background: #f96b2b; color: #fff;
-    font-size: 13px; font-weight: 600;
-    text-decoration: none; border: none;
-    transition: opacity 0.15s, transform 0.15s;
+.player-card-hudl { padding: 12px 20px 16px; }
+.hudl-logo-btn {
+    display: inline-flex;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    overflow: hidden;
+    text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(249,107,43,0.35);
 }
-.hudl-btn:hover { opacity: 0.88; transform: translateY(-1px); }
-.hudl-logo { width: 20px; height: 20px; object-fit: contain; border-radius: 4px; }
+.hudl-logo-btn img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+.hudl-logo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(249,107,43,0.5);
+}
