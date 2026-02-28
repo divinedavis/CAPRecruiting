@@ -117,6 +117,36 @@
                         <span class="stat-value">{{ profile.vertical }} <small>in</small></span>
                     </div>
                     {% endif %}
+                    {% if profile.squat %}
+                    <div class="stat-card">
+                        <span class="stat-label">Squat</span>
+                        <span class="stat-value">{{ profile.squat }} <small>lbs</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.clean %}
+                    <div class="stat-card">
+                        <span class="stat-label">Clean</span>
+                        <span class="stat-value">{{ profile.clean }} <small>lbs</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.broad_jump %}
+                    <div class="stat-card">
+                        <span class="stat-label">Broad Jump</span>
+                        <span class="stat-value">{{ profile.broad_jump }} <small>in</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.pro_agility %}
+                    <div class="stat-card">
+                        <span class="stat-label">Pro Agility</span>
+                        <span class="stat-value">{{ profile.pro_agility }} <small>sec</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.wingspan %}
+                    <div class="stat-card">
+                        <span class="stat-label">Wingspan</span>
+                        <span class="stat-value">{{ profile.wingspan }} <small>in</small></span>
+                    </div>
+                    {% endif %}
                     {% if profile.gpa %}
                     <div class="stat-card">
                         <span class="stat-label">GPA</span>

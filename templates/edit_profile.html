@@ -112,9 +112,35 @@
                         <input type="text" name="vertical" value="{{ profile.vertical if profile else '' }}" placeholder="34">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>GPA</label>
-                    <input type="text" name="gpa" value="{{ profile.gpa if profile else '' }}" placeholder="3.8">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Squat (lbs)</label>
+                        <input type="text" name="squat" value="{{ profile.squat if profile else '' }}" placeholder="315">
+                    </div>
+                    <div class="form-group">
+                        <label>Clean (lbs)</label>
+                        <input type="text" name="clean" value="{{ profile.clean if profile else '' }}" placeholder="225">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Broad Jump (inches)</label>
+                        <input type="text" name="broad_jump" value="{{ profile.broad_jump if profile else '' }}" placeholder="120">
+                    </div>
+                    <div class="form-group">
+                        <label>Pro Agility (sec)</label>
+                        <input type="text" name="pro_agility" value="{{ profile.pro_agility if profile else '' }}" placeholder="4.25">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Wingspan (inches)</label>
+                        <input type="text" name="wingspan" value="{{ profile.wingspan if profile else '' }}" placeholder="78">
+                    </div>
+                    <div class="form-group">
+                        <label>GPA</label>
+                        <input type="text" name="gpa" value="{{ profile.gpa if profile else '' }}" placeholder="3.8">
+                    </div>
                 </div>
             </div>
 
