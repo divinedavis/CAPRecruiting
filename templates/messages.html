@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Messages — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header">
+        <h1>Messages</h1>
+        <a href="/dashboard" class="btn btn-outline">Back to Players</a>
+    </div>
+
+    {% if conversations %}
+    <div class="conversations-list">
+        {% for conv in conversations %}
+        <a href="/messages/{{ conv.peer.username }}" class="conversation-item {{ 'unread' if conv.unread > 0 else '' }}">
+            <div class="conv-avatar">{{ conv.peer.username[0] | upper }}</div>
+            <div class="conv-info">
+                <div class="conv-name">
+                    {{ conv.peer.username }}
+                    <span class="conv-role-tag">{{ "Player" if conv.peer.role == "player" else "Coach" }}</span>
+                </div>
+                <div class="conv-preview">{{ conv.last_msg.content[:60] + "..." if conv.last_msg and conv.last_msg.content|length > 60 else (conv.last_msg.content if conv.last_msg else "") }}</div>
+            </div>
+            <div class="conv-meta">
+                {% if conv.last_msg %}
+                <span class="conv-time">{{ conv.last_msg.timestamp.strftime("%b %d") }}</span>
+                {% endif %}
+                {% if conv.unread > 0 %}
+                <span class="badge">{{ conv.unread }}</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">💬</div>
+        <h3>No messages yet</h3>
+        <p>Visit a player or coach profile to start a conversation.</p>
+        <a href="/dashboard" class="btn btn-primary">Browse Players</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

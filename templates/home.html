@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Bearcats Recruiting — Find Your Future{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">🏈 Official Recruiting Platform</div>
+        <h1>Bearcats<br><span class="gold">Recruiting Hub</span></h1>
+        <p class="hero-sub">Connect players with college coaches. Build your profile. Get discovered.</p>
+        <div class="hero-actions">
+            <a href="/signup" class="btn btn-primary btn-lg">Create Your Profile</a>
+            <a href="/dashboard" class="btn btn-outline btn-lg">Browse Players</a>
+            <a href="/login" class="btn btn-outline btn-lg">Sign In</a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat"><strong>Players</strong><span>Build your profile</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat"><strong>Coaches</strong><span>Browse talent</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat"><strong>Direct</strong><span>Messaging</span></div>
+        </div>
+    </div>
+    <div class="hero-art">
+        <div class="art-circle">
+            <span class="art-icon">🏈</span>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">Everything You Need to Get Recruited</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📋</div>
+                <h3>Full Athletic Profile</h3>
+                <p>Showcase height, weight, 40-yard dash, bench press, GPA, and more in one place.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Direct Messaging</h3>
+                <p>Players and coaches can communicate directly, securely, and privately.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔗</div>
+                <h3>Shareable Profiles</h3>
+                <p>Share your profile link with coaches, scouts, or anyone with one click.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎥</div>
+                <h3>External Links</h3>
+                <p>Link to highlight reels, Hudl, MaxPreps, or any external site from your profile.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

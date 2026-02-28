@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Chat with {{ peer.username }} — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="chat-layout">
+        <div class="chat-header">
+            <a href="/messages" class="back-link">← Messages</a>
+            <div class="chat-peer-info">
+                <div class="chat-avatar">{{ peer.username[0] | upper }}</div>
+                <div>
+                    <a href="/profile/{{ peer.username }}" class="chat-peer-name">{{ peer.username }}</a>
+                    <span class="chat-peer-role">{{ "Player" if peer.role == "player" else "Coach" }}</span>
+                </div>
+            </div>
+            <a href="/profile/{{ peer.username }}" class="btn btn-outline btn-sm">View Profile</a>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            {% if messages %}
+                {% for msg in messages %}
+                <div class="message {{ 'mine' if msg.sender_id == user.id else 'theirs' }}">
+                    <div class="message-bubble">{{ msg.content }}</div>
+                    <div class="message-time">{{ msg.timestamp.strftime("%b %d, %I:%M %p") }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="chat-empty">
+                <p>Start the conversation with {{ peer.username }}!</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="chat-status" id="chat-status"></div>
+
+        <form id="chat-form" class="chat-input-form">
+            <input type="text" name="content" id="chat-input" placeholder="Type a message..." required autocomplete="off" class="chat-input">
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const ME = {{ user.id }};
+const PEER_USERNAME = "{{ peer.username }}";
+const chatMessages = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatStatus = document.getElementById('chat-status');
+
+// Scroll to bottom
+function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+scrollToBottom();
+
+// Append a message bubble to the chat
+function appendMessage(content, isMine, timestamp) {
+    const empty = chatMessages.querySelector('.chat-empty');
+    if (empty) empty.remove();
+
+    const div = document.createElement('div');
+    div.className = 'message ' + (isMine ? 'mine' : 'theirs');
+    div.innerHTML = `<div class="message-bubble">${escapeHtml(content)}</div>
+                     <div class="message-time">${timestamp}</div>`;
+    chatMessages.appendChild(div);
+    scrollToBottom();
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(text));
+    return d.innerHTML;
+}
+
+// ── WebSocket ────────────────────────────────────────────────────
+let ws = null;
+let wsReady = false;
+let reconnectDelay = 1000;
+
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws/${ME}`);
+
+    ws.onopen = () => {
+        wsReady = true;
+        reconnectDelay = 1000;
+        chatStatus.textContent = '';
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'message') {
+            // Only show if this message belongs to this conversation
+            const inConv = (data.sender_id == ME && data.receiver_id != ME && data.sender_username == "{{ user.username }}")
+                        || (data.sender_id != ME && data.sender_username == PEER_USERNAME);
+            if (inConv) {
+                const isMine = data.sender_id == ME;
+                appendMessage(data.content, isMine, data.timestamp);
+            }
+        }
+        if (data.type === 'unread') {
+            updateBadge(data.count);
+        }
+    };
+
+    ws.onclose = () => {
+        wsReady = false;
+        chatStatus.textContent = 'Reconnecting...';
+        setTimeout(connectWS, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+    };
+
+    ws.onerror = () => {
+        ws.close();
+    };
+}
+
+connectWS();
+
+// ── Send message ─────────────────────────────────────────────────
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const content = chatInput.value.trim();
+    if (!content) return;
+
+    chatInput.value = '';
+    chatInput.focus();
+
+    try {
+        const res = await fetch(`/messages/${PEER_USERNAME}/send`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content})
+        });
+        const data = await res.json();
+        if (data.ok) {
+            // Sender sees their own message immediately via WS echo,
+            // but append directly as fallback if WS isn't ready
+            if (!wsReady) {
+                appendMessage(content, true, data.message.timestamp);
+            }
+        } else {
+            chatStatus.textContent = 'Failed to send. Try again.';
+        }
+    } catch {
+        // Fallback: submit the form the old way
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/messages/${PEER_USERNAME}`;
+        const input = document.createElement('input');
+        input.name = 'content';
+        input.value = content;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+});
+
+// ── Live unread badge ────────────────────────────────────────────
+function updateBadge(count) {
+    const badges = document.querySelectorAll('.msg-link .badge');
+    if (count > 0) {
+        if (badges.length) {
+            badges.forEach(b => b.textContent = count);
+        } else {
+            const link = document.querySelector('.msg-link');
+            if (link) {
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.textContent = count;
+                link.appendChild(badge);
+            }
+        }
+    } else {
+        badges.forEach(b => b.remove());
+    }
+}
+</script>
+{% endblock %}

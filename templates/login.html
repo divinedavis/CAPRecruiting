@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Login — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <span class="paw">🐾</span>
+            <h1>Welcome Back</h1>
+            <p>Sign in to your account</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/login">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" placeholder="Your username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Your password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <p class="auth-alt">Don't have an account? <a href="/signup">Sign up</a></p>
+    </div>
+</div>
+{% endblock %}

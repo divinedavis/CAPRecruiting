@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
+  <rect width="1200" height="630" fill="#0a1628"/>
+  <rect x="0" y="600" width="1200" height="30" fill="#e8a020"/>
+  <text x="600" y="280" font-family="Arial,sans-serif" font-size="80" font-weight="bold" fill="#e8a020" text-anchor="middle">BEARCATS</text>
+  <text x="600" y="380" font-family="Arial,sans-serif" font-size="64" font-weight="bold" fill="white" text-anchor="middle">RECRUITING</text>
+  <text x="600" y="450" font-family="Arial,sans-serif" font-size="26" fill="#aaaaaa" text-anchor="middle">Find and recruit top football talent</text>
+</svg>

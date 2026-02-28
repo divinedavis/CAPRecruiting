@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="edit-layout">
+        <div class="edit-header">
+            <h1>Edit Your Profile</h1>
+            <p>Keep your profile up to date so coaches can find you</p>
+        </div>
+
+        {% if success %}
+        <div class="alert alert-success">✅ Profile saved successfully!</div>
+        {% endif %}
+
+        <!-- Photo Upload Section -->
+        <div class="form-section">
+            <h2>Profile Photo</h2>
+            <div class="photo-upload-area">
+                <div class="photo-preview" id="photo-preview">
+                    {% if profile and profile.photo %}
+                        <img src="{{ profile.photo }}" alt="Profile photo" id="preview-img">
+                    {% else %}
+                        <div class="photo-placeholder" id="photo-placeholder">
+                            {{ (profile.first_name[0] if profile and profile.first_name else user.username[0]) | upper }}
+                        </div>
+                        <img src="" alt="" id="preview-img" style="display:none">
+                    {% endif %}
+                </div>
+                <div class="photo-upload-controls">
+                    <form method="post" action="/profile/upload-photo" enctype="multipart/form-data" id="photo-form">
+                        <label for="photo-input" class="btn btn-outline btn-upload">
+                            📷 {% if profile and profile.photo %}Change Photo{% else %}Upload Photo{% endif %}
+                        </label>
+                        <input type="file" name="photo" id="photo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+                        <p class="photo-hint">JPG, PNG, GIF or WebP — max 5MB</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" action="/profile/edit">
+            {% if user.role == "player" %}
+            <!-- PLAYER FORM -->
+            <div class="form-section">
+                <h2>Personal Info</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" value="{{ profile.first_name if profile else '' }}" placeholder="First name">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" value="{{ profile.last_name if profile else '' }}" placeholder="Last name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>School / High School</label>
+                        <input type="text" name="school" value="{{ profile.school if profile else '' }}" placeholder="School name">
+                    </div>
+                    <div class="form-group">
+                        <label>Class Year</label>
+                        <select name="year">
+                            <option value="">Select year</option>
+                            {% for yr in ["2025", "2026", "2027", "2028", "2029"] %}
+                            <option value="{{ yr }}" {{ "selected" if profile and profile.year == yr else "" }}>{{ yr }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" name="city" value="{{ profile.city if profile else '' }}" placeholder="City">
+                    </div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <input type="text" name="state" value="{{ profile.state if profile else '' }}" placeholder="TX">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Athletic Info</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Position</label>
+                        <select name="position">
+                            <option value="">Select position</option>
+                            {% for pos in ["QB", "RB", "WR", "TE", "OL", "DE", "DT", "LB", "CB", "S", "K", "P", "LS", "ATH"] %}
+                            <option value="{{ pos }}" {{ "selected" if profile and profile.position == pos else "" }}>{{ pos }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Height (e.g. 6'2")</label>
+                        <input type="text" name="height" value="{{ profile.height if profile else '' }}" placeholder="6'2&quot;">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Weight (lbs)</label>
+                        <input type="text" name="weight" value="{{ profile.weight if profile else '' }}" placeholder="185">
+                    </div>
+                    <div class="form-group">
+                        <label>40-Yard Dash (sec)</label>
+                        <input type="text" name="forty_yard" value="{{ profile.forty_yard if profile else '' }}" placeholder="4.65">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bench Press (lbs)</label>
+                        <input type="text" name="bench_press" value="{{ profile.bench_press if profile else '' }}" placeholder="225">
+                    </div>
+                    <div class="form-group">
+                        <label>Vertical (inches)</label>
+                        <input type="text" name="vertical" value="{{ profile.vertical if profile else '' }}" placeholder="34">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>GPA</label>
+                    <input type="text" name="gpa" value="{{ profile.gpa if profile else '' }}" placeholder="3.8">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>About Me</h2>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea name="bio" rows="4" placeholder="Tell coaches about yourself, your strengths, goals...">{{ profile.bio if profile else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>External Links</h2>
+                <p class="section-hint">Add links to Hudl, MaxPreps, highlight reels, or any other site</p>
+                <div class="link-input-group">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Link 1 Label</label>
+                            <input type="text" name="link1_label" value="{{ profile.link1_label if profile else '' }}" placeholder="e.g. Hudl Highlights">
+                        </div>
+                        <div class="form-group">
+                            <label>Link 1 URL</label>
+                            <input type="url" name="link1_url" value="{{ profile.link1_url if profile else '' }}" placeholder="https://www.hudl.com/...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Link 2 Label</label>
+                            <input type="text" name="link2_label" value="{{ profile.link2_label if profile else '' }}" placeholder="e.g. MaxPreps">
+                        </div>
+                        <div class="form-group">
+                            <label>Link 2 URL</label>
+                            <input type="url" name="link2_url" value="{{ profile.link2_url if profile else '' }}" placeholder="https://www.maxpreps.com/...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Link 3 Label</label>
+                            <input type="text" name="link3_label" value="{{ profile.link3_label if profile else '' }}" placeholder="e.g. Twitter/X">
+                        </div>
+                        <div class="form-group">
+                            <label>Link 3 URL</label>
+                            <input type="url" name="link3_url" value="{{ profile.link3_url if profile else '' }}" placeholder="https://twitter.com/...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- COACH FORM -->
+            <div class="form-section">
+                <h2>Personal Info</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" value="{{ profile.first_name if profile else '' }}" placeholder="First name">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" value="{{ profile.last_name if profile else '' }}" placeholder="Last name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" name="title" value="{{ profile.title if profile else '' }}" placeholder="e.g. Head Coach, OC, DB Coach">
+                    </div>
+                    <div class="form-group">
+                        <label>School / University</label>
+                        <input type="text" name="school" value="{{ profile.school if profile else '' }}" placeholder="School name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Division</label>
+                        <select name="division">
+                            <option value="">Select division</option>
+                            {% for div in ["FBS", "FCS", "D2", "D3", "NAIA", "JUCO", "High School"] %}
+                            <option value="{{ div }}" {{ "selected" if profile and profile.division == div else "" }}>{{ div }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Conference</label>
+                        <input type="text" name="conference" value="{{ profile.conference if profile else '' }}" placeholder="e.g. Big 12, SEC">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>About</h2>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea name="bio" rows="4" placeholder="Tell players about your program, coaching philosophy...">{{ profile.bio if profile else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Links</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Link 1 Label</label>
+                        <input type="text" name="link1_label" value="{{ profile.link1_label if profile else '' }}" placeholder="e.g. Program Website">
+                    </div>
+                    <div class="form-group">
+                        <label>Link 1 URL</label>
+                        <input type="url" name="link1_url" value="{{ profile.link1_url if profile else '' }}" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Link 2 Label</label>
+                        <input type="text" name="link2_label" value="{{ profile.link2_label if profile else '' }}" placeholder="e.g. Twitter/X">
+                    </div>
+                    <div class="form-group">
+                        <label>Link 2 URL</label>
+                        <input type="url" name="link2_url" value="{{ profile.link2_url if profile else '' }}" placeholder="https://...">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">Save Profile</button>
+                <a href="/profile/{{ user.username }}" class="btn btn-outline btn-lg">View My Profile</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('photo-input').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File is too large. Max size is 5MB.');
+        this.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = document.getElementById('preview-img');
+        const placeholder = document.getElementById('photo-placeholder');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    // Auto-submit the photo form
+    document.getElementById('photo-form').submit();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Bearcats Recruiting{% endblock %}
+
+{% set display_name = (profile.first_name ~ ' ' ~ profile.last_name).strip() if profile and (profile.first_name or profile.last_name) else target.username %}
+{% set og_desc %}{% if target.role == 'player' %}{% if profile and profile.position %}{{ profile.position }}{% endif %}{% if profile and profile.year %} · Class of {{ profile.year }}{% endif %}{% if profile and profile.school %} · {{ profile.school }}{% endif %} — View full recruiting profile on Bearcats Recruiting.{% else %}{% if profile and profile.title %}{{ profile.title }}{% endif %}{% if profile and profile.school %} at {{ profile.school }}{% endif %} — View coach profile on Bearcats Recruiting.{% endif %}{% endset %}
+{% set og_img = ('https://bearcatrecruiting.com' ~ profile.photo) if profile and profile.photo else 'https://bearcatrecruiting.com/static/og-default.png' %}
+
+{% block og_type %}profile{% endblock %}
+{% block og_title %}{{ display_name }} — Bearcats Recruiting{% endblock %}
+{% block og_description %}{{ og_desc }}{% endblock %}
+{% block og_image %}{{ og_img }}{% endblock %}
+{% block og_url %}https://bearcatrecruiting.com/profile/{{ target.username }}{% endblock %}
+{% block tw_title %}{{ display_name }} — Bearcats Recruiting{% endblock %}
+{% block tw_description %}{{ og_desc }}{% endblock %}
+{% block tw_image %}{{ og_img }}{% endblock %}
+
+{% block content %}
+<div class="container page-top">
+
+    <!-- Share bar -->
+    <div class="share-bar">
+        <span class="share-label">🔗 Share this profile:</span>
+        <div class="share-input-group">
+            <input type="text" id="share-url" value="{{ request.url }}" readonly class="share-input">
+            <button onclick="copyProfile()" class="btn btn-outline btn-sm" id="copy-btn">Copy Link</button>
+        </div>
+    </div>
+
+    <div class="profile-layout">
+        <!-- Left: Main info -->
+        <div class="profile-main">
+            <div class="profile-header-card">
+                <div class="profile-avatar-lg">
+                    {% if profile and profile.photo %}
+                        <img src="{{ profile.photo }}" alt="Profile photo" class="avatar-img">
+                    {% else %}
+                        {{ (profile.first_name[0] if profile and profile.first_name else target.username[0]) | upper }}
+                    {% endif %}
+                </div>
+                <div class="profile-identity">
+                    <h1>
+                        {% if profile and (profile.first_name or profile.last_name) %}
+                            {{ profile.first_name }} {{ profile.last_name }}
+                        {% else %}
+                            {{ target.username }}
+                        {% endif %}
+                    </h1>
+                    <div class="profile-badges">
+                        <span class="role-tag {{ target.role }}">{{ "🏈 Player" if target.role == "player" else "📋 Coach" }}</span>
+                        {% if target.role == "player" and profile and profile.position %}
+                            <span class="position-tag">{{ profile.position }}</span>
+                        {% endif %}
+                        {% if target.role == "coach" and profile and profile.title %}
+                            <span class="position-tag">{{ profile.title }}</span>
+                        {% endif %}
+                    </div>
+                    {% if target.role == "player" and profile and profile.school %}
+                        <p class="profile-school">🏫 {{ profile.school }}{% if profile.city or profile.state %} — {{ profile.city }}{{ ", " if profile.city and profile.state else "" }}{{ profile.state }}{% endif %}</p>
+                    {% elif target.role == "coach" and profile and profile.school %}
+                        <p class="profile-school">🏫 {{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
+                    {% endif %}
+                </div>
+
+                {% if current_user and current_user.id != target.id %}
+                <div class="profile-actions">
+                    <a href="/messages/{{ target.username }}" class="btn btn-primary">💬 Message</a>
+                </div>
+                {% elif current_user and current_user.id == target.id %}
+                <div class="profile-actions">
+                    <a href="/profile/edit" class="btn btn-outline">✏️ Edit Profile</a>
+                </div>
+                {% else %}
+                <div class="profile-actions">
+                    <a href="/login" class="btn btn-primary">Sign in to Message</a>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if profile and profile.bio %}
+            <div class="profile-section">
+                <h2>About</h2>
+                <p class="bio-text">{{ profile.bio }}</p>
+            </div>
+            {% endif %}
+
+            {% if target.role == "player" and profile %}
+            <div class="profile-section">
+                <h2>Athletic Stats</h2>
+                <div class="stats-grid">
+                    {% if profile.height %}
+                    <div class="stat-card">
+                        <span class="stat-label">Height</span>
+                        <span class="stat-value">{{ profile.height }}</span>
+                    </div>
+                    {% endif %}
+                    {% if profile.weight %}
+                    <div class="stat-card">
+                        <span class="stat-label">Weight</span>
+                        <span class="stat-value">{{ profile.weight }} <small>lbs</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.forty_yard %}
+                    <div class="stat-card">
+                        <span class="stat-label">40-Yard Dash</span>
+                        <span class="stat-value">{{ profile.forty_yard }} <small>sec</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.bench_press %}
+                    <div class="stat-card">
+                        <span class="stat-label">Bench Press</span>
+                        <span class="stat-value">{{ profile.bench_press }} <small>lbs</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.vertical %}
+                    <div class="stat-card">
+                        <span class="stat-label">Vertical</span>
+                        <span class="stat-value">{{ profile.vertical }} <small>in</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.gpa %}
+                    <div class="stat-card">
+                        <span class="stat-label">GPA</span>
+                        <span class="stat-value">{{ profile.gpa }}</span>
+                    </div>
+                    {% endif %}
+                    {% if profile.year %}
+                    <div class="stat-card">
+                        <span class="stat-label">Class</span>
+                        <span class="stat-value">{{ profile.year }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- External Links -->
+            {% if profile and (profile.link1_url or profile.link2_url or (target.role == "player" and profile.link3_url)) %}
+            <div class="profile-section">
+                <h2>Links</h2>
+                <div class="links-list">
+                    {% if profile.link1_url %}
+                    <a href="{{ profile.link1_url }}" target="_blank" rel="noopener" class="ext-link">
+                        🔗 {{ profile.link1_label if profile.link1_label else profile.link1_url }}
+                        <span class="ext-arrow">↗</span>
+                    </a>
+                    {% endif %}
+                    {% if profile.link2_url %}
+                    <a href="{{ profile.link2_url }}" target="_blank" rel="noopener" class="ext-link">
+                        🔗 {{ profile.link2_label if profile.link2_label else profile.link2_url }}
+                        <span class="ext-arrow">↗</span>
+                    </a>
+                    {% endif %}
+                    {% if target.role == "player" and profile.link3_url %}
+                    <a href="{{ profile.link3_url }}" target="_blank" rel="noopener" class="ext-link">
+                        🔗 {{ profile.link3_label if profile.link3_label else profile.link3_url }}
+                        <span class="ext-arrow">↗</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function copyProfile() {
+    const url = document.getElementById('share-url').value;
+    navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy Link'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+</script>
+{% endblock %}

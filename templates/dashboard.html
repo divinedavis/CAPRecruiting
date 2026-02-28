@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Player Directory — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header">
+        <div>
+            <h1>Player Directory</h1>
+            <p class="page-sub">Browse all registered players</p>
+        </div>
+        <div class="header-actions">
+            {% if user %}
+                <a href="/profile/{{ user.username }}" class="btn btn-outline">My Profile</a>
+                {% if user.role == "player" %}
+                <a href="/profile/edit" class="btn btn-primary">Edit Profile</a>
+                {% endif %}
+            {% else %}
+                <a href="/login" class="btn btn-outline">Sign In</a>
+                <a href="/signup" class="btn btn-primary">Sign Up</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if player_data %}
+    <div class="player-grid">
+        {% for item in player_data %}
+        {% set p = item.profile %}
+        <a href="/profile/{{ item.user.username }}" class="player-card">
+            <div class="player-card-top">
+                <div class="player-avatar">
+                    {% if p and p.photo %}
+                        <img src="{{ p.photo }}" alt="Profile photo" class="avatar-img">
+                    {% else %}
+                        {{ (p.first_name[0] if p and p.first_name else item.user.username[0]) | upper }}
+                    {% endif %}
+                </div>
+                <div class="player-info">
+                    <h3>
+                        {% if p and (p.first_name or p.last_name) %}
+                            {{ p.first_name }} {{ p.last_name }}
+                        {% else %}
+                            {{ item.user.username }}
+                        {% endif %}
+                    </h3>
+                    <span class="position-badge">{{ p.position if p and p.position else "Position TBD" }}</span>
+                </div>
+            </div>
+            <div class="player-stats-preview">
+                {% if p and p.height %}<span class="stat-pill"><strong>HT</strong> {{ p.height }}</span>{% endif %}
+                {% if p and p.weight %}<span class="stat-pill"><strong>WT</strong> {{ p.weight }} lbs</span>{% endif %}
+                {% if p and p.year %}<span class="stat-pill"><strong>Class of</strong> {{ p.year }}</span>{% endif %}
+            </div>
+            {% if p and p.school %}
+            <div class="player-location">🏫 {{ p.school }}{% if p.city or p.state %} — {{ p.city }}{{ ", " if p.city and p.state else "" }}{{ p.state }}{% endif %}</div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🏈</div>
+        <h3>No players yet</h3>
+        <p>Players who sign up will appear here.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

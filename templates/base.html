@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bearcats Recruiting{% endblock %}</title>
+    <!-- Open Graph / iMessage / Social Preview -->
+    <meta property="og:site_name" content="Bearcats Recruiting">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}Bearcats Recruiting{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Find and recruit top football talent on Bearcats Recruiting.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}https://bearcatrecruiting.com/static/og-default.png{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}https://bearcatrecruiting.com{% endblock %}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block tw_title %}Bearcats Recruiting{% endblock %}">
+    <meta name="twitter:description" content="{% block tw_description %}Find and recruit top football talent on Bearcats Recruiting.{% endblock %}">
+    <meta name="twitter:image" content="{% block tw_image %}https://bearcatrecruiting.com/static/og-default.png{% endblock %}">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-inner">
+        <a href="/" class="nav-brand">
+            <span class="paw">🐾</span> Bearcats Recruiting
+        </a>
+        <div class="nav-links">
+            {% if request.session.get("user_id") %}
+                <a href="/dashboard">Players</a>
+                <a href="/messages" class="msg-link">
+                    Messages
+                    {% if unread_count and unread_count > 0 %}
+                        <span class="badge">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="/profile/edit" class="btn btn-outline">Edit Profile</a>
+                <a href="/logout" class="btn btn-ghost">Logout</a>
+            {% else %}
+                <a href="/dashboard">Browse Players</a>
+                <a href="/login">Login</a>
+                <a href="/signup" class="btn btn-primary">Sign Up</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+    <p>&copy; 2024 Bearcats Recruiting. All rights reserved.</p>
+</footer>
+
+{% if request.session.get("user_id") %}
+<script>
+// Global WebSocket for live unread badge on all pages
+(function() {
+    const userId = {{ request.session.get("user_id") }};
+    let ws, reconnectDelay = 1000;
+
+    function connect() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}/ws/${userId}`);
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'unread') {
+                const badges = document.querySelectorAll('.msg-link .badge');
+                if (data.count > 0) {
+                    if (badges.length) {
+                        badges.forEach(b => b.textContent = data.count);
+                    } else {
+                        const link = document.querySelector('.msg-link');
+                        if (link) {
+                            const b = document.createElement('span');
+                            b.className = 'badge';
+                            b.textContent = data.count;
+                            link.appendChild(b);
+                        }
+                    }
+                } else {
+                    badges.forEach(b => b.remove());
+                }
+            }
+        };
+
+        ws.onclose = () => {
+            setTimeout(connect, reconnectDelay);
+            reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+        };
+        ws.onerror = () => ws.close();
+    }
+
+    connect();
+})();
+</script>
+{% endif %}
+</body>
+</html>

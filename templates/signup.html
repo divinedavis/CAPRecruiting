@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — Bearcats Recruiting{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <span class="paw">🐾</span>
+            <h1>Create Your Account</h1>
+            <p>Join Bearcats Recruiting today</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/signup">
+            <div class="role-select-section">
+                <label class="section-label">I am a...</label>
+                <div class="role-cards">
+                    <label class="role-card">
+                        <input type="radio" name="role" value="player" required>
+                        <div class="role-card-inner">
+                            <span class="role-icon">🏈</span>
+                            <span class="role-name">Player</span>
+                            <span class="role-desc">Build my athletic profile</span>
+                        </div>
+                    </label>
+                    <label class="role-card">
+                        <input type="radio" name="role" value="coach" required>
+                        <div class="role-card-inner">
+                            <span class="role-icon">📋</span>
+                            <span class="role-name">Coach</span>
+                            <span class="role-desc">Scout and recruit players</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Username <span class="field-hint">Letters, numbers, _ . - only (no spaces)</span></label>
+                <input type="text" name="username" id="username"
+                    placeholder="e.g. JohnSmith or john_smith"
+                    required
+                    autocomplete="username"
+                    pattern="[a-zA-Z0-9_.\-]+"
+                    title="Letters, numbers, underscores, dots, and hyphens only — no spaces">
+                <span class="field-error" id="username-error"></span>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" placeholder="your@email.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="At least 6 characters" required autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+        <p class="auth-alt">Already have an account? <a href="/login">Sign in</a></p>
+    </div>
+</div>
+
+<script>
+const usernameInput = document.getElementById('username');
+const usernameError = document.getElementById('username-error');
+
+usernameInput.addEventListener('keypress', function(e) {
+    if (e.key === ' ') {
+        e.preventDefault();
+        usernameError.textContent = 'No spaces allowed in username.';
+    }
+});
+
+usernameInput.addEventListener('input', function() {
+    const val = this.value;
+    if (/[^a-zA-Z0-9_.\-]/.test(val)) {
+        this.value = val.replace(/[^a-zA-Z0-9_.\-]/g, '');
+        usernameError.textContent = 'Only letters, numbers, _ . - allowed.';
+    } else {
+        usernameError.textContent = '';
+    }
+});
+</script>
+{% endblock %}
