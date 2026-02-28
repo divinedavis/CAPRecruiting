@@ -147,6 +147,24 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
+                            <label>
+                                <img src="/static/x_logo.svg" alt="X" style="height:18px; vertical-align:middle; margin-right:6px; border-radius:4px;">
+                                X (Twitter) Profile URL
+                            </label>
+                            <input type="url" name="x_url" value="{{ profile.x_url if profile else '' }}" placeholder="https://x.com/yourusername">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <img src="/static/instagram_logo.svg" alt="Instagram" style="height:18px; vertical-align:middle; margin-right:6px; border-radius:4px;">
+                                Instagram Profile URL
+                            </label>
+                            <input type="url" name="instagram_url" value="{{ profile.instagram_url if profile else '' }}" placeholder="https://instagram.com/yourusername">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                             <label>Link 1 Label</label>
                             <input type="text" name="link1_label" value="{{ profile.link1_label if profile else '' }}" placeholder="e.g. Hudl Highlights">
                         </div>

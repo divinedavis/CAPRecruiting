@@ -98,6 +98,8 @@ class PlayerProfile(Base):
     link3_url = Column(String, default="")
     photo = Column(String, default="")
     hudl_url = Column(String, default="")
+    x_url = Column(String, default="")
+    instagram_url = Column(String, default="")
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -323,6 +325,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.link3_label = form.get("link3_label", "")
         p.link3_url = form.get("link3_url", "")
         p.hudl_url = form.get("hudl_url", "")
+        p.x_url = form.get("x_url", "")
+        p.instagram_url = form.get("instagram_url", "")
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
         c.first_name = form.get("first_name", "")
