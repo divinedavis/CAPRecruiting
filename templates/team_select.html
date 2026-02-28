@@ -7,12 +7,20 @@
         <p class="page-sub">Select a high school team to view their players</p>
     </div>
 
-    <div class="team-grid">
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:20px; margin:32px 0;">
         {% for team in teams %}
-        <a href="/dashboard?team_id={{ team.id }}" class="team-card">
-            <div class="team-card-icon">🏈</div>
-            <div class="team-card-name">{{ team.name }}</div>
-            <div class="team-card-arrow">Browse Players →</div>
+        <a href="/dashboard?team_id={{ team.id }}" style="
+            display:flex; flex-direction:column; align-items:center; gap:12px;
+            padding:36px 24px; background:#ffffff;
+            border:3px solid #0a1628; border-radius:16px;
+            text-decoration:none; color:inherit; text-align:center;
+            box-shadow:0 2px 12px rgba(0,0,0,0.10);
+            transition:border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+        " onmouseover="this.style.borderColor='#e8a020'; this.style.transform='translateY(-3px)';"
+           onmouseout="this.style.borderColor='#0a1628'; this.style.transform='translateY(0)';">
+            <div style="font-size:40px;">🏈</div>
+            <div style="font-size:18px; font-weight:700; color:#0a1628;">{{ team.name }}</div>
+            <div style="font-size:13px; font-weight:600; color:#e8a020;">Browse Players →</div>
         </a>
         {% endfor %}
     </div>
