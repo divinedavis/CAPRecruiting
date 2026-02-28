@@ -55,7 +55,7 @@
                         {% endif %}
                     </div>
                     {% if target.role == "player" and profile and profile.school %}
-                        <p class="profile-school">🏫 {{ profile.school }}{% if profile.city or profile.state %} — {{ profile.city }}{{ ", " if profile.city and profile.state else "" }}{{ profile.state }}{% endif %}</p>
+                        <p class="profile-school">🏫 {{ profile.school }}</p>
                     {% elif target.role == "coach" and profile and profile.school %}
                         <p class="profile-school">🏫 {{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
                     {% endif %}

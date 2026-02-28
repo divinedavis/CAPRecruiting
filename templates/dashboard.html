@@ -66,7 +66,7 @@
                 {% if p and p.year %}<span class="stat-pill"><strong>Class of</strong> {{ p.year }}</span>{% endif %}
             </div>
             {% if p and p.school %}
-            <div class="player-location" style="text-align:center;">🏫 {{ p.school }}{% if p.city or p.state %} — {{ p.city }}{{ ", " if p.city and p.state else "" }}{{ p.state }}{% endif %}</div>
+            <div class="player-location" style="text-align:center;">🏫 {{ p.school }}</div>
             {% endif %}
             {% if p and (p.hudl_url or p.x_url or p.instagram_url) %}
             <div style="position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:8px; align-items:center;">

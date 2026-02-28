@@ -296,7 +296,8 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
         profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
     else:
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False})
+    teams = db.query(Team).order_by(Team.name).all()
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -319,8 +320,6 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.vertical = form.get("vertical", "")
         p.gpa = form.get("gpa", "")
         p.school = form.get("school", "")
-        p.city = form.get("city", "")
-        p.state = form.get("state", "")
         p.bio = form.get("bio", "")
         p.link1_label = form.get("link1_label", "")
         p.link1_url = form.get("link1_url", "")
@@ -354,7 +353,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
     else:
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True})
+    teams = db.query(Team).order_by(Team.name).all()
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
