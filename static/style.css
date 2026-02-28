@@ -661,14 +661,17 @@ textarea { resize: vertical; }
 .team-card {
     display: flex; flex-direction: column; align-items: center;
     gap: 12px; padding: 36px 24px;
-    background: var(--white); border: 2px solid var(--gray-200);
+    background: #ffffff;
+    border: 2.5px solid #0a1628;
     border-radius: 16px; text-decoration: none; color: inherit;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
     text-align: center;
 }
 .team-card:hover {
-    border-color: var(--gold); box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
+    border-color: #e8a020;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    transform: translateY(-3px);
 }
 .team-card-icon { font-size: 40px; }
 .team-card-name { font-size: 18px; font-weight: 700; color: var(--navy); }
