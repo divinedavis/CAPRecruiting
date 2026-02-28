@@ -100,6 +100,8 @@ class PlayerProfile(Base):
     hudl_url = Column(String, default="")
     x_url = Column(String, default="")
     instagram_url = Column(String, default="")
+    phone = Column(String, default="")
+    contact_email = Column(String, default="")
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -117,6 +119,8 @@ class CoachProfile(Base):
     link2_label = Column(String, default="")
     link2_url = Column(String, default="")
     photo = Column(String, default="")
+    phone = Column(String, default="")
+    contact_email = Column(String, default="")
 
 class Message(Base):
     __tablename__ = "messages"
@@ -327,6 +331,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.hudl_url = form.get("hudl_url", "")
         p.x_url = form.get("x_url", "")
         p.instagram_url = form.get("instagram_url", "")
+        p.phone = form.get("phone", "")
+        p.contact_email = form.get("contact_email", "")
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
         c.first_name = form.get("first_name", "")
@@ -340,6 +346,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         c.link1_url = form.get("link1_url", "")
         c.link2_label = form.get("link2_label", "")
         c.link2_url = form.get("link2_url", "")
+        c.phone = form.get("phone", "")
+        c.contact_email = form.get("contact_email", "")
     db.commit()
 
     if user.role == "player":

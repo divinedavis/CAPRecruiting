@@ -219,6 +219,19 @@
 
             {% endif %}
 
+            <div class="form-section">
+                <h2>Contact Info <span class="section-hint" style="font-size:13px; font-weight:400; margin-left:8px;">Only visible to logged-in users</span></h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" name="phone" value="{{ profile.phone if profile else '' }}" placeholder="e.g. (555) 867-5309">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email</label>
+                        <input type="email" name="contact_email" value="{{ profile.contact_email if profile else '' }}" placeholder="your@email.com">
+                    </div>
+                </div>
+            </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary btn-lg">Save Profile</button>
                 <a href="/profile/{{ user.username }}" class="btn btn-outline btn-lg">View My Profile</a>

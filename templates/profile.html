@@ -159,6 +159,34 @@
                 </div>
             </div>
             {% endif %}
+            <!-- Contact Info — logged-in users only -->
+            {% if current_user and profile and (profile.phone or profile.contact_email) %}
+            <div class="profile-section">
+                <h2>Contact</h2>
+                <div class="contact-list">
+                    {% if profile.phone %}
+                    <div class="contact-row">
+                        <span class="contact-icon">📞</span>
+                        <a href="tel:{{ profile.phone }}" class="contact-value">{{ profile.phone }}</a>
+                    </div>
+                    {% endif %}
+                    {% if profile.contact_email %}
+                    <div class="contact-row">
+                        <span class="contact-icon">✉️</span>
+                        <a href="mailto:{{ profile.contact_email }}" class="contact-value">{{ profile.contact_email }}</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif not current_user and profile and (profile.phone or profile.contact_email) %}
+            <div class="profile-section">
+                <h2>Contact</h2>
+                <div class="contact-locked">
+                    <span style="font-size:24px;">🔒</span>
+                    <p><a href="/login">Sign in</a> to view contact information</p>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
