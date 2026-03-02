@@ -155,33 +155,24 @@
             <div class="form-section">
                 <h2>Scholarship Offers</h2>
                 <p class="section-hint">Add up to 5 schools that have offered you a scholarship</p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Offer 1</label>
-                        <input type="text" name="offer1" value="{{ profile.offer1 if profile else '' }}" placeholder="e.g. Ohio State">
-                    </div>
-                    <div class="form-group">
-                        <label>Offer 2</label>
-                        <input type="text" name="offer2" value="{{ profile.offer2 if profile else '' }}" placeholder="e.g. Michigan">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Offer 3</label>
-                        <input type="text" name="offer3" value="{{ profile.offer3 if profile else '' }}" placeholder="e.g. Alabama">
-                    </div>
-                    <div class="form-group">
-                        <label>Offer 4</label>
-                        <input type="text" name="offer4" value="{{ profile.offer4 if profile else '' }}" placeholder="e.g. Georgia">
+                {% for n in [1, 2, 3, 4, 5] %}
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Offer {{ n }}</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <select id="offer{{ n }}_div" onchange="offerDivChange({{ n }})" style="flex:1; min-width:120px;">
+                            <option value="">Division</option>
+                            <option value="Division I">Division I</option>
+                            <option value="Division II">Division II</option>
+                        </select>
+                        <select id="offer{{ n }}_conf" onchange="offerConfChange({{ n }})" style="flex:1.5; min-width:150px;">
+                            <option value="">Conference</option>
+                        </select>
+                        <select id="offer{{ n }}_school" name="offer{{ n }}" style="flex:2; min-width:160px;">
+                            <option value="">School</option>
+                        </select>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Offer 5</label>
-                        <input type="text" name="offer5" value="{{ profile.offer5 if profile else '' }}" placeholder="e.g. Notre Dame">
-                    </div>
-                    <div class="form-group"></div>
-                </div>
+                {% endfor %}
             </div>
 
             <div class="form-section">
@@ -375,6 +366,104 @@ document.getElementById('photo-input').addEventListener('change', function() {
     reader.readAsDataURL(file);
     // Auto-submit the photo form
     document.getElementById('photo-form').submit();
+});
+</script>
+<script>
+const CFBD = {
+  "Division I": {
+    "ACC": ["Boston College","Clemson","Duke","Florida State","Georgia Tech","Louisville","Miami (FL)","NC State","North Carolina","Pittsburgh","SMU","Stanford","Syracuse","Virginia","Virginia Tech","Wake Forest"],
+    "Big Ten": ["Illinois","Indiana","Iowa","Maryland","Michigan","Michigan State","Minnesota","Nebraska","Northwestern","Ohio State","Oregon","Penn State","Purdue","Rutgers","UCLA","USC","Washington","Wisconsin"],
+    "Big 12": ["Arizona","Arizona State","Baylor","BYU","Cincinnati","Colorado","Houston","Iowa State","Kansas","Kansas State","Oklahoma State","TCU","Texas Tech","UCF","Utah","West Virginia"],
+    "SEC": ["Alabama","Arkansas","Auburn","Florida","Georgia","Kentucky","LSU","Mississippi State","Missouri","Oklahoma","Ole Miss","South Carolina","Tennessee","Texas","Texas A&M","Vanderbilt"],
+    "AAC": ["Charlotte","East Carolina","FAU","Memphis","North Texas","Rice","South Florida","Tulane","Tulsa","UTSA"],
+    "Conference USA": ["FIU","Jacksonville State","Kennesaw State","Liberty","Louisiana Tech","Middle Tennessee","New Mexico State","Sam Houston","UTEP","Western Kentucky"],
+    "MAC": ["Akron","Ball State","Bowling Green","Buffalo","Central Michigan","Eastern Michigan","Kent State","Miami (OH)","Northern Illinois","Ohio","Toledo","Western Michigan"],
+    "Mountain West": ["Air Force","Boise State","Colorado State","Fresno State","Hawaii","Nevada","New Mexico","San Diego State","San Jose State","UNLV","Utah State","Wyoming"],
+    "Sun Belt": ["Appalachian State","Arkansas State","Coastal Carolina","Georgia Southern","Georgia State","James Madison","Louisiana","Louisiana Monroe","Marshall","Old Dominion","South Alabama","Southern Miss","Texas State","Troy"],
+    "FBS Independents": ["Army","Connecticut","Massachusetts","Navy","Notre Dame"],
+    "CAA (FCS)": ["Delaware","Elon","Hampton","Maine","Monmouth","New Hampshire","Rhode Island","Richmond","Stony Brook","Towson","Villanova","William & Mary"],
+    "Missouri Valley (FCS)": ["Illinois State","Indiana State","Missouri State","Murray State","North Dakota State","Northern Iowa","South Dakota","South Dakota State","Southern Illinois","Youngstown State"],
+    "Big South-OVC (FCS)": ["Austin Peay","Bellarmine","Charleston Southern","Eastern Kentucky","Gardner-Webb","Lindenwood","Morehead State","North Alabama","Presbyterian","Robert Morris","SE Missouri State","Tennessee State","Tennessee Tech","UT Martin"],
+    "Southern Conference (FCS)": ["Chattanooga","East Tennessee State","Furman","Mercer","Samford","The Citadel","VMI","Western Carolina","Wofford"],
+    "Southland (FCS)": ["Houston Christian","Incarnate Word","Lamar","McNeese","Nicholls","Northwestern State","SE Louisiana","Stephen F. Austin","Tarleton State"],
+    "SWAC (FCS)": ["Alabama A&M","Alabama State","Alcorn State","Arkansas-Pine Bluff","Bethune-Cookman","Florida A&M","Grambling","Jackson State","Mississippi Valley State","Prairie View A&M","Southern","Texas Southern"],
+    "MEAC (FCS)": ["Delaware State","Howard","Morgan State","Norfolk State","North Carolina A&T","North Carolina Central","South Carolina State"],
+    "Patriot League (FCS)": ["Bucknell","Colgate","Fordham","Georgetown","Holy Cross","Lafayette","Lehigh"],
+    "Pioneer League (FCS)": ["Butler","Campbell","Davidson","Dayton","Drake","Marist","San Diego","Stetson","Valparaiso"],
+    "NEC (FCS)": ["Bryant","Central Connecticut","Duquesne","LIU","Merrimack","Sacred Heart","Saint Francis","Stonehill"],
+    "FCS Independents": ["North Dakota","Southern Utah","UC Davis"]
+  },
+  "Division II": {
+    "CIAA": ["Bowie State","Elizabeth City State","Fayetteville State","Johnson C. Smith","Livingstone","Shaw","Virginia State","Virginia Union","Winston-Salem State"],
+    "GLIAC": ["Davenport","Ferris State","Grand Valley State","Michigan Tech","Northwood","Saginaw Valley State","Tiffin","Wayne State (MI)"],
+    "GNAC": ["Azusa Pacific","Cal Poly Humboldt","Chico State","Simon Fraser","Western Oregon"],
+    "Gulf South": ["Christian Brothers","Delta State","Shorter","West Alabama","West Florida","West Georgia"],
+    "MIAA": ["Emporia State","Fort Hays State","Missouri Southern","Missouri Western","Pittsburg State","Washburn"],
+    "Mountain East": ["Alderson Broaddus","Concord","Fairmont State","Frostburg State","Glenville State","Notre Dame (OH)","Salem","West Liberty","West Virginia State","West Virginia Wesleyan","Wheeling"],
+    "NE10": ["American International","Assumption","Bentley","New Haven","Southern Connecticut"],
+    "NSIC": ["Augustana (SD)","Bemidji State","Minnesota Duluth","Minnesota State","Minot State","Northern State","Sioux Falls","Southwest Minnesota State","Upper Iowa","Wayne State (NE)","Winona State"],
+    "PSAC": ["Bloomsburg","California (PA)","Clarion","East Stroudsburg","Edinboro","IUP","Kutztown","Lock Haven","Mansfield","Millersville","Shippensburg","Slippery Rock"],
+    "Rocky Mountain": ["Adams State","Black Hills State","Chadron State","Colorado Mesa","Colorado School of Mines","Fort Lewis","New Mexico Highlands","South Dakota Mines","Western Colorado"],
+    "South Atlantic": ["Carson-Newman","Catawba","Lenoir-Rhyne","Mars Hill","Newberry","Tusculum","Wingate"],
+    "SIAC": ["Albany State","Clark Atlanta","Fort Valley State","Kentucky State","Lane","Miles","Morehouse","Savannah State","Stillman","Tuskegee"],
+    "Lone Star": ["Angelo State","Eastern New Mexico","Midwestern State","Sul Ross State","Texas A&M-Commerce","Texas A&M-Kingsville","West Texas A&M"],
+    "SAA": ["Barton","Limestone","Newberry","North Greenville","Shorter","Young Harris"]
+  }
+};
+
+// Reverse lookup: school name -> {division, conference}
+const SCHOOL_LOOKUP = {};
+for (const [div, confs] of Object.entries(CFBD)) {
+  for (const [conf, schools] of Object.entries(confs)) {
+    for (const s of schools) SCHOOL_LOOKUP[s] = {division: div, conference: conf};
+  }
+}
+
+function offerDivChange(n) {
+  const div = document.getElementById('offer'+n+'_div').value;
+  const confSel = document.getElementById('offer'+n+'_conf');
+  const schoolSel = document.getElementById('offer'+n+'_school');
+  confSel.innerHTML = '<option value="">Conference</option>';
+  schoolSel.innerHTML = '<option value="">School</option>';
+  if (!div) return;
+  Object.keys(CFBD[div]).sort().forEach(c => confSel.add(new Option(c, c)));
+}
+
+function offerConfChange(n) {
+  const div = document.getElementById('offer'+n+'_div').value;
+  const conf = document.getElementById('offer'+n+'_conf').value;
+  const schoolSel = document.getElementById('offer'+n+'_school');
+  schoolSel.innerHTML = '<option value="">School</option>';
+  if (!div || !conf) return;
+  [...CFBD[div][conf]].sort().forEach(s => schoolSel.add(new Option(s, s)));
+}
+
+function preloadOffer(n, school) {
+  if (!school) return;
+  const info = SCHOOL_LOOKUP[school];
+  if (!info) return;
+  const divSel = document.getElementById('offer'+n+'_div');
+  const confSel = document.getElementById('offer'+n+'_conf');
+  const schoolSel = document.getElementById('offer'+n+'_school');
+  divSel.value = info.division;
+  confSel.innerHTML = '<option value="">Conference</option>';
+  Object.keys(CFBD[info.division]).sort().forEach(c => confSel.add(new Option(c, c)));
+  confSel.value = info.conference;
+  schoolSel.innerHTML = '<option value="">School</option>';
+  [...CFBD[info.division][info.conference]].sort().forEach(s => schoolSel.add(new Option(s, s)));
+  schoolSel.value = school;
+}
+
+const SAVED_OFFERS = [
+  "",
+  "{{ (profile.offer1 or '') | e if profile else '' }}",
+  "{{ (profile.offer2 or '') | e if profile else '' }}",
+  "{{ (profile.offer3 or '') | e if profile else '' }}",
+  "{{ (profile.offer4 or '') | e if profile else '' }}",
+  "{{ (profile.offer5 or '') | e if profile else '' }}"
+];
+document.addEventListener('DOMContentLoaded', function() {
+  for (let n = 1; n <= 5; n++) { if (SAVED_OFFERS[n]) preloadOffer(n, SAVED_OFFERS[n]); }
 });
 </script>
 {% endblock %}
