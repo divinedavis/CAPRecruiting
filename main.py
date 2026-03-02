@@ -127,6 +127,17 @@ class CoachProfile(Base):
     phone = Column(String, default="")
     contact_email = Column(String, default="")
 
+class Video(Base):
+    __tablename__ = "videos"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String, default="")
+    url = Column(String, nullable=False)
+    embed_url = Column(String, nullable=False)
+    thumbnail_url = Column(String, default="")
+    is_pinned = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True)
@@ -164,6 +175,16 @@ def unread_sender_count(db: Session, user_id: int) -> int:
         Message.read == False
     ).scalar()
     return result or 0
+
+def parse_video_url(url: str):
+    yt = re.search(r'(?:youtube\.com/watch\?.*v=|youtu\.be/)([a-zA-Z0-9_-]{11})', url)
+    if yt:
+        vid_id = yt.group(1)
+        return f"https://www.youtube.com/embed/{vid_id}", f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg"
+    vimeo = re.search(r'vimeo\.com/(\d+)', url)
+    if vimeo:
+        return f"https://player.vimeo.com/video/{vimeo.group(1)}", ""
+    return None, None
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
@@ -379,14 +400,107 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     else:
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == target.id).first()
 
+    all_vids = db.query(Video).filter(Video.user_id == target.id).order_by(
+        Video.is_pinned.desc(), Video.created_at.desc()
+    ).limit(6).all()
+    videos = all_vids[:5]
+    has_more_videos = len(all_vids) > 5
+    total_video_count = db.query(Video).filter(Video.user_id == target.id).count() if has_more_videos else len(videos)
+    is_owner = bool(current_user and current_user.id == target.id)
+    video_error = request.query_params.get("video_error")
+
     unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
     return templates.TemplateResponse("profile.html", {
         "request": request,
         "target": target,
         "profile": profile,
         "current_user": current_user,
-        "unread_count": unread_count
+        "unread_count": unread_count,
+        "videos": videos,
+        "has_more_videos": has_more_videos,
+        "total_video_count": total_video_count,
+        "is_owner": is_owner,
+        "video_error": video_error,
     })
+
+@app.get("/videos/{username}", response_class=HTMLResponse)
+async def all_videos(username: str, request: Request, db: Session = Depends(get_db)):
+    current_user_id = request.session.get("user_id")
+    current_user = db.query(User).filter(User.id == current_user_id).first() if current_user_id else None
+    target = db.query(User).filter(User.username == username).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.role == "player":
+        target_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target.id).first()
+    else:
+        target_profile = db.query(CoachProfile).filter(CoachProfile.user_id == target.id).first()
+    videos = db.query(Video).filter(Video.user_id == target.id).order_by(
+        Video.is_pinned.desc(), Video.created_at.desc()
+    ).all()
+    unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
+    is_owner = bool(current_user and current_user.id == target.id)
+    video_error = request.query_params.get("video_error")
+    return templates.TemplateResponse("videos.html", {
+        "request": request,
+        "target": target,
+        "target_profile": target_profile,
+        "videos": videos,
+        "current_user": current_user,
+        "unread_count": unread_count,
+        "is_owner": is_owner,
+        "video_error": video_error,
+    })
+
+@app.post("/profile/videos/add")
+async def add_video(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    form = await request.form()
+    url = form.get("url", "").strip()
+    title = form.get("title", "").strip()
+    redirect_to = form.get("redirect_to", f"/profile/{user.username}")
+    embed_url, thumbnail_url = parse_video_url(url)
+    if not embed_url:
+        return RedirectResponse(redirect_to + "?video_error=1", status_code=302)
+    db.add(Video(user_id=user_id, title=title, url=url, embed_url=embed_url, thumbnail_url=thumbnail_url))
+    db.commit()
+    return RedirectResponse(redirect_to, status_code=302)
+
+@app.post("/profile/videos/{video_id}/pin")
+async def pin_video(video_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == user_id).first()
+    if not video:
+        raise HTTPException(status_code=404)
+    user = db.query(User).filter(User.id == user_id).first()
+    form = await request.form()
+    redirect_to = form.get("redirect_to", f"/profile/{user.username}")
+    if video.is_pinned:
+        video.is_pinned = False
+    else:
+        db.query(Video).filter(Video.user_id == user_id).update({"is_pinned": False})
+        video.is_pinned = True
+    db.commit()
+    return RedirectResponse(redirect_to, status_code=302)
+
+@app.post("/profile/videos/{video_id}/delete")
+async def delete_video(video_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == user_id).first()
+    if not video:
+        raise HTTPException(status_code=404)
+    user = db.query(User).filter(User.id == user_id).first()
+    form = await request.form()
+    redirect_to = form.get("redirect_to", f"/profile/{user.username}")
+    db.delete(video)
+    db.commit()
+    return RedirectResponse(redirect_to, status_code=302)
 
 @app.get("/admin/teams", response_class=HTMLResponse)
 async def admin_teams_get(request: Request, db: Session = Depends(get_db)):

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ target_profile.first_name ~ ' ' ~ target_profile.last_name if target_profile and (target_profile.first_name or target_profile.last_name) else target.username }}'s Videos — Collegiate Athletic Planning{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header">
+        <div>
+            <a href="/profile/{{ target.username }}" class="back-link">← Back to Profile</a>
+            <h1>{% if target_profile and (target_profile.first_name or target_profile.last_name) %}{{ target_profile.first_name }} {{ target_profile.last_name }}'s Videos{% else %}{{ target.username }}'s Videos{% endif %}</h1>
+            <p class="page-sub">{{ videos|length }} video{{ 's' if videos|length != 1 else '' }}</p>
+        </div>
+        {% if is_owner %}
+        <div class="header-actions">
+            <button onclick="var f=document.getElementById('add-video-form'); f.style.display=f.style.display==='none'?'block':'none';" class="btn btn-primary">+ Add Video</button>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if is_owner %}
+    <div id="add-video-form" style="display:none; background:white; border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:24px; margin-bottom:24px;">
+        <h3 style="font-size:16px; font-weight:700; color:var(--navy); margin-bottom:16px;">Add a Video</h3>
+        <form method="post" action="/profile/videos/add">
+            <input type="hidden" name="redirect_to" value="/videos/{{ target.username }}">
+            <div class="form-row" style="margin-bottom:12px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Title (optional)</label>
+                    <input type="text" name="title" placeholder="e.g. Junior Highlights 2026">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>YouTube or Vimeo URL</label>
+                    <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Video</button>
+            {% if video_error %}
+            <p style="color:#ef4444; font-size:13px; margin-top:8px; display:inline-block; margin-left:12px;">Invalid URL — paste a YouTube or Vimeo link.</p>
+            {% endif %}
+        </form>
+    </div>
+    {% endif %}
+
+    {% if videos %}
+    <div class="video-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));">
+        {% for video in videos %}
+        <div class="video-card {% if video.is_pinned %}pinned{% endif %}">
+            {% if video.is_pinned %}<div class="pin-badge">📌 Pinned</div>{% endif %}
+            <div class="video-thumb-wrap" onclick="playVideo(this,'{{ video.embed_url }}')">
+                {% if video.thumbnail_url %}
+                <img src="{{ video.thumbnail_url }}" class="video-thumb" alt="{{ video.title or 'Video' }}">
+                {% else %}
+                <div class="video-thumb-placeholder">🎬</div>
+                {% endif %}
+                <div class="video-play-overlay">▶</div>
+            </div>
+            <div class="video-frame-wrap" style="display:none;">
+                <iframe src="" allowfullscreen class="video-frame"></iframe>
+            </div>
+            <div class="video-meta">
+                <span class="video-title">{{ video.title or 'Untitled Video' }}</span>
+                {% if is_owner %}
+                <div class="video-actions">
+                    <form method="post" action="/profile/videos/{{ video.id }}/pin" style="display:inline;">
+                        <input type="hidden" name="redirect_to" value="/videos/{{ target.username }}">
+                        <button type="submit" class="video-action-btn" title="{{ 'Unpin' if video.is_pinned else 'Pin to profile' }}">{{ '📌' if video.is_pinned else '📍' }}</button>
+                    </form>
+                    <form method="post" action="/profile/videos/{{ video.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this video?')">
+                        <input type="hidden" name="redirect_to" value="/videos/{{ target.username }}">
+                        <button type="submit" class="video-action-btn" title="Delete">🗑</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🎬</div>
+        <h3>No videos yet</h3>
+        {% if is_owner %}
+        <p>Add your highlights from YouTube or Vimeo using the button above.</p>
+        {% else %}
+        <p>This player hasn't added any videos yet.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function playVideo(thumbWrap, embedUrl) {
+    const card = thumbWrap.closest('.video-card');
+    const frameWrap = card.querySelector('.video-frame-wrap');
+    const iframe = card.querySelector('.video-frame');
+    thumbWrap.style.display = 'none';
+    frameWrap.style.display = 'block';
+    iframe.src = embedUrl + '?autoplay=1';
+}
+</script>
+{% endblock %}

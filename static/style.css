@@ -741,6 +741,63 @@ textarea { resize: vertical; }
     box-shadow: 0 6px 16px rgba(249,107,43,0.5);
 }
 
+/* ── Video section ───────────────────────────────────────────── */
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+.video-card {
+    background: var(--gray-50);
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+}
+.video-card.pinned { border-color: var(--gold); }
+.pin-badge {
+    position: absolute; top: 8px; left: 8px; z-index: 2;
+    background: var(--gold); color: var(--navy);
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px;
+}
+.video-thumb-wrap {
+    position: relative; aspect-ratio: 16/9;
+    cursor: pointer; overflow: hidden; background: #000;
+}
+.video-thumb { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.2s; }
+.video-thumb-wrap:hover .video-thumb { opacity: 0.8; }
+.video-thumb-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; background: var(--navy);
+}
+.video-play-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; color: white;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    opacity: 0; transition: opacity 0.2s;
+}
+.video-thumb-wrap:hover .video-play-overlay { opacity: 1; }
+.video-frame-wrap { aspect-ratio: 16/9; }
+.video-frame { width: 100%; height: 100%; border: none; }
+.video-meta {
+    padding: 10px 12px;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 8px;
+}
+.video-title {
+    font-size: 13px; font-weight: 600; color: var(--navy);
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.video-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.video-action-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; padding: 2px 4px; border-radius: 4px;
+}
+.video-action-btn:hover { background: var(--gray-200); }
+
 /* ── Contact section on profile ──────────────────────────────── */
 .contact-list { display: flex; flex-direction: column; gap: 12px; }
 .contact-row { display: flex; align-items: center; gap: 12px; }
