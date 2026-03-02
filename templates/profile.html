@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Bearcats Recruiting{% endblock %}
+{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Collegiate Athletic Planning{% endblock %}
 
 {% set display_name = (profile.first_name ~ ' ' ~ profile.last_name).strip() if profile and (profile.first_name or profile.last_name) else target.username %}
-{% set og_desc %}{% if target.role == 'player' %}{% if profile and profile.position %}{{ profile.position }}{% endif %}{% if profile and profile.year %} · Class of {{ profile.year }}{% endif %}{% if profile and profile.school %} · {{ profile.school }}{% endif %} — View full recruiting profile on Bearcats Recruiting.{% else %}{% if profile and profile.title %}{{ profile.title }}{% endif %}{% if profile and profile.school %} at {{ profile.school }}{% endif %} — View coach profile on Bearcats Recruiting.{% endif %}{% endset %}
+{% set og_desc %}{% if target.role == 'player' %}{% if profile and profile.position %}{{ profile.position }}{% endif %}{% if profile and profile.year %} · Class of {{ profile.year }}{% endif %}{% if profile and profile.school %} · {{ profile.school }}{% endif %} — View full recruiting profile on Collegiate Athletic Planning.{% else %}{% if profile and profile.title %}{{ profile.title }}{% endif %}{% if profile and profile.school %} at {{ profile.school }}{% endif %} — View coach profile on Collegiate Athletic Planning.{% endif %}{% endset %}
 {% set og_img = ('https://bearcatrecruiting.com' ~ profile.photo) if profile and profile.photo else 'https://bearcatrecruiting.com/static/og-default.png' %}
 
 {% block og_type %}profile{% endblock %}
-{% block og_title %}{{ display_name }} — Bearcats Recruiting{% endblock %}
+{% block og_title %}{{ display_name }} — Collegiate Athletic Planning{% endblock %}
 {% block og_description %}{{ og_desc }}{% endblock %}
 {% block og_image %}{{ og_img }}{% endblock %}
 {% block og_url %}https://bearcatrecruiting.com/profile/{{ target.username }}{% endblock %}
-{% block tw_title %}{{ display_name }} — Bearcats Recruiting{% endblock %}
+{% block tw_title %}{{ display_name }} — Collegiate Athletic Planning{% endblock %}
 {% block tw_description %}{{ og_desc }}{% endblock %}
 {% block tw_image %}{{ og_img }}{% endblock %}
 
