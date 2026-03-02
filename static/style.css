@@ -1,11 +1,11 @@
 /* ── Reset & Base ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-    --navy: #0a1628;
-    --navy-mid: #12243f;
-    --navy-light: #1c3557;
-    --gold: #e8a020;
-    --gold-light: #f5c355;
+    --navy: #1d3461;
+    --navy-mid: #162952;
+    --navy-light: #1e3d7a;
+    --gold: #76C831;
+    --gold-light: #8fd644;
     --white: #ffffff;
     --gray-50: #f8f9fa;
     --gray-100: #f0f2f5;
@@ -177,8 +177,8 @@ textarea { resize: vertical; }
 .hero-content { max-width: 580px; }
 .hero-badge {
     display: inline-block;
-    background: rgba(232,160,32,0.15);
-    border: 1px solid rgba(232,160,32,0.4);
+    background: rgba(118,200,49,0.15);
+    border: 1px solid rgba(118,200,49,0.4);
     color: var(--gold-light);
     padding: 6px 14px;
     border-radius: 20px;
@@ -198,8 +198,8 @@ textarea { resize: vertical; }
 .hero-art { flex-shrink: 0; }
 .art-circle {
     width: 240px; height: 240px;
-    background: rgba(232,160,32,0.12);
-    border: 2px solid rgba(232,160,32,0.25);
+    background: rgba(118,200,49,0.12);
+    border: 2px solid rgba(118,200,49,0.25);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
 }
@@ -268,7 +268,7 @@ textarea { resize: vertical; }
 }
 .role-card input:checked + .role-card-inner {
     border-color: var(--gold);
-    background: rgba(232,160,32,0.06);
+    background: rgba(118,200,49,0.06);
 }
 .role-card-inner:hover { border-color: var(--gold-light); }
 .role-icon { font-size: 32px; }
@@ -377,7 +377,7 @@ textarea { resize: vertical; }
     font-size: 12px;
     font-weight: 700;
 }
-.role-tag.player { background: rgba(232,160,32,0.15); color: #92400e; }
+.role-tag.player { background: rgba(118,200,49,0.15); color: #2d6a1a; }
 .role-tag.coach { background: rgba(10,22,40,0.1); color: var(--navy); }
 .position-tag {
     background: var(--gold);
@@ -428,7 +428,7 @@ textarea { resize: vertical; }
     color: var(--navy);
     transition: all 0.18s;
 }
-.ext-link:hover { border-color: var(--gold); background: rgba(232,160,32,0.05); }
+.ext-link:hover { border-color: var(--gold); background: rgba(118,200,49,0.05); }
 .ext-arrow { color: var(--gold); font-weight: 700; }
 
 /* ── Edit Profile ─────────────────────────────────────────────── */
@@ -662,14 +662,14 @@ textarea { resize: vertical; }
     display: flex; flex-direction: column; align-items: center;
     gap: 12px; padding: 36px 24px;
     background: #ffffff;
-    border: 2.5px solid #0a1628;
+    border: 2.5px solid #1d3461;
     border-radius: 16px; text-decoration: none; color: inherit;
     box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
     text-align: center;
 }
 .team-card:hover {
-    border-color: #e8a020;
+    border-color: #76C831;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     transform: translateY(-3px);
 }
