@@ -268,15 +268,25 @@
                 {% endif %}
             </div>
 
-            <form method="post" action="/profile/videos/add" style="margin-bottom:20px;">
+            <form method="post" action="/profile/videos/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
                 <input type="hidden" name="redirect_to" value="/profile/edit">
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-                    <input type="text" name="title" placeholder="Title (optional)" style="flex:1; min-width:140px;">
-                    <input type="url" name="url" placeholder="YouTube or Vimeo URL" required style="flex:2; min-width:200px;">
-                    <button type="submit" class="btn btn-primary">Add Video</button>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end;">
+                    <div style="flex:1; min-width:140px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Title (optional)</label>
+                        <input type="text" name="title" placeholder="e.g. Junior Highlights 2026">
+                    </div>
+                    <div style="flex:2; min-width:200px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Video File (MP4, MOV, WebM — max 500MB)</label>
+                        <input type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/avi" required style="padding:8px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="flex-shrink:0;">Upload</button>
                 </div>
-                {% if video_error %}
-                <p style="color:#ef4444; font-size:13px; margin:0;">Invalid URL — paste a YouTube or Vimeo link.</p>
+                {% if video_error == 'type' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Invalid file type. Use MP4, MOV, or WebM.</p>
+                {% elif video_error == 'size' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">File too large. Max 500MB.</p>
+                {% elif video_error == 'upload' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Upload failed. Please try again.</p>
                 {% endif %}
             </form>
 
@@ -285,16 +295,10 @@
                 {% for video in videos %}
                 <div class="video-card {% if video.is_pinned %}pinned{% endif %}">
                     {% if video.is_pinned %}<div class="pin-badge">📌 Pinned</div>{% endif %}
-                    <div class="video-thumb-wrap" onclick="playVideo(this,'{{ video.embed_url }}')">
-                        {% if video.thumbnail_url %}
-                        <img src="{{ video.thumbnail_url }}" class="video-thumb" alt="{{ video.title or 'Video' }}">
-                        {% else %}
-                        <div class="video-thumb-placeholder">🎬</div>
-                        {% endif %}
-                        <div class="video-play-overlay">▶</div>
-                    </div>
-                    <div class="video-frame-wrap" style="display:none;">
-                        <iframe src="" allowfullscreen class="video-frame"></iframe>
+                    <div class="video-frame-wrap">
+                        <video controls preload="none" style="width:100%;height:100%;display:block;background:#000;">
+                            <source src="{{ video.url }}" type="video/mp4">
+                        </video>
                     </div>
                     <div class="video-meta">
                         <span class="video-title">{{ video.title or 'Untitled Video' }}</span>
@@ -319,16 +323,6 @@
     </div>
 </div>
 
-<script>
-function playVideo(thumbWrap, embedUrl) {
-    const card = thumbWrap.closest('.video-card');
-    const frameWrap = card.querySelector('.video-frame-wrap');
-    const iframe = card.querySelector('.video-frame');
-    thumbWrap.style.display = 'none';
-    frameWrap.style.display = 'block';
-    iframe.src = embedUrl + '?autoplay=1';
-}
-</script>
 <script>
 document.getElementById('photo-input').addEventListener('change', function() {
     const file = this.files[0];

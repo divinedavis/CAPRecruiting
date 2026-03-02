@@ -43,16 +43,10 @@
         {% for video in videos %}
         <div class="video-card {% if video.is_pinned %}pinned{% endif %}">
             {% if video.is_pinned %}<div class="pin-badge">📌 Pinned</div>{% endif %}
-            <div class="video-thumb-wrap" onclick="playVideo(this,'{{ video.embed_url }}')">
-                {% if video.thumbnail_url %}
-                <img src="{{ video.thumbnail_url }}" class="video-thumb" alt="{{ video.title or 'Video' }}">
-                {% else %}
-                <div class="video-thumb-placeholder">🎬</div>
-                {% endif %}
-                <div class="video-play-overlay">▶</div>
-            </div>
-            <div class="video-frame-wrap" style="display:none;">
-                <iframe src="" allowfullscreen class="video-frame"></iframe>
+            <div class="video-frame-wrap">
+                <video controls preload="none" style="width:100%;height:100%;display:block;background:#000;">
+                    <source src="{{ video.url }}" type="video/mp4">
+                </video>
             </div>
             <div class="video-meta">
                 <span class="video-title">{{ video.title or 'Untitled Video' }}</span>

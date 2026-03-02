@@ -1,3 +1,5 @@
+import boto3
+from botocore.client import Config
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +15,23 @@ from datetime import datetime
 from typing import Optional, Dict, List
 
 app = FastAPI()
+
+# ── DigitalOcean Spaces (S3-compatible) ────────────────────────────────────────
+SPACES_KEY    = os.environ.get("SPACES_KEY", "")
+SPACES_SECRET = os.environ.get("SPACES_SECRET", "")
+SPACES_REGION = os.environ.get("SPACES_REGION", "nyc3")
+SPACES_BUCKET = os.environ.get("SPACES_BUCKET", "cap-recruiting-videos")
+SPACES_ENDPOINT = f"https://{SPACES_REGION}.digitaloceanspaces.com"
+SPACES_BASE_URL = f"https://{SPACES_BUCKET}.{SPACES_REGION}.digitaloceanspaces.com"
+
+s3 = boto3.client(
+    "s3",
+    region_name=SPACES_REGION,
+    endpoint_url=SPACES_ENDPOINT,
+    aws_access_key_id=SPACES_KEY,
+    aws_secret_access_key=SPACES_SECRET,
+    config=Config(signature_version="s3v4"),
+)
 
 # ── WebSocket Connection Manager ───────────────────────────────────────────────
 
@@ -176,15 +195,8 @@ def unread_sender_count(db: Session, user_id: int) -> int:
     ).scalar()
     return result or 0
 
-def parse_video_url(url: str):
-    yt = re.search(r'(?:youtube\.com/watch\?.*v=|youtu\.be/)([a-zA-Z0-9_-]{11})', url)
-    if yt:
-        vid_id = yt.group(1)
-        return f"https://www.youtube.com/embed/{vid_id}", f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg"
-    vimeo = re.search(r'vimeo\.com/(\d+)', url)
-    if vimeo:
-        return f"https://player.vimeo.com/video/{vimeo.group(1)}", ""
-    return None, None
+VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
+VIDEO_MAX_BYTES = 500 * 1024 * 1024  # 500 MB
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
@@ -454,20 +466,41 @@ async def all_videos(username: str, request: Request, db: Session = Depends(get_
         "video_error": video_error,
     })
 
-@app.post("/profile/videos/add")
-async def add_video(request: Request, db: Session = Depends(get_db)):
+@app.post("/profile/videos/upload")
+async def upload_video(
+    request: Request,
+    video: UploadFile = File(...),
+    title: str = Form(""),
+    redirect_to: str = Form("/profile/edit"),
+    db: Session = Depends(get_db)
+):
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
-    form = await request.form()
-    url = form.get("url", "").strip()
-    title = form.get("title", "").strip()
-    redirect_to = form.get("redirect_to", f"/profile/{user.username}")
-    embed_url, thumbnail_url = parse_video_url(url)
-    if not embed_url:
-        return RedirectResponse(redirect_to + "?video_error=1", status_code=302)
-    db.add(Video(user_id=user_id, title=title, url=url, embed_url=embed_url, thumbnail_url=thumbnail_url))
+
+    ext = video.filename.rsplit(".", 1)[-1].lower() if "." in video.filename else ""
+    if ext not in VIDEO_ALLOWED_EXTENSIONS:
+        return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
+
+    contents = await video.read()
+    if len(contents) > VIDEO_MAX_BYTES:
+        return RedirectResponse(redirect_to + "?video_error=size", status_code=302)
+
+    import io
+    key = f"videos/{user_id}/{uuid.uuid4().hex}.{ext}"
+    try:
+        s3.upload_fileobj(
+            io.BytesIO(contents),
+            SPACES_BUCKET,
+            key,
+            ExtraArgs={"ACL": "public-read", "ContentType": video.content_type or f"video/{ext}"}
+        )
+    except Exception:
+        return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
+
+    video_url = f"{SPACES_BASE_URL}/{key}"
+    db.add(Video(user_id=user_id, title=title.strip(), url=video_url, embed_url=video_url, thumbnail_url=""))
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
 
@@ -501,6 +534,12 @@ async def delete_video(video_id: int, request: Request, db: Session = Depends(ge
     user = db.query(User).filter(User.id == user_id).first()
     form = await request.form()
     redirect_to = form.get("redirect_to", f"/profile/{user.username}")
+    # Delete file from Spaces
+    try:
+        key = video.url.replace(f"{SPACES_BASE_URL}/", "")
+        s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+    except Exception:
+        pass
     db.delete(video)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
