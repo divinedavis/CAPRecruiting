@@ -153,6 +153,38 @@
             </div>
 
             <div class="form-section">
+                <h2>Scholarship Offers</h2>
+                <p class="section-hint">Add up to 5 schools that have offered you a scholarship</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Offer 1</label>
+                        <input type="text" name="offer1" value="{{ profile.offer1 if profile else '' }}" placeholder="e.g. Ohio State">
+                    </div>
+                    <div class="form-group">
+                        <label>Offer 2</label>
+                        <input type="text" name="offer2" value="{{ profile.offer2 if profile else '' }}" placeholder="e.g. Michigan">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Offer 3</label>
+                        <input type="text" name="offer3" value="{{ profile.offer3 if profile else '' }}" placeholder="e.g. Alabama">
+                    </div>
+                    <div class="form-group">
+                        <label>Offer 4</label>
+                        <input type="text" name="offer4" value="{{ profile.offer4 if profile else '' }}" placeholder="e.g. Georgia">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Offer 5</label>
+                        <input type="text" name="offer5" value="{{ profile.offer5 if profile else '' }}" placeholder="e.g. Notre Dame">
+                    </div>
+                    <div class="form-group"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
                 <h2>External Links</h2>
                 <p class="section-hint">Add your Hudl profile and other links so coaches can find your highlights</p>
                 <div class="link-input-group">
