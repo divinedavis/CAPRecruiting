@@ -258,9 +258,77 @@
                 <a href="/profile/{{ user.username }}" class="btn btn-outline btn-lg">View My Profile</a>
             </div>
         </form>
+
+        <!-- Videos section (outside main form) -->
+        <div class="form-section">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <h2 style="margin-bottom:0;">Videos</h2>
+                {% if videos %}
+                <a href="/videos/{{ user.username }}" class="btn btn-outline btn-sm">View all →</a>
+                {% endif %}
+            </div>
+
+            <form method="post" action="/profile/videos/add" style="margin-bottom:20px;">
+                <input type="hidden" name="redirect_to" value="/profile/edit">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                    <input type="text" name="title" placeholder="Title (optional)" style="flex:1; min-width:140px;">
+                    <input type="url" name="url" placeholder="YouTube or Vimeo URL" required style="flex:2; min-width:200px;">
+                    <button type="submit" class="btn btn-primary">Add Video</button>
+                </div>
+                {% if video_error %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Invalid URL — paste a YouTube or Vimeo link.</p>
+                {% endif %}
+            </form>
+
+            {% if videos %}
+            <div class="video-grid">
+                {% for video in videos %}
+                <div class="video-card {% if video.is_pinned %}pinned{% endif %}">
+                    {% if video.is_pinned %}<div class="pin-badge">📌 Pinned</div>{% endif %}
+                    <div class="video-thumb-wrap" onclick="playVideo(this,'{{ video.embed_url }}')">
+                        {% if video.thumbnail_url %}
+                        <img src="{{ video.thumbnail_url }}" class="video-thumb" alt="{{ video.title or 'Video' }}">
+                        {% else %}
+                        <div class="video-thumb-placeholder">🎬</div>
+                        {% endif %}
+                        <div class="video-play-overlay">▶</div>
+                    </div>
+                    <div class="video-frame-wrap" style="display:none;">
+                        <iframe src="" allowfullscreen class="video-frame"></iframe>
+                    </div>
+                    <div class="video-meta">
+                        <span class="video-title">{{ video.title or 'Untitled Video' }}</span>
+                        <div class="video-actions">
+                            <form method="post" action="/profile/videos/{{ video.id }}/pin" style="display:inline;">
+                                <input type="hidden" name="redirect_to" value="/profile/edit">
+                                <button type="submit" class="video-action-btn" title="{{ 'Unpin' if video.is_pinned else 'Pin' }}">{{ '📌' if video.is_pinned else '📍' }}</button>
+                            </form>
+                            <form method="post" action="/profile/videos/{{ video.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this video?')">
+                                <input type="hidden" name="redirect_to" value="/profile/edit">
+                                <button type="submit" class="video-action-btn" title="Delete">🗑</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--gray-400); font-size:14px;">No videos yet. Add your first video above.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 
+<script>
+function playVideo(thumbWrap, embedUrl) {
+    const card = thumbWrap.closest('.video-card');
+    const frameWrap = card.querySelector('.video-frame-wrap');
+    const iframe = card.querySelector('.video-frame');
+    thumbWrap.style.display = 'none';
+    frameWrap.style.display = 'block';
+    iframe.src = embedUrl + '?autoplay=1';
+}
+</script>
 <script>
 document.getElementById('photo-input').addEventListener('change', function() {
     const file = this.files[0];

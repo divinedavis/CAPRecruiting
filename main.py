@@ -323,7 +323,9 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
     else:
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
     teams = db.query(Team).order_by(Team.name).all()
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams})
+    videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
+    video_error = request.query_params.get("video_error")
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams, "videos": videos, "video_error": video_error})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -385,7 +387,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
     else:
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
     teams = db.query(Team).order_by(Team.name).all()
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams})
+    videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
