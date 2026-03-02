@@ -196,7 +196,7 @@ def unread_sender_count(db: Session, user_id: int) -> int:
     return result or 0
 
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
-VIDEO_MAX_BYTES = 500 * 1024 * 1024  # 500 MB
+VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
@@ -483,15 +483,10 @@ async def upload_video(
     if ext not in VIDEO_ALLOWED_EXTENSIONS:
         return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
 
-    contents = await video.read()
-    if len(contents) > VIDEO_MAX_BYTES:
-        return RedirectResponse(redirect_to + "?video_error=size", status_code=302)
-
-    import io
     key = f"videos/{user_id}/{uuid.uuid4().hex}.{ext}"
     try:
         s3.upload_fileobj(
-            io.BytesIO(contents),
+            video.file,
             SPACES_BUCKET,
             key,
             ExtraArgs={"ACL": "public-read", "ContentType": video.content_type or f"video/{ext}"}
