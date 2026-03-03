@@ -129,6 +129,16 @@ class PlayerProfile(Base):
     offer3 = Column(String, default="")
     offer4 = Column(String, default="")
     offer5 = Column(String, default="")
+    visit1_school = Column(String, default="")
+    visit1_date   = Column(String, default="")
+    visit2_school = Column(String, default="")
+    visit2_date   = Column(String, default="")
+    visit3_school = Column(String, default="")
+    visit3_date   = Column(String, default="")
+    visit4_school = Column(String, default="")
+    visit4_date   = Column(String, default="")
+    visit5_school = Column(String, default="")
+    visit5_date   = Column(String, default="")
     phone = Column(String, default="")
     contact_email = Column(String, default="")
 
@@ -382,6 +392,9 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.offer3 = form.get("offer3", "")
         p.offer4 = form.get("offer4", "")
         p.offer5 = form.get("offer5", "")
+        for i in range(1, 6):
+            setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
+            setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   ""))
         p.hudl_url = form.get("hudl_url", "")
         p.x_url = form.get("x_url", "")
         p.instagram_url = form.get("instagram_url", "")
@@ -434,6 +447,23 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     is_owner = bool(current_user and current_user.id == target.id)
     video_error = request.query_params.get("video_error")
 
+    # Build visit list — only expose school data to logged-in users
+    has_visits = False
+    visit_list = []
+    if target.role == "player" and profile:
+        for i in range(1, 6):
+            school = getattr(profile, f"visit{i}_school", "") or ""
+            if school:
+                has_visits = True
+                if current_user:
+                    date_str = getattr(profile, f"visit{i}_date", "") or ""
+                    try:
+                        from datetime import datetime as _dt
+                        fmt_date = _dt.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y") if date_str else ""
+                    except Exception:
+                        fmt_date = date_str
+                    visit_list.append({"school": school, "date": fmt_date})
+
     unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
     return templates.TemplateResponse("profile.html", {
         "request": request,
@@ -446,6 +476,8 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "total_video_count": total_video_count,
         "is_owner": is_owner,
         "video_error": video_error,
+        "visit_list": visit_list,
+        "has_visits": has_visits,
     })
 
 @app.get("/videos/{username}", response_class=HTMLResponse)

@@ -176,6 +176,30 @@
             </div>
 
             <div class="form-section">
+                <h2>School Visits</h2>
+                <p class="section-hint">Add up to 5 schools you have visited on an official or unofficial visit</p>
+                {% for n in [1, 2, 3, 4, 5] %}
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Visit {{ n }}</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <select id="visit{{ n }}_div" onchange="visitDivChange({{ n }})" style="flex:1; min-width:120px;">
+                            <option value="">Division</option>
+                            <option value="Division I">Division I</option>
+                            <option value="Division II">Division II</option>
+                        </select>
+                        <select id="visit{{ n }}_conf" onchange="visitConfChange({{ n }})" style="flex:1.5; min-width:150px;">
+                            <option value="">Conference</option>
+                        </select>
+                        <select id="visit{{ n }}_school" name="visit{{ n }}_school" style="flex:2; min-width:160px;">
+                            <option value="">School</option>
+                        </select>
+                        <input type="date" name="visit{{ n }}_date" id="visit{{ n }}_date" style="flex:1; min-width:140px;">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-section">
                 <h2>External Links</h2>
                 <p class="section-hint">Add your Hudl profile and other links so coaches can find your highlights</p>
                 <div class="link-input-group">
@@ -462,8 +486,55 @@ const SAVED_OFFERS = [
   "{{ (profile.offer4 or '') | e if profile else '' }}",
   "{{ (profile.offer5 or '') | e if profile else '' }}"
 ];
+
+function visitDivChange(n) {
+  const div = document.getElementById('visit'+n+'_div').value;
+  const confSel = document.getElementById('visit'+n+'_conf');
+  const schoolSel = document.getElementById('visit'+n+'_school');
+  confSel.innerHTML = '<option value="">Conference</option>';
+  schoolSel.innerHTML = '<option value="">School</option>';
+  if (!div) return;
+  Object.keys(CFBD[div]).sort().forEach(c => confSel.add(new Option(c, c)));
+}
+function visitConfChange(n) {
+  const div = document.getElementById('visit'+n+'_div').value;
+  const conf = document.getElementById('visit'+n+'_conf').value;
+  const schoolSel = document.getElementById('visit'+n+'_school');
+  schoolSel.innerHTML = '<option value="">School</option>';
+  if (!div || !conf) return;
+  [...CFBD[div][conf]].sort().forEach(s => schoolSel.add(new Option(s, s)));
+}
+function preloadVisit(n, school, date) {
+  if (!school) return;
+  const info = SCHOOL_LOOKUP[school];
+  if (!info) return;
+  const divSel = document.getElementById('visit'+n+'_div');
+  const confSel = document.getElementById('visit'+n+'_conf');
+  const schoolSel = document.getElementById('visit'+n+'_school');
+  divSel.value = info.division;
+  confSel.innerHTML = '<option value="">Conference</option>';
+  Object.keys(CFBD[info.division]).sort().forEach(c => confSel.add(new Option(c, c)));
+  confSel.value = info.conference;
+  schoolSel.innerHTML = '<option value="">School</option>';
+  [...CFBD[info.division][info.conference]].sort().forEach(s => schoolSel.add(new Option(s, s)));
+  schoolSel.value = school;
+  if (date) document.getElementById('visit'+n+'_date').value = date;
+}
+
+const SAVED_VISITS = [
+  null,
+  { school: "{{ (profile.visit1_school or '') | e if profile else '' }}", date: "{{ (profile.visit1_date or '') | e if profile else '' }}" },
+  { school: "{{ (profile.visit2_school or '') | e if profile else '' }}", date: "{{ (profile.visit2_date or '') | e if profile else '' }}" },
+  { school: "{{ (profile.visit3_school or '') | e if profile else '' }}", date: "{{ (profile.visit3_date or '') | e if profile else '' }}" },
+  { school: "{{ (profile.visit4_school or '') | e if profile else '' }}", date: "{{ (profile.visit4_date or '') | e if profile else '' }}" },
+  { school: "{{ (profile.visit5_school or '') | e if profile else '' }}", date: "{{ (profile.visit5_date or '') | e if profile else '' }}" }
+];
+
 document.addEventListener('DOMContentLoaded', function() {
-  for (let n = 1; n <= 5; n++) { if (SAVED_OFFERS[n]) preloadOffer(n, SAVED_OFFERS[n]); }
+  for (let n = 1; n <= 5; n++) {
+    if (SAVED_OFFERS[n]) preloadOffer(n, SAVED_OFFERS[n]);
+    if (SAVED_VISITS[n] && SAVED_VISITS[n].school) preloadVisit(n, SAVED_VISITS[n].school, SAVED_VISITS[n].date);
+  }
 });
 </script>
 {% endblock %}

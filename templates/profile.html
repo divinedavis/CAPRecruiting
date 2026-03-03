@@ -256,6 +256,29 @@
             </div>
             {% endif %}
 
+            <!-- Campus Visits — logged-in users only -->
+            {% if visit_list %}
+            <div class="profile-section">
+                <h2>Campus Visits</h2>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    {% for v in visit_list %}
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:var(--radius-sm);">
+                        <span style="font-size:14px; font-weight:600; color:var(--navy);">🏛 {{ v.school }}</span>
+                        {% if v.date %}<span style="font-size:13px; color:var(--gray-500);">{{ v.date }}</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif not current_user and has_visits %}
+            <div class="profile-section">
+                <h2>Campus Visits</h2>
+                <div class="contact-locked">
+                    <span style="font-size:24px;">🔒</span>
+                    <p><a href="/login">Sign in</a> to view campus visits</p>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Contact Info — logged-in users only -->
             {% if current_user and profile and (profile.phone or profile.contact_email) %}
             <div class="profile-section">
