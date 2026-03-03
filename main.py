@@ -180,6 +180,14 @@ class Photo(Base):
     url = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class Evaluation(Base):
+    __tablename__ = "evaluations"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("users.id"))
+    coach_id  = Column(Integer, ForeignKey("users.id"))
+    content   = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True)
@@ -466,6 +474,25 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     is_owner = bool(current_user and current_user.id == target.id)
     video_error = request.query_params.get("video_error")
 
+    # Evaluations — only coaches can see/write; players never see their own evals
+    eval_list = []
+    can_evaluate = False
+    if target.role == "player" and current_user and current_user.role == "coach":
+        can_evaluate = True
+        raw_evals = (
+            db.query(Evaluation, User)
+            .join(User, Evaluation.coach_id == User.id)
+            .filter(Evaluation.player_id == target.id)
+            .order_by(Evaluation.created_at.desc())
+            .limit(5)
+            .all()
+        )
+        for ev, coach_user in raw_evals:
+            cp = db.query(CoachProfile).filter(CoachProfile.user_id == coach_user.id).first()
+            coach_name = f"{cp.first_name} {cp.last_name}".strip() if cp and (cp.first_name or cp.last_name) else coach_user.username
+            fmt_date = ev.created_at.strftime("%B %d, %Y") if ev.created_at else ""
+            eval_list.append({"coach_name": coach_name, "date": fmt_date, "content": ev.content})
+
     # Build visit list — only expose school data to logged-in users
     has_visits = False
     visit_list = []
@@ -500,6 +527,8 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "total_photo_count": total_photo_count,
         "visit_list": visit_list,
         "has_visits": has_visits,
+        "eval_list": eval_list,
+        "can_evaluate": can_evaluate,
     })
 
 @app.get("/videos/{username}", response_class=HTMLResponse)
@@ -670,6 +699,24 @@ async def delete_photo_gallery(photo_id: int, request: Request, db: Session = De
     db.delete(photo)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
+
+@app.post("/profile/{username}/evaluate")
+async def submit_evaluation(username: str, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    coach = db.query(User).filter(User.id == user_id).first()
+    if not coach or coach.role != "coach":
+        raise HTTPException(status_code=403, detail="Only coaches can submit evaluations.")
+    player = db.query(User).filter(User.username == username).first()
+    if not player or player.role != "player":
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    content = (form.get("content") or "").strip()
+    if content:
+        db.add(Evaluation(player_id=player.id, coach_id=coach.id, content=content))
+        db.commit()
+    return RedirectResponse(f"/profile/{username}", status_code=302)
 
 @app.get("/admin/teams", response_class=HTMLResponse)
 async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
