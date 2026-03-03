@@ -228,8 +228,6 @@ def unread_sender_count(db: Session, user_id: int) -> int:
 
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
-PHOTO_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
-PHOTO_MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
@@ -369,10 +367,8 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
-    photos = db.query(Photo).filter(Photo.user_id == user_id).order_by(Photo.created_at.desc()).all()
     video_error = request.query_params.get("video_error")
-    photo_error = request.query_params.get("photo_error")
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams, "videos": videos, "video_error": video_error, "photos": photos, "photo_error": photo_error})
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams, "videos": videos, "video_error": video_error})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -443,8 +439,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
-    photos = db.query(Photo).filter(Photo.user_id == user_id).order_by(Photo.created_at.desc()).all()
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "photos": photos, "photo_error": None})
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
@@ -465,11 +460,6 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     videos = all_vids[:5]
     has_more_videos = len(all_vids) > 5
     total_video_count = db.query(Video).filter(Video.user_id == target.id).count() if has_more_videos else len(videos)
-
-    all_pics = db.query(Photo).filter(Photo.user_id == target.id).order_by(Photo.created_at.desc()).limit(6).all()
-    photos = all_pics[:5]
-    has_more_photos = len(all_pics) > 5
-    total_photo_count = db.query(Photo).filter(Photo.user_id == target.id).count() if has_more_photos else len(photos)
 
     is_owner = bool(current_user and current_user.id == target.id)
     video_error = request.query_params.get("video_error")
@@ -522,9 +512,6 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "total_video_count": total_video_count,
         "is_owner": is_owner,
         "video_error": video_error,
-        "photos": photos,
-        "has_more_photos": has_more_photos,
-        "total_photo_count": total_photo_count,
         "visit_list": visit_list,
         "has_visits": has_visits,
         "eval_list": eval_list,
@@ -629,74 +616,6 @@ async def delete_video(video_id: int, request: Request, db: Session = Depends(ge
     except Exception:
         pass
     db.delete(video)
-    db.commit()
-    return RedirectResponse(redirect_to, status_code=302)
-
-@app.get("/photos/{username}", response_class=HTMLResponse)
-async def all_photos_page(username: str, request: Request, db: Session = Depends(get_db)):
-    current_user_id = request.session.get("user_id")
-    current_user = db.query(User).filter(User.id == current_user_id).first() if current_user_id else None
-    target = db.query(User).filter(User.username == username).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
-    if target.role == "player":
-        target_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target.id).first()
-    else:
-        target_profile = db.query(CoachProfile).filter(CoachProfile.user_id == target.id).first()
-    photos = db.query(Photo).filter(Photo.user_id == target.id).order_by(Photo.created_at.desc()).all()
-    is_owner = bool(current_user and current_user.id == target.id)
-    photo_error = request.query_params.get("photo_error")
-    unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
-    return templates.TemplateResponse("photos.html", {
-        "request": request, "target": target, "target_profile": target_profile,
-        "photos": photos, "is_owner": is_owner, "photo_error": photo_error,
-        "current_user": current_user, "unread_count": unread_count,
-    })
-
-@app.post("/profile/photos/upload")
-async def upload_photo_gallery(
-    request: Request,
-    image: UploadFile = File(...),
-    title: str = Form(""),
-    redirect_to: str = Form("/profile/edit"),
-    db: Session = Depends(get_db)
-):
-    user_id = request.session.get("user_id")
-    if not user_id:
-        return RedirectResponse("/login", status_code=302)
-    ext = (image.filename or "").rsplit(".", 1)[-1].lower()
-    if ext not in PHOTO_ALLOWED_EXTENSIONS:
-        return RedirectResponse(redirect_to + "?photo_error=type", status_code=302)
-    key = f"photos/{user_id}/{uuid.uuid4().hex}.{ext}"
-    try:
-        s3.upload_fileobj(
-            image.file, SPACES_BUCKET, key,
-            ExtraArgs={"ACL": "public-read", "ContentType": image.content_type or f"image/{ext}"}
-        )
-    except Exception:
-        return RedirectResponse(redirect_to + "?photo_error=upload", status_code=302)
-    photo_url = f"{SPACES_BASE_URL}/{key}"
-    db.add(Photo(user_id=user_id, title=title.strip(), url=photo_url))
-    db.commit()
-    return RedirectResponse(redirect_to, status_code=302)
-
-@app.post("/profile/photos/{photo_id}/delete")
-async def delete_photo_gallery(photo_id: int, request: Request, db: Session = Depends(get_db)):
-    user_id = request.session.get("user_id")
-    if not user_id:
-        return RedirectResponse("/login", status_code=302)
-    photo = db.query(Photo).filter(Photo.id == photo_id, Photo.user_id == user_id).first()
-    if not photo:
-        raise HTTPException(status_code=404)
-    user = db.query(User).filter(User.id == user_id).first()
-    form = await request.form()
-    redirect_to = form.get("redirect_to", f"/profile/{user.username}")
-    try:
-        key = photo.url.replace(f"{SPACES_BASE_URL}/", "")
-        s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
-    except Exception:
-        pass
-    db.delete(photo)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
 
