@@ -801,14 +801,15 @@ textarea { resize: vertical; }
 /* ── Photo gallery ───────────────────────────────────────────── */
 .photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, 125px);
     gap: 10px;
 }
 .photo-card {
     position: relative;
     border-radius: var(--radius-sm);
     overflow: hidden;
-    height: 150px;
+    width: 125px;
+    height: 125px;
     background: var(--gray-100);
     border: 1.5px solid var(--gray-200);
 }
