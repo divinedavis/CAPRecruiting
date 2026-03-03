@@ -163,6 +163,22 @@
             </div>
             {% endif %}
 
+            <!-- Scholarship Offers -->
+            {% if target.role == "player" and profile and (profile.offer1 or profile.offer2 or profile.offer3 or profile.offer4 or profile.offer5) %}
+            <div class="profile-section">
+                <h2>Scholarship Offers</h2>
+                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                    {% for offer in [profile.offer1, profile.offer2, profile.offer3, profile.offer4, profile.offer5] %}
+                    {% if offer %}
+                    <span style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--navy); background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:20px; padding:5px 14px;">
+                        🎓 {{ offer }}
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- External Links -->
             {% if profile and (profile.link1_url or profile.link2_url or (target.role == "player" and profile.link3_url)) %}
             <div class="profile-section">
