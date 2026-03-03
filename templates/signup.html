@@ -36,7 +36,8 @@
                 </div>
             </div>
 
-            <div class="form-group" id="team-group" style="display:none;">
+            <!-- Player team picker -->
+            <div class="form-group" id="player-team-group" style="display:none;">
                 <label>High School Team</label>
                 <select name="team_id" id="team-select">
                     <option value="">— Select your team —</option>
@@ -46,6 +47,25 @@
                 </select>
                 <span class="field-hint">Select the team you play for</span>
                 <span class="field-error" id="team-error"></span>
+            </div>
+
+            <!-- Coach team picker -->
+            <div class="form-group" id="coach-team-group" style="display:none;">
+                <label>Your Team <span class="field-hint">Optional</span></label>
+                <select name="coach_team_id" id="coach-team-select" onchange="handleCoachTeamChange()">
+                    <option value="">— Select your team (optional) —</option>
+                    {% for t in teams %}
+                    <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                    <option value="__new__">➕ My team isn't listed — add it</option>
+                </select>
+                <div id="new-team-wrap" style="display:none; margin-top:10px;">
+                    <input type="text" name="new_team_name" id="new-team-input"
+                           placeholder="e.g. Lincoln High School"
+                           maxlength="100"
+                           style="margin-bottom:4px;">
+                    <span class="field-hint">This team will be added and available for players to select.</span>
+                </div>
             </div>
 
             <div class="form-group">
@@ -75,29 +95,55 @@
 <script>
 const usernameInput = document.getElementById('username');
 const usernameError = document.getElementById('username-error');
-const teamGroup = document.getElementById('team-group');
-const teamSelect = document.getElementById('team-select');
-const teamError = document.getElementById('team-error');
+const playerTeamGroup = document.getElementById('player-team-group');
+const coachTeamGroup  = document.getElementById('coach-team-group');
+const teamSelect      = document.getElementById('team-select');
+const teamError       = document.getElementById('team-error');
+const coachTeamSelect = document.getElementById('coach-team-select');
+const newTeamWrap     = document.getElementById('new-team-wrap');
+const newTeamInput    = document.getElementById('new-team-input');
 
-// Show/hide team dropdown based on role
+function handleCoachTeamChange() {
+    if (coachTeamSelect.value === '__new__') {
+        newTeamWrap.style.display = 'block';
+        newTeamInput.required = true;
+        coachTeamSelect.name = '';        // don't submit coach_team_id when creating new
+    } else {
+        newTeamWrap.style.display = 'none';
+        newTeamInput.required = false;
+        newTeamInput.value = '';
+        coachTeamSelect.name = 'coach_team_id';
+    }
+}
+
+// Show/hide team sections based on role
 document.querySelectorAll('input[name="role"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
         if (this.value === 'player') {
-            teamGroup.style.display = 'block';
+            playerTeamGroup.style.display = 'block';
+            coachTeamGroup.style.display  = 'none';
             teamSelect.required = true;
+            coachTeamSelect.value = '';
+            newTeamWrap.style.display = 'none';
+            newTeamInput.required = false;
         } else {
-            teamGroup.style.display = 'none';
+            playerTeamGroup.style.display = 'none';
+            coachTeamGroup.style.display  = 'block';
             teamSelect.required = false;
             teamSelect.value = '';
         }
     });
 });
 
-// Pre-select player if role was previously chosen (e.g. on error)
+// Pre-select on error re-render
 const checkedRole = document.querySelector('input[name="role"]:checked');
-if (checkedRole && checkedRole.value === 'player') {
-    teamGroup.style.display = 'block';
-    teamSelect.required = true;
+if (checkedRole) {
+    if (checkedRole.value === 'player') {
+        playerTeamGroup.style.display = 'block';
+        teamSelect.required = true;
+    } else {
+        coachTeamGroup.style.display = 'block';
+    }
 }
 
 usernameInput.addEventListener('keypress', function(e) {

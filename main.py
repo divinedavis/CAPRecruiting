@@ -146,6 +146,7 @@ class CoachProfile(Base):
     __tablename__ = "coach_profiles"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     first_name = Column(String, default="")
     last_name = Column(String, default="")
     school = Column(String, default="")
@@ -250,9 +251,12 @@ async def signup_post(
     password: str = Form(...),
     role: str = Form(...),
     team_id: Optional[int] = Form(None),
+    coach_team_id: Optional[int] = Form(None),
+    new_team_name: str = Form(""),
     db: Session = Depends(get_db)
 ):
     username = username.strip()
+    new_team_name = new_team_name.strip()
     teams = db.query(Team).order_by(Team.name).all()
 
     def err(msg):
@@ -276,6 +280,24 @@ async def signup_post(
     if len(password) < 6:
         return err("Password must be at least 6 characters.")
 
+    # Resolve coach team: create new team if name provided, else use selected id
+    coach_tid = None
+    if role == "coach":
+        if new_team_name:
+            if len(new_team_name) > 100:
+                return err("Team name is too long (max 100 characters).")
+            existing_team = db.query(Team).filter(Team.name == new_team_name).first()
+            if existing_team:
+                coach_tid = existing_team.id
+            else:
+                created = Team(name=new_team_name)
+                db.add(created)
+                db.commit()
+                db.refresh(created)
+                coach_tid = created.id
+        elif coach_team_id and db.query(Team).filter(Team.id == coach_team_id).first():
+            coach_tid = coach_team_id
+
     user = User(username=username, email=email, password_hash=hash_password(password), role=role)
     db.add(user)
     db.commit()
@@ -284,7 +306,7 @@ async def signup_post(
     if role == "player":
         db.add(PlayerProfile(user_id=user.id, team_id=team_id))
     else:
-        db.add(CoachProfile(user_id=user.id))
+        db.add(CoachProfile(user_id=user.id, team_id=coach_tid))
     db.commit()
 
     request.session["user_id"] = user.id
