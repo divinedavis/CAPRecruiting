@@ -272,6 +272,47 @@
             </div>
             {% endif %}
 
+            <!-- Photos -->
+            {% if photos or is_owner %}
+            <div class="profile-section">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                    <h2 style="margin-bottom:0;">Photos</h2>
+                    {% if is_owner %}
+                    <a href="/profile/edit" class="btn btn-outline btn-sm">+ Add Photos</a>
+                    {% endif %}
+                </div>
+                {% if photos %}
+                <div class="photo-grid">
+                    {% for photo in photos %}
+                    <div class="photo-card">
+                        <img src="{{ photo.url }}" alt="{{ photo.title or 'Photo' }}" loading="lazy">
+                        {% if photo.title %}
+                        <div class="photo-card-meta">
+                            <span class="photo-card-title">{{ photo.title }}</span>
+                        </div>
+                        {% endif %}
+                        {% if is_owner %}
+                        <form method="post" action="/profile/photos/{{ photo.id }}/delete" onsubmit="return confirm('Delete this photo?')">
+                            <input type="hidden" name="redirect_to" value="/profile/{{ target.username }}">
+                            <button type="submit" class="photo-delete-btn" title="Delete">🗑</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if has_more_photos %}
+                <div style="text-align:center; margin-top:16px;">
+                    <a href="/photos/{{ target.username }}" class="btn btn-outline btn-sm">View all {{ total_photo_count }} photos →</a>
+                </div>
+                {% endif %}
+                {% else %}
+                {% if is_owner %}
+                <p style="color:var(--gray-400); font-size:14px;">No photos yet. <a href="/profile/edit">Add your first photo.</a></p>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
+
             <!-- Campus Visits — logged-in users only -->
             {% if visit_list %}
             <div class="profile-section">

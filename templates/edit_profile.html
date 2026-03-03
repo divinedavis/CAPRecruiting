@@ -367,6 +367,57 @@
             <p style="color:var(--gray-400); font-size:14px;">No videos yet. Add your first video above.</p>
             {% endif %}
         </div>
+
+        <!-- Photos section -->
+        <div class="form-section">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <h2 style="margin-bottom:0;">Photos</h2>
+                {% if photos %}
+                <a href="/photos/{{ user.username }}" class="btn btn-outline btn-sm">View all →</a>
+                {% endif %}
+            </div>
+
+            <form method="post" action="/profile/photos/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
+                <input type="hidden" name="redirect_to" value="/profile/edit">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end;">
+                    <div style="flex:1; min-width:140px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Caption (optional)</label>
+                        <input type="text" name="title" placeholder="e.g. State championship game">
+                    </div>
+                    <div style="flex:2; min-width:200px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Photo (JPG, PNG, WebP — max 20MB)</label>
+                        <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required style="padding:8px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="flex-shrink:0;">Upload</button>
+                </div>
+                {% if photo_error == 'type' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Invalid file type. Use JPG, PNG, or WebP.</p>
+                {% elif photo_error == 'upload' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Upload failed. Please try again.</p>
+                {% endif %}
+            </form>
+
+            {% if photos %}
+            <div class="photo-grid">
+                {% for photo in photos %}
+                <div class="photo-card">
+                    <img src="{{ photo.url }}" alt="{{ photo.title or 'Photo' }}" loading="lazy">
+                    {% if photo.title %}
+                    <div class="photo-card-meta">
+                        <span class="photo-card-title">{{ photo.title }}</span>
+                    </div>
+                    {% endif %}
+                    <form method="post" action="/profile/photos/{{ photo.id }}/delete" onsubmit="return confirm('Delete this photo?')">
+                        <input type="hidden" name="redirect_to" value="/profile/edit">
+                        <button type="submit" class="photo-delete-btn" title="Delete">🗑</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--gray-400); font-size:14px;">No photos yet. Add your first photo above.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 

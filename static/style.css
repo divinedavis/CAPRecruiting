@@ -798,6 +798,41 @@ textarea { resize: vertical; }
 }
 .video-action-btn:hover { background: var(--gray-200); }
 
+/* ── Photo gallery ───────────────────────────────────────────── */
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+}
+.photo-card {
+    position: relative;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    background: var(--gray-100);
+    border: 1.5px solid var(--gray-200);
+}
+.photo-card img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    transition: transform 0.2s;
+}
+.photo-card:hover img { transform: scale(1.03); }
+.photo-card-meta {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    padding: 20px 10px 7px;
+}
+.photo-card-title { font-size: 12px; font-weight: 600; color: white; }
+.photo-delete-btn {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.45); border: none; border-radius: 50%;
+    width: 28px; height: 28px; cursor: pointer; font-size: 13px;
+    color: white; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+}
+.photo-delete-btn:hover { background: rgba(239,68,68,0.85); }
+
 /* ── Contact section on profile ──────────────────────────────── */
 .contact-list { display: flex; flex-direction: column; gap: 12px; }
 .contact-row { display: flex; align-items: center; gap: 12px; }
