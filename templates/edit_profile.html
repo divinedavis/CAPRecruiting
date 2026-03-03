@@ -368,6 +368,66 @@
             {% endif %}
         </div>
 
+        {% if user.role == "player" %}
+        <!-- Transcripts section (outside main form) -->
+        <div class="form-section">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <h2 style="margin-bottom:0;">Transcripts</h2>
+            </div>
+            <p style="color:var(--gray-400); font-size:13px; margin-bottom:16px;">Only visible to coaches &mdash; {{ transcripts|length }}/8 uploaded</p>
+
+            {% if transcripts|length < 8 %}
+            <form method="post" action="/profile/transcripts/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
+                <input type="hidden" name="redirect_to" value="/profile/edit">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end;">
+                    <div style="flex:1; min-width:140px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Name (optional)</label>
+                        <input type="text" name="title" placeholder="e.g. Junior Year Transcript">
+                    </div>
+                    <div style="flex:2; min-width:200px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">File (PDF, DOC, DOCX &mdash; max 10MB)</label>
+                        <input type="file" name="transcript" accept=".pdf,.doc,.docx" required style="padding:8px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="flex-shrink:0;">Upload</button>
+                </div>
+                {% if transcript_error == 'type' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Invalid file type. Use PDF, DOC, or DOCX.</p>
+                {% elif transcript_error == 'size' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">File too large. Max 10MB.</p>
+                {% elif transcript_error == 'upload' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Upload failed. Please try again.</p>
+                {% elif transcript_error == 'limit' %}
+                <p style="color:#ef4444; font-size:13px; margin:0;">Maximum of 8 transcripts reached. Delete one to upload another.</p>
+                {% endif %}
+            </form>
+            {% else %}
+            <p style="color:var(--gray-400); font-size:14px; margin-bottom:20px;">Maximum of 8 transcripts reached. Delete one to upload another.</p>
+            {% endif %}
+
+            {% if transcripts %}
+            <div class="transcript-list">
+                {% for t in transcripts %}
+                <div class="transcript-item">
+                    <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+                        <span class="transcript-icon">📄</span>
+                        <span class="transcript-name">{{ t.title or 'Untitled Transcript' }}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                        <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">View ↗</a>
+                        <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')" style="display:inline;">
+                            <input type="hidden" name="redirect_to" value="/profile/edit">
+                            <button type="submit" class="video-action-btn" title="Delete">🗑</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--gray-400); font-size:14px;">No transcripts yet. Upload your first transcript above.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
     </div>
 </div>
 

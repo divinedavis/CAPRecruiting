@@ -431,6 +431,23 @@ textarea { resize: vertical; }
 .ext-link:hover { border-color: var(--gold); background: rgba(118,200,49,0.05); }
 .ext-arrow { color: var(--gold); font-weight: 700; }
 
+/* ── Transcripts ──────────────────────────────────────────────── */
+.transcript-list { display: flex; flex-direction: column; gap: 8px; }
+.transcript-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--gray-50);
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    gap: 10px;
+}
+.transcript-link { transition: border-color 0.18s, background 0.18s; }
+.transcript-link:hover { border-color: var(--gold); background: rgba(118,200,49,0.05); }
+.transcript-icon { font-size: 18px; flex-shrink: 0; }
+.transcript-name { font-size: 14px; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── Edit Profile ─────────────────────────────────────────────── */
 .edit-layout { max-width: 760px; }
 .edit-header { margin-bottom: 32px; }

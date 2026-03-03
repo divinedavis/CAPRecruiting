@@ -181,6 +181,15 @@ class Photo(Base):
     url = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class Transcript(Base):
+    __tablename__ = "transcripts"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String, default="")
+    file_url = Column(String, nullable=False)
+    filename = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Evaluation(Base):
     __tablename__ = "evaluations"
     id = Column(Integer, primary_key=True)
@@ -229,6 +238,15 @@ def unread_sender_count(db: Session, user_id: int) -> int:
 
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
+
+TRANSCRIPT_ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
+TRANSCRIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+TRANSCRIPT_MAX_COUNT = 8
+TRANSCRIPT_CONTENT_TYPES = {
+    "pdf": "application/pdf",
+    "doc": "application/msword",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
@@ -389,8 +407,10 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
+    transcripts = db.query(Transcript).filter(Transcript.user_id == user_id).order_by(Transcript.created_at.desc()).all() if user.role == "player" else []
     video_error = request.query_params.get("video_error")
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams, "videos": videos, "video_error": video_error})
+    transcript_error = request.query_params.get("transcript_error")
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": False, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -461,7 +481,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None})
+    transcripts = db.query(Transcript).filter(Transcript.user_id == user_id).order_by(Transcript.created_at.desc()).all() if user.role == "player" else []
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
@@ -485,6 +506,13 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
 
     is_owner = bool(current_user and current_user.id == target.id)
     video_error = request.query_params.get("video_error")
+
+    # Transcripts — only coaches can see; players never see their own
+    transcript_list = []
+    can_see_transcripts = False
+    if target.role == "player" and current_user and current_user.role == "coach":
+        can_see_transcripts = True
+        transcript_list = db.query(Transcript).filter(Transcript.user_id == target.id).order_by(Transcript.created_at.desc()).all()
 
     # Evaluations — only coaches can see/write; players never see their own evals
     eval_list = []
@@ -538,6 +566,8 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "has_visits": has_visits,
         "eval_list": eval_list,
         "can_evaluate": can_evaluate,
+        "transcript_list": transcript_list,
+        "can_see_transcripts": can_see_transcripts,
     })
 
 @app.get("/videos/{username}", response_class=HTMLResponse)
@@ -638,6 +668,70 @@ async def delete_video(video_id: int, request: Request, db: Session = Depends(ge
     except Exception:
         pass
     db.delete(video)
+    db.commit()
+    return RedirectResponse(redirect_to, status_code=302)
+
+@app.post("/profile/transcripts/upload")
+async def upload_transcript(
+    request: Request,
+    transcript: UploadFile = File(...),
+    title: str = Form(""),
+    redirect_to: str = Form("/profile/edit"),
+    db: Session = Depends(get_db)
+):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player":
+        raise HTTPException(status_code=403, detail="Only players can upload transcripts.")
+
+    count = db.query(Transcript).filter(Transcript.user_id == user_id).count()
+    if count >= TRANSCRIPT_MAX_COUNT:
+        return RedirectResponse(redirect_to + "?transcript_error=limit", status_code=302)
+
+    ext = transcript.filename.rsplit(".", 1)[-1].lower() if "." in transcript.filename else ""
+    if ext not in TRANSCRIPT_ALLOWED_EXTENSIONS:
+        return RedirectResponse(redirect_to + "?transcript_error=type", status_code=302)
+
+    contents = await transcript.read()
+    if len(contents) > TRANSCRIPT_MAX_BYTES:
+        return RedirectResponse(redirect_to + "?transcript_error=size", status_code=302)
+
+    import io
+    key = f"transcripts/{user_id}/{uuid.uuid4().hex}.{ext}"
+    try:
+        s3.upload_fileobj(
+            io.BytesIO(contents),
+            SPACES_BUCKET,
+            key,
+            ExtraArgs={"ACL": "public-read", "ContentType": TRANSCRIPT_CONTENT_TYPES.get(ext, "application/octet-stream")}
+        )
+    except Exception:
+        return RedirectResponse(redirect_to + "?transcript_error=upload", status_code=302)
+
+    file_url = f"{SPACES_BASE_URL}/{key}"
+    t_title = title.strip() or transcript.filename
+    db.add(Transcript(user_id=user_id, title=t_title, file_url=file_url, filename=transcript.filename))
+    db.commit()
+    return RedirectResponse(redirect_to, status_code=302)
+
+@app.post("/profile/transcripts/{transcript_id}/delete")
+async def delete_transcript(transcript_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    t = db.query(Transcript).filter(Transcript.id == transcript_id, Transcript.user_id == user_id).first()
+    if not t:
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    redirect_to = form.get("redirect_to", "/profile/edit")
+    try:
+        key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
+        s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+    except Exception:
+        pass
+    db.delete(t)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
 

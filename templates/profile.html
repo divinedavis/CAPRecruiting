@@ -321,6 +321,28 @@
             </div>
             {% endif %}
 
+            <!-- Transcripts — coaches only, never visible to player -->
+            {% if can_see_transcripts %}
+            <div class="profile-section">
+                <h2>📄 Transcripts <span style="font-size:13px; font-weight:400; color:var(--gray-400); margin-left:8px;">Visible to coaches only</span></h2>
+                {% if transcript_list %}
+                <div class="transcript-list">
+                    {% for t in transcript_list %}
+                    <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="transcript-item transcript-link">
+                        <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+                            <span class="transcript-icon">📄</span>
+                            <span class="transcript-name">{{ t.title or t.filename or 'Transcript' }}</span>
+                        </div>
+                        <span class="ext-arrow">↗</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--gray-400); font-size:14px;">No transcripts uploaded yet.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <!-- Contact Info — logged-in users only -->
             {% if current_user and profile and (profile.phone or profile.contact_email) %}
             <div class="profile-section">
