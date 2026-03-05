@@ -328,12 +328,9 @@
                 {% if transcript_list %}
                 <div class="transcript-list">
                     {% for t in transcript_list %}
-                    <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="transcript-item transcript-link">
-                        <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
-                            <span class="transcript-icon">📄</span>
-                            <span class="transcript-name">{{ t.title or t.filename or 'Transcript' }}</span>
-                        </div>
-                        <span class="ext-arrow">↗</span>
+                    <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="transcript-card">
+                        <img src="/static/transcript-icon.png" alt="Transcript">
+                        <span class="transcript-card-name">{{ t.title or t.filename or 'Transcript' }}</span>
                     </a>
                     {% endfor %}
                 </div>

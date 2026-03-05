@@ -407,18 +407,15 @@
             {% if transcripts %}
             <div class="transcript-list">
                 {% for t in transcripts %}
-                <div class="transcript-item">
-                    <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
-                        <span class="transcript-icon">📄</span>
-                        <span class="transcript-name">{{ t.title or 'Untitled Transcript' }}</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                        <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">View ↗</a>
-                        <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')" style="display:inline;">
-                            <input type="hidden" name="redirect_to" value="/profile/edit">
-                            <button type="submit" class="video-action-btn" title="Delete">🗑</button>
-                        </form>
-                    </div>
+                <div class="transcript-card-wrap">
+                    <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="transcript-card">
+                        <img src="/static/transcript-icon.png" alt="Transcript">
+                        <span class="transcript-card-name">{{ t.title or 'Untitled Transcript' }}</span>
+                    </a>
+                    <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')">
+                        <input type="hidden" name="redirect_to" value="/profile/edit">
+                        <button type="submit" class="transcript-delete-btn">🗑 Delete</button>
+                    </form>
                 </div>
                 {% endfor %}
             </div>
