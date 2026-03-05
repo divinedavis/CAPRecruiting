@@ -1,7 +1,7 @@
 import boto3
 from botocore.client import Config
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, distinct, func
@@ -734,6 +734,31 @@ async def delete_transcript(transcript_id: int, request: Request, db: Session = 
     db.delete(t)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
+
+@app.get("/profile/transcripts/{transcript_id}/download")
+async def download_transcript(transcript_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user:
+        return RedirectResponse("/login", status_code=302)
+    t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if not t:
+        raise HTTPException(status_code=404)
+    if current_user.id != t.user_id and current_user.role != "coach":
+        raise HTTPException(status_code=403)
+    key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
+    obj = s3.get_object(Bucket=SPACES_BUCKET, Key=key)
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else "pdf"
+    filename = t.filename or f"transcript.{ext}"
+    content_type = TRANSCRIPT_CONTENT_TYPES.get(ext, "application/octet-stream")
+    from urllib.parse import quote
+    return Response(
+        content=obj["Body"].read(),
+        media_type=content_type,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"}
+    )
 
 @app.post("/profile/{username}/evaluate")
 async def submit_evaluation(username: str, request: Request, db: Session = Depends(get_db)):

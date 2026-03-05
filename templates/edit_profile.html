@@ -407,15 +407,9 @@
             {% if transcripts %}
             <div class="transcript-list">
                 {% for t in transcripts %}
-                <div class="transcript-card-wrap">
-                    <a href="{{ t.file_url }}" target="_blank" rel="noopener" class="transcript-card">
-                        <img src="/static/transcript-icon.png" alt="Transcript">
-                        <span class="transcript-card-name">{{ t.title or 'Untitled Transcript' }}</span>
-                    </a>
-                    <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')">
-                        <input type="hidden" name="redirect_to" value="/profile/edit">
-                        <button type="submit" class="transcript-delete-btn">🗑 Delete</button>
-                    </form>
+                <div class="transcript-card" onclick="openTranscript('{{ t.file_url }}', '{{ (t.title or 'Untitled Transcript') | e }}', {{ t.id }}, true)">
+                    <img src="/static/transcript-icon.png" alt="Transcript">
+                    <span class="transcript-card-name">{{ t.title or 'Untitled Transcript' }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -427,6 +421,44 @@
 
     </div>
 </div>
+
+<!-- Transcript viewer modal -->
+<div id="transcript-modal" class="transcript-modal-backdrop" onclick="if(event.target===this)closeTranscript()">
+    <div class="transcript-modal">
+        <div class="transcript-modal-header">
+            <span class="transcript-modal-title" id="tm-title"></span>
+            <div class="transcript-modal-actions">
+                <a id="tm-download" href="#" class="btn btn-outline btn-sm">⬇ Download</a>
+                <form id="tm-delete-form" method="post" style="display:none;" onsubmit="return confirm('Delete this transcript?')">
+                    <input type="hidden" name="redirect_to" value="/profile/edit">
+                    <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;">🗑 Delete</button>
+                </form>
+                <button class="transcript-modal-close" onclick="closeTranscript()">✕</button>
+            </div>
+        </div>
+        <div class="transcript-modal-body">
+            <iframe id="tm-frame" src=""></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+function openTranscript(fileUrl, title, transcriptId, canDelete) {
+    document.getElementById('tm-title').textContent = title;
+    const ext = fileUrl.split('?')[0].split('.').pop().toLowerCase();
+    document.getElementById('tm-frame').src = ext === 'pdf'
+        ? fileUrl
+        : 'https://docs.google.com/viewer?url=' + encodeURIComponent(fileUrl) + '&embedded=true';
+    document.getElementById('tm-download').href = '/profile/transcripts/' + transcriptId + '/download';
+    document.getElementById('tm-delete-form').action = '/profile/transcripts/' + transcriptId + '/delete';
+    document.getElementById('tm-delete-form').style.display = 'inline-block';
+    document.getElementById('transcript-modal').classList.add('open');
+}
+function closeTranscript() {
+    document.getElementById('transcript-modal').classList.remove('open');
+    document.getElementById('tm-frame').src = '';
+}
+</script>
 
 <script>
 document.getElementById('photo-input').addEventListener('change', function() {

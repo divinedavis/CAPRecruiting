@@ -441,18 +441,53 @@ textarea { resize: vertical; }
     background: var(--white);
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius-sm);
-    text-decoration: none;
     text-align: center;
     gap: 10px;
     transition: border-color 0.18s, box-shadow 0.18s;
     cursor: pointer;
+    user-select: none;
 }
 .transcript-card:hover { border-color: var(--gold); box-shadow: var(--shadow); }
 .transcript-card img { width: 52px; height: 52px; object-fit: contain; }
 .transcript-card-name { font-size: 12px; font-weight: 600; color: var(--navy); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.transcript-card-wrap { display: flex; flex-direction: column; gap: 4px; }
-.transcript-delete-btn { width: 100%; background: none; border: none; color: var(--gray-400); font-size: 12px; cursor: pointer; padding: 3px 6px; border-radius: 4px; font-family: inherit; }
-.transcript-delete-btn:hover { color: var(--red); background: #fee2e2; }
+/* ── Transcript Modal ─────────────────────────────────────────── */
+.transcript-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.transcript-modal-backdrop.open { display: flex; }
+.transcript-modal {
+    background: var(--white);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 860px;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+.transcript-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1.5px solid var(--gray-200);
+    gap: 12px;
+    flex-shrink: 0;
+}
+.transcript-modal-title { font-size: 15px; font-weight: 700; color: var(--navy); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transcript-modal-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.transcript-modal-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--gray-400); padding: 2px 4px; border-radius: 4px; }
+.transcript-modal-close:hover { color: var(--gray-800); background: var(--gray-100); }
+.transcript-modal-body { flex: 1; overflow: hidden; }
+.transcript-modal-body iframe { width: 100%; height: 100%; border: none; display: block; }
 
 /* ── Edit Profile ─────────────────────────────────────────────── */
 .edit-layout { max-width: 760px; }
