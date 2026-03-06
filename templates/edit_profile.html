@@ -38,7 +38,7 @@
             </div>
         </div>
 
-        <form method="post" action="/profile/edit">
+        <form id="profile-form" method="post" action="{{ profile_form_action | default('/profile/edit') }}">
             {% if user.role == "player" %}
             <!-- PLAYER FORM -->
             <div class="form-section">
@@ -300,10 +300,7 @@
                     </div>
                 </div>
             </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary btn-lg">Save Profile</button>
-                <a href="/profile/{{ user.username }}" class="btn btn-outline btn-lg">View My Profile</a>
-            </div>
+
         </form>
 
         <!-- Videos section (outside main form) -->
@@ -316,7 +313,7 @@
             </div>
 
             <form method="post" action="/profile/videos/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
-                <input type="hidden" name="redirect_to" value="/profile/edit">
+                <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end;">
                     <div style="flex:1; min-width:140px;">
                         <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Title (optional)</label>
@@ -351,11 +348,11 @@
                         <span class="video-title">{{ video.title or 'Untitled Video' }}</span>
                         <div class="video-actions">
                             <form method="post" action="/profile/videos/{{ video.id }}/pin" style="display:inline;">
-                                <input type="hidden" name="redirect_to" value="/profile/edit">
+                                <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
                                 <button type="submit" class="video-action-btn" title="{{ 'Unpin' if video.is_pinned else 'Pin' }}">{{ '📌' if video.is_pinned else '📍' }}</button>
                             </form>
                             <form method="post" action="/profile/videos/{{ video.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this video?')">
-                                <input type="hidden" name="redirect_to" value="/profile/edit">
+                                <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
                                 <button type="submit" class="video-action-btn" title="Delete">🗑</button>
                             </form>
                         </div>
@@ -374,11 +371,11 @@
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                 <h2 style="margin-bottom:0;">Transcripts</h2>
             </div>
-            <p style="color:var(--gray-400); font-size:13px; margin-bottom:16px;">Only visible to coaches &mdash; {{ transcripts|length }}/8 uploaded</p>
+            <p style="color:var(--gray-400); font-size:13px; margin-bottom:16px;">Only visible to coaches &mdash; {{ transcripts|length }}/4 uploaded</p>
 
-            {% if transcripts|length < 8 %}
+            {% if transcripts|length < 4 %}
             <form method="post" action="/profile/transcripts/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
-                <input type="hidden" name="redirect_to" value="/profile/edit">
+                <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end;">
                     <div style="flex:1; min-width:140px;">
                         <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Name (optional)</label>
@@ -397,19 +394,25 @@
                 {% elif transcript_error == 'upload' %}
                 <p style="color:#ef4444; font-size:13px; margin:0;">Upload failed. Please try again.</p>
                 {% elif transcript_error == 'limit' %}
-                <p style="color:#ef4444; font-size:13px; margin:0;">Maximum of 8 transcripts reached. Delete one to upload another.</p>
+                <p style="color:#ef4444; font-size:13px; margin:0;">Maximum of 4 transcripts reached. Delete one to upload another.</p>
                 {% endif %}
             </form>
             {% else %}
-            <p style="color:var(--gray-400); font-size:14px; margin-bottom:20px;">Maximum of 8 transcripts reached. Delete one to upload another.</p>
+            <p style="color:var(--gray-400); font-size:14px; margin-bottom:20px;">Maximum of 4 transcripts reached. Delete one to upload another.</p>
             {% endif %}
 
             {% if transcripts %}
             <div class="transcript-list">
                 {% for t in transcripts %}
-                <div class="transcript-card" onclick="openTranscript('{{ t.file_url }}', '{{ (t.title or 'Untitled Transcript') | e }}', {{ t.id }}, true)">
-                    <img src="/static/transcript-icon.png" alt="Transcript">
-                    <span class="transcript-card-name">{{ t.title or 'Untitled Transcript' }}</span>
+                <div class="transcript-card">
+                    <a href="/profile/transcripts/{{ t.id }}/view" target="_blank" style="text-decoration:none;display:flex;flex-direction:column;align-items:center;">
+                        <img src="/static/transcript-icon.png" alt="Transcript">
+                        <span class="transcript-card-name">{{ t.title or 'Untitled Transcript' }}</span>
+                    </a>
+                    <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')" style="margin-top:6px;">
+                        <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
+                        <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;width:100%;">Delete</button>
+                    </form>
                 </div>
                 {% endfor %}
             </div>
@@ -418,6 +421,16 @@
             {% endif %}
         </div>
         {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" form="profile-form" class="btn btn-primary btn-lg">Save Profile</button>
+            <a href="/profile/{{ user.username }}" class="btn btn-outline btn-lg">View My Profile</a>
+            {% if request.session.get("is_admin") and profile_form_action is defined and "/admin/" in profile_form_action %}
+            <form method="post" action="/admin/users/{{ user.id }}/delete" onsubmit="return confirm('Permanently delete {{ user.username }}? This cannot be undone.')" style="display:inline;">
+                <button type="submit" class="btn btn-lg" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;">Delete Account</button>
+            </form>
+            {% endif %}
+        </div>
 
     </div>
 </div>
@@ -430,7 +443,7 @@
             <div class="transcript-modal-actions">
                 <a id="tm-download" href="#" class="btn btn-outline btn-sm">⬇ Download</a>
                 <form id="tm-delete-form" method="post" style="display:none;" onsubmit="return confirm('Delete this transcript?')">
-                    <input type="hidden" name="redirect_to" value="/profile/edit">
+                    <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
                     <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;">🗑 Delete</button>
                 </form>
                 <button class="transcript-modal-close" onclick="closeTranscript()">✕</button>

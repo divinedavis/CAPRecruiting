@@ -35,7 +35,11 @@
                         <span class="badge">{{ unread_count }}</span>
                     {% endif %}
                 </a>
+                {% if request.session.get("is_admin") %}
+                <a href="/admin/teams" class="btn btn-outline">Admin</a>
+                {% else %}
                 <a href="/profile/edit" class="btn btn-outline">Edit Profile</a>
+                {% endif %}
                 <a href="/logout" class="btn btn-ghost">Logout</a>
             {% else %}
                 <a href="/dashboard">Browse Players</a>

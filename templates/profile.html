@@ -64,6 +64,9 @@
                 {% if current_user and current_user.id != target.id %}
                 <div class="profile-actions">
                     <a href="/messages/{{ target.username }}" class="btn btn-primary">💬 Message</a>
+                    {% if current_user.is_admin %}
+                    <a href="/admin/users/{{ target.id }}/edit-profile" class="btn btn-primary">Edit Profile</a>
+                    {% endif %}
                 </div>
                 {% elif current_user and current_user.id == target.id %}
                 <div class="profile-actions">
@@ -328,9 +331,17 @@
                 {% if transcript_list %}
                 <div class="transcript-list">
                     {% for t in transcript_list %}
-                    <div class="transcript-card" onclick="openTranscript('{{ t.file_url }}', '{{ (t.title or t.filename or 'Transcript') | e }}', {{ t.id }}, false)">
-                        <img src="/static/transcript-icon.png" alt="Transcript">
-                        <span class="transcript-card-name">{{ t.title or t.filename or 'Transcript' }}</span>
+                    <div class="transcript-card">
+                        <a href="/profile/transcripts/{{ t.id }}/view" target="_blank" style="text-decoration:none;display:flex;flex-direction:column;align-items:center;">
+                            <img src="/static/transcript-icon.png" alt="Transcript">
+                            <span class="transcript-card-name">{{ t.title or t.filename or 'Transcript' }}</span>
+                        </a>
+                        {% if current_user and (current_user.id == target.id or current_user.is_admin) %}
+                        <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')" style="margin-top:6px;">
+                            <input type="hidden" name="redirect_to" value="/profile/{{ target.username }}">
+                            <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;width:100%;">Delete</button>
+                        </form>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>

@@ -241,7 +241,7 @@ VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
 
 TRANSCRIPT_ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
 TRANSCRIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
-TRANSCRIPT_MAX_COUNT = 8
+TRANSCRIPT_MAX_COUNT = 4
 TRANSCRIPT_CONTENT_TYPES = {
     "pdf": "application/pdf",
     "doc": "application/msword",
@@ -328,6 +328,7 @@ async def signup_post(
     db.commit()
 
     request.session["user_id"] = user.id
+    request.session["is_admin"] = bool(user.is_admin)
     return RedirectResponse("/profile/edit", status_code=302)
 
 @app.get("/login", response_class=HTMLResponse)
@@ -345,6 +346,7 @@ async def login_post(
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password."})
     request.session["user_id"] = user.id
+    request.session["is_admin"] = bool(user.is_admin)
     return RedirectResponse("/dashboard", status_code=302)
 
 @app.get("/logout")
@@ -510,14 +512,14 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     # Transcripts — only coaches can see; players never see their own
     transcript_list = []
     can_see_transcripts = False
-    if target.role == "player" and current_user and current_user.role == "coach":
+    if target.role == "player" and current_user and (current_user.role == "coach" or current_user.is_admin):
         can_see_transcripts = True
         transcript_list = db.query(Transcript).filter(Transcript.user_id == target.id).order_by(Transcript.created_at.desc()).all()
 
-    # Evaluations — only coaches can see/write; players never see their own evals
+    # Evaluations — only coaches/admins can see/write; players never see their own evals
     eval_list = []
     can_evaluate = False
-    if target.role == "player" and current_user and current_user.role == "coach":
+    if target.role == "player" and current_user and (current_user.role == "coach" or current_user.is_admin):
         can_evaluate = True
         raw_evals = (
             db.query(Evaluation, User)
@@ -683,10 +685,17 @@ async def upload_transcript(
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
-    if not user or user.role != "player":
-        raise HTTPException(status_code=403, detail="Only players can upload transcripts.")
+    if not user or (user.role != "player" and not user.is_admin):
+        raise HTTPException(status_code=403, detail="Only players or admins can upload transcripts.")
 
-    count = db.query(Transcript).filter(Transcript.user_id == user_id).count()
+    target_user_id = user_id
+    if user.is_admin:
+        import re as _re
+        m = _re.search(r"/admin/users/(\d+)/", str(redirect_to))
+        if m:
+            target_user_id = int(m.group(1))
+
+    count = db.query(Transcript).filter(Transcript.user_id == target_user_id).count()
     if count >= TRANSCRIPT_MAX_COUNT:
         return RedirectResponse(redirect_to + "?transcript_error=limit", status_code=302)
 
@@ -699,7 +708,7 @@ async def upload_transcript(
         return RedirectResponse(redirect_to + "?transcript_error=size", status_code=302)
 
     import io
-    key = f"transcripts/{user_id}/{uuid.uuid4().hex}.{ext}"
+    key = f"transcripts/{target_user_id}/{uuid.uuid4().hex}.{ext}"
     try:
         s3.upload_fileobj(
             io.BytesIO(contents),
@@ -712,7 +721,7 @@ async def upload_transcript(
 
     file_url = f"{SPACES_BASE_URL}/{key}"
     t_title = title.strip() or transcript.filename
-    db.add(Transcript(user_id=user_id, title=t_title, file_url=file_url, filename=transcript.filename))
+    db.add(Transcript(user_id=target_user_id, title=t_title, file_url=file_url, filename=transcript.filename))
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
 
@@ -721,7 +730,11 @@ async def delete_transcript(transcript_id: int, request: Request, db: Session = 
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
-    t = db.query(Transcript).filter(Transcript.id == transcript_id, Transcript.user_id == user_id).first()
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if current_user and current_user.is_admin:
+        t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
+    else:
+        t = db.query(Transcript).filter(Transcript.id == transcript_id, Transcript.user_id == user_id).first()
     if not t:
         raise HTTPException(status_code=404)
     form = await request.form()
@@ -746,7 +759,7 @@ async def download_transcript(transcript_id: int, request: Request, db: Session 
     t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
     if not t:
         raise HTTPException(status_code=404)
-    if current_user.id != t.user_id and current_user.role != "coach":
+    if current_user.id != t.user_id and current_user.role != "coach" and not current_user.is_admin:
         raise HTTPException(status_code=403)
     key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
     obj = s3.get_object(Bucket=SPACES_BUCKET, Key=key)
@@ -760,14 +773,59 @@ async def download_transcript(transcript_id: int, request: Request, db: Session 
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"}
     )
 
+@app.get("/profile/transcripts/{transcript_id}/view", response_class=HTMLResponse)
+async def view_transcript(transcript_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user:
+        return RedirectResponse("/login", status_code=302)
+    t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if not t:
+        raise HTTPException(status_code=404)
+    if current_user.id != t.user_id and current_user.role != "coach" and not current_user.is_admin:
+        raise HTTPException(status_code=403)
+    ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
+    if ext == "pdf":
+        viewer_url = t.file_url
+    else:
+        from urllib.parse import quote
+        viewer_url = "https://docs.google.com/viewer?url=" + quote(t.file_url, safe="") + "&embedded=true"
+    title = t.title or t.filename or "Transcript"
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'>
+  <title>{title}</title>
+  <style>
+    * {{ margin:0; padding:0; box-sizing:border-box; }}
+    body {{ display:flex; flex-direction:column; height:100vh; font-family:sans-serif; background:#f5f5f5; }}
+    .toolbar {{ display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#1e3a5f; color:#fff; flex-shrink:0; }}
+    .toolbar h2 {{ font-size:15px; font-weight:600; }}
+    .toolbar a {{ color:#fff; text-decoration:none; font-size:13px; background:rgba(255,255,255,0.15); padding:6px 12px; border-radius:6px; }}
+    iframe {{ flex:1; border:none; width:100%; }}
+  </style>
+</head>
+<body>
+  <div class='toolbar'>
+    <h2>{title}</h2>
+    <a href='/profile/transcripts/{transcript_id}/download'>Download</a>
+  </div>
+  <iframe src='{viewer_url}'></iframe>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
 @app.post("/profile/{username}/evaluate")
 async def submit_evaluation(username: str, request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     coach = db.query(User).filter(User.id == user_id).first()
-    if not coach or coach.role != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can submit evaluations.")
+    if not coach or (coach.role != "coach" and not coach.is_admin):
+        raise HTTPException(status_code=403, detail="Only coaches or admins can submit evaluations.")
     player = db.query(User).filter(User.username == username).first()
     if not player or player.role != "player":
         raise HTTPException(status_code=404)
@@ -820,6 +878,123 @@ async def admin_teams_create(request: Request, db: Session = Depends(get_db)):
     teams_raw = db.query(Team).order_by(Team.name).all()
     teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
     return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "unread_count": unread_count, "success": True, "error": None})
+
+@app.get("/admin/users/{target_id}/edit-profile", response_class=HTMLResponse)
+async def admin_edit_profile_get(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    target = db.query(User).filter(User.id == target_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first() if target.role == "player" else db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
+    teams = db.query(Team).order_by(Team.name).all()
+    videos = db.query(Video).filter(Video.user_id == target_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
+    transcripts = db.query(Transcript).filter(Transcript.user_id == target_id).order_by(Transcript.created_at.desc()).all() if target.role == "player" else []
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("edit_profile.html", {
+        "request": request, "user": target, "profile": profile,
+        "success": False, "teams": teams, "videos": videos,
+        "video_error": None, "transcripts": transcripts, "transcript_error": None,
+        "profile_form_action": f"/admin/users/{target_id}/edit-profile",
+        "unread_count": unread_count,
+    })
+
+@app.post("/admin/users/{target_id}/edit-profile", response_class=HTMLResponse)
+async def admin_edit_profile_post(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    target = db.query(User).filter(User.id == target_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    form = await request.form()
+    if target.role == "player":
+        p = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first()
+        p.first_name = form.get("first_name", "")
+        p.last_name = form.get("last_name", "")
+        p.position = form.get("position", "")
+        p.year = form.get("year", "")
+        p.height = form.get("height", "")
+        p.weight = form.get("weight", "")
+        p.forty_yard = form.get("forty_yard", "")
+        p.bench_press = form.get("bench_press", "")
+        p.vertical = form.get("vertical", "")
+        p.squat = form.get("squat", "")
+        p.clean = form.get("clean", "")
+        p.broad_jump = form.get("broad_jump", "")
+        p.pro_agility = form.get("pro_agility", "")
+        p.wingspan = form.get("wingspan", "")
+        p.gpa = form.get("gpa", "")
+        p.school = form.get("school", "")
+        p.bio = form.get("bio", "")
+        p.hudl_url = form.get("hudl_url", "")
+        p.x_url = form.get("x_url", "")
+        p.instagram_url = form.get("instagram_url", "")
+        p.phone = form.get("phone", "")
+        p.contact_email = form.get("contact_email", "")
+        p.offer1 = form.get("offer1", "")
+        p.offer2 = form.get("offer2", "")
+        p.offer3 = form.get("offer3", "")
+        p.offer4 = form.get("offer4", "")
+        p.offer5 = form.get("offer5", "")
+        for i in range(1, 6):
+            setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
+            setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", ""))
+    else:
+        c = db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
+        c.first_name = form.get("first_name", "")
+        c.last_name = form.get("last_name", "")
+        c.school = form.get("school", "")
+        c.title = form.get("title", "")
+        c.division = form.get("division", "")
+        c.conference = form.get("conference", "")
+        c.bio = form.get("bio", "")
+        c.phone = form.get("phone", "")
+        c.contact_email = form.get("contact_email", "")
+    db.commit()
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first() if target.role == "player" else db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
+    teams = db.query(Team).order_by(Team.name).all()
+    videos = db.query(Video).filter(Video.user_id == target_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
+    transcripts = db.query(Transcript).filter(Transcript.user_id == target_id).order_by(Transcript.created_at.desc()).all() if target.role == "player" else []
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("edit_profile.html", {
+        "request": request, "user": target, "profile": profile,
+        "success": True, "teams": teams, "videos": videos,
+        "video_error": None, "transcripts": transcripts, "transcript_error": None,
+        "profile_form_action": f"/admin/users/{target_id}/edit-profile",
+        "unread_count": unread_count,
+    })
+
+@app.post("/admin/users/{target_id}/delete", response_class=HTMLResponse)
+async def admin_delete_user(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    target = db.query(User).filter(User.id == target_id).first()
+    if not target:
+        raise HTTPException(status_code=404)
+    if target.id == admin.id:
+        return RedirectResponse("/dashboard", status_code=302)
+    db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).delete()
+    db.query(CoachProfile).filter(CoachProfile.user_id == target_id).delete()
+    db.query(Message).filter((Message.sender_id == target_id) | (Message.receiver_id == target_id)).delete()
+    db.query(Video).filter(Video.user_id == target_id).delete()
+    db.query(Transcript).filter(Transcript.user_id == target_id).delete()
+    db.query(Evaluation).filter((Evaluation.coach_id == target_id) | (Evaluation.player_id == target_id)).delete()
+    db.delete(target)
+    db.commit()
+    return RedirectResponse("/dashboard", status_code=302)
+
 
 @app.get("/messages", response_class=HTMLResponse)
 async def messages_inbox(request: Request, db: Session = Depends(get_db)):
