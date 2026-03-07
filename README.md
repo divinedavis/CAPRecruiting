@@ -86,32 +86,3 @@ A football recruiting platform connecting high school players with college coach
 | Process manager | systemd |
 | Hosting | DigitalOcean Droplet |
 
-## Project Structure
-
-```
-bearcats/
-├── main.py                  # FastAPI app — routes, models, WebSocket logic
-├── requirements.txt         # Python dependencies
-├── recruiting.db            # SQLite database
-├── static/
-│   ├── style.css            # All styles (responsive, mobile-friendly)
-│   ├── cap-logo.png         # Site logo
-│   ├── og-default.png       # Open Graph / iMessage share image
-│   ├── hudl.png             # Hudl icon
-│   ├── x_logo.svg           # X (Twitter) icon
-│   └── instagram_logo.svg   # Instagram icon
-└── templates/
-    ├── base.html            # Navbar, footer, global WebSocket badge
-    ├── home.html            # Landing page
-    ├── team_select.html     # Team browser for visitors
-    ├── dashboard.html       # Player directory with filters
-    ├── signup.html          # Registration with role selection
-    ├── login.html           # Login (username or email)
-    ├── profile.html         # Public profile view (player & coach)
-    ├── edit_profile.html    # Edit profile, photos, videos, transcripts
-    ├── transcript_view.html # Transcript viewer page
-    ├── inbox.html           # Message thread list
-    ├── conversation.html    # Real-time chat
-    ├── admin_teams.html     # Admin team management
-    └── admin_users.html     # Admin user management
-```
