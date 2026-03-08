@@ -23,14 +23,25 @@
         {% endif %}
     </div>
 
-    {% if user and teams %}
+    {% if teams %}
     <div class="team-filter-bar">
         <span class="filter-label">Filter:</span>
         <a href="/dashboard" class="team-pill {% if not active_team_id %}active{% endif %}">All Teams</a>
         {% for t in teams %}
-        <a href="/dashboard?team_id={{ t.id }}" class="team-pill {% if active_team_id == t.id %}active{% endif %}">{{ t.name }}</a>
+        <a href="/dashboard?team_id={{ t.id }}{% if active_year %}&year={{ active_year }}{% endif %}" class="team-pill {% if active_team_id == t.id %}active{% endif %}">{{ t.name }}</a>
         {% endfor %}
     </div>
+    {% if active_team_id %}
+    <div class="team-filter-bar" style="margin-top:8px;">
+        <span class="filter-label">Year:</span>
+        <select onchange="applyYearFilter(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer;">
+            <option value="" {% if not active_year %}selected{% endif %}>All Years</option>
+            {% for yr in ["2025", "2026", "2027", "2028", "2029"] %}
+            <option value="{{ yr }}" {% if active_year == yr %}selected{% endif %}>Class of {{ yr }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
     {% endif %}
 
     {% if player_data %}
@@ -79,6 +90,14 @@
                 </div>
             </div>
             {% endif %}
+            {% if p and p.stars %}
+            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--gray-200); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">Stars</div>
+                <div style="font-size:20px; letter-spacing:2px; color:#f59e0b;">
+                    {% for i in range(p.stars) %}★{% endfor %}{% for i in range(5 - p.stars) %}☆{% endfor %}
+                </div>
+            </div>
+            {% endif %}
             {% if p and (p.hudl_url or p.x_url or p.instagram_url) %}
             <div style="position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:8px; align-items:center;">
                 {% if p.hudl_url %}
@@ -124,4 +143,12 @@
     </div>
     {% endif %}
 </div>
+<script>
+function applyYearFilter(yr) {
+    var url = new URL(window.location.href);
+    if (yr) url.searchParams.set('year', yr);
+    else url.searchParams.delete('year');
+    window.location.href = url.toString();
+}
+</script>
 {% endblock %}

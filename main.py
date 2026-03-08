@@ -22,7 +22,8 @@ SPACES_SECRET = os.environ.get("SPACES_SECRET", "")
 SPACES_REGION = os.environ.get("SPACES_REGION", "nyc3")
 SPACES_BUCKET = os.environ.get("SPACES_BUCKET", "cap-recruiting-videos")
 SPACES_ENDPOINT = f"https://{SPACES_REGION}.digitaloceanspaces.com"
-SPACES_BASE_URL = f"https://{SPACES_BUCKET}.{SPACES_REGION}.digitaloceanspaces.com"
+SPACES_CDN_URL  = os.environ.get("SPACES_CDN_URL", "")
+SPACES_BASE_URL = SPACES_CDN_URL if SPACES_CDN_URL else f"https://{SPACES_BUCKET}.{SPACES_REGION}.digitaloceanspaces.com"
 
 s3 = boto3.client(
     "s3",
@@ -141,6 +142,7 @@ class PlayerProfile(Base):
     visit5_date   = Column(String, default="")
     phone = Column(String, default="")
     contact_email = Column(String, default="")
+    stars = Column(Integer, default=0)
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -188,6 +190,13 @@ class Transcript(Base):
     title = Column(String, default="")
     file_url = Column(String, nullable=False)
     filename = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ProfileImage(Base):
+    __tablename__ = "profile_images"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    file_url = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Evaluation(Base):
@@ -242,6 +251,10 @@ VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
 TRANSCRIPT_ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
 TRANSCRIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 TRANSCRIPT_MAX_COUNT = 4
+IMAGE_MAX_COUNT = 20
+IMAGE_MAX_BYTES = 10 * 1024 * 1024
+IMAGE_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+IMAGE_CONTENT_TYPES = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif", "webp": "image/webp"}
 TRANSCRIPT_CONTENT_TYPES = {
     "pdf": "application/pdf",
     "doc": "application/msword",
@@ -355,7 +368,7 @@ async def logout(request: Request):
     return RedirectResponse("/", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, team_id: Optional[int] = None, db: Session = Depends(get_db)):
+async def dashboard(request: Request, team_id: Optional[int] = None, year: Optional[str] = None, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     teams = db.query(Team).order_by(Team.name).all()
@@ -365,6 +378,7 @@ async def dashboard(request: Request, team_id: Optional[int] = None, db: Session
         return templates.TemplateResponse("team_select.html", {
             "request": request,
             "teams": teams,
+            "active_year": year,
             "unread_count": 0
         })
 
@@ -384,7 +398,8 @@ async def dashboard(request: Request, team_id: Optional[int] = None, db: Session
     player_data = []
     for p in player_users:
         prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
-        player_data.append({"user": p, "profile": prof})
+        if not year or (prof and prof.year == year):
+            player_data.append({"user": p, "profile": prof})
 
     unread_count = unread_sender_count(db, user_id) if user_id else 0
     return templates.TemplateResponse("dashboard.html", {
@@ -394,7 +409,8 @@ async def dashboard(request: Request, team_id: Optional[int] = None, db: Session
         "unread_count": unread_count,
         "team": team,
         "teams": teams,
-        "active_team_id": team_id
+        "active_team_id": team_id,
+        "active_year": year
     })
 
 @app.get("/profile/edit", response_class=HTMLResponse)
@@ -509,6 +525,9 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     is_owner = bool(current_user and current_user.id == target.id)
     video_error = request.query_params.get("video_error")
 
+    # Profile Images — visible to everyone
+    image_list = db.query(ProfileImage).filter(ProfileImage.user_id == target.id).order_by(ProfileImage.created_at.desc()).all() if target.role == "player" else []
+
     # Transcripts — only coaches can see; players never see their own
     transcript_list = []
     can_see_transcripts = False
@@ -568,6 +587,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "has_visits": has_visits,
         "eval_list": eval_list,
         "can_evaluate": can_evaluate,
+        "image_list": image_list,
         "transcript_list": transcript_list,
         "can_see_transcripts": can_see_transcripts,
     })
@@ -670,6 +690,105 @@ async def delete_video(video_id: int, request: Request, db: Session = Depends(ge
     except Exception:
         pass
     db.delete(video)
+    db.commit()
+    return RedirectResponse(redirect_to, status_code=302)
+
+@app.post("/profile/images/upload")
+async def upload_profile_image(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    uploader = db.query(User).filter(User.id == user_id).first()
+    if not uploader:
+        return RedirectResponse("/login", status_code=302)
+
+    form = await request.form()
+    redirect_to = str(form.get("redirect_to", ""))
+    back = redirect_to or "/profile/edit"
+
+    # Determine target user
+    target_user_id = user_id
+    if uploader.is_admin and redirect_to:
+        import re as _re
+        m = _re.search(r"/admin/users/(\d+)/", redirect_to)
+        if m:
+            target_user_id = int(m.group(1))
+        else:
+            m2 = _re.search(r"/profile/([^/?]+)", redirect_to)
+            if m2:
+                tu = db.query(User).filter(User.username == m2.group(1)).first()
+                if tu:
+                    target_user_id = tu.id
+
+    images = form.getlist("image")
+    if not images:
+        single = form.get("image")
+        images = [single] if single else []
+    images = [f for f in images if f and hasattr(f, "filename") and f.filename]
+
+    import io as _io
+    from PIL import Image as _Image
+
+    for image in images:
+        count = db.query(ProfileImage).filter(ProfileImage.user_id == target_user_id).count()
+        if count >= IMAGE_MAX_COUNT:
+            break
+        ext = image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else ""
+        if ext not in IMAGE_ALLOWED_EXTENSIONS:
+            continue
+        contents = await image.read()
+        if len(contents) > IMAGE_MAX_BYTES:
+            continue
+
+        # Resize to max 1200px on longest side, convert to JPEG for efficiency
+        try:
+            img = _Image.open(_io.BytesIO(contents))
+            img = img.convert("RGB")
+            img.thumbnail((1200, 1200), _Image.LANCZOS)
+            buf = _io.BytesIO()
+            img.save(buf, format="JPEG", quality=82, optimize=True)
+            buf.seek(0)
+            upload_bytes = buf
+            content_type = "image/jpeg"
+            save_ext = "jpg"
+        except Exception:
+            upload_bytes = _io.BytesIO(contents)
+            content_type = IMAGE_CONTENT_TYPES.get(ext, "image/jpeg")
+            save_ext = ext
+
+        key = f"profile-images/{target_user_id}/{uuid.uuid4().hex}.{save_ext}"
+        try:
+            s3.upload_fileobj(
+                upload_bytes, SPACES_BUCKET, key,
+                ExtraArgs={"ACL": "public-read", "ContentType": content_type}
+            )
+            db.add(ProfileImage(user_id=target_user_id, file_url=f"{SPACES_BASE_URL}/{key}"))
+        except Exception:
+            continue
+    db.commit()
+    return RedirectResponse(back, status_code=302)
+
+
+@app.post("/profile/images/{image_id}/delete")
+async def delete_profile_image(image_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if current_user and current_user.is_admin:
+        img = db.query(ProfileImage).filter(ProfileImage.id == image_id).first()
+    else:
+        img = db.query(ProfileImage).filter(ProfileImage.id == image_id, ProfileImage.user_id == user_id).first()
+    if not img:
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    redirect_to = form.get("redirect_to", "/profile/edit")
+    try:
+        key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
+        s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+    except Exception:
+        pass
+    db.delete(img)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
 
@@ -836,6 +955,26 @@ async def submit_evaluation(username: str, request: Request, db: Session = Depen
         db.commit()
     return RedirectResponse(f"/profile/{username}", status_code=302)
 
+@app.post("/admin/users/{target_id}/set-stars", response_class=HTMLResponse)
+async def admin_set_stars(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    form = await request.form()
+    stars = int(form.get("stars", 0))
+    stars = max(0, min(5, stars))
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first()
+    if profile:
+        profile.stars = stars
+        db.commit()
+    target = db.query(User).filter(User.id == target_id).first()
+    if target:
+        return RedirectResponse(f"/profile/{target.username}", status_code=302)
+    return RedirectResponse("/dashboard", status_code=302)
+
 @app.get("/admin/teams", response_class=HTMLResponse)
 async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
@@ -894,11 +1033,13 @@ async def admin_edit_profile_get(target_id: int, request: Request, db: Session =
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == target_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
     transcripts = db.query(Transcript).filter(Transcript.user_id == target_id).order_by(Transcript.created_at.desc()).all() if target.role == "player" else []
+    image_list = db.query(ProfileImage).filter(ProfileImage.user_id == target_id).order_by(ProfileImage.created_at.desc()).all() if target.role == "player" else []
     unread_count = unread_sender_count(db, user_id)
     return templates.TemplateResponse("edit_profile.html", {
         "request": request, "user": target, "profile": profile,
         "success": False, "teams": teams, "videos": videos,
         "video_error": None, "transcripts": transcripts, "transcript_error": None,
+        "image_list": image_list,
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
     })
@@ -963,11 +1104,13 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == target_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
     transcripts = db.query(Transcript).filter(Transcript.user_id == target_id).order_by(Transcript.created_at.desc()).all() if target.role == "player" else []
+    image_list = db.query(ProfileImage).filter(ProfileImage.user_id == target_id).order_by(ProfileImage.created_at.desc()).all() if target.role == "player" else []
     unread_count = unread_sender_count(db, user_id)
     return templates.TemplateResponse("edit_profile.html", {
         "request": request, "user": target, "profile": profile,
         "success": True, "teams": teams, "videos": videos,
         "video_error": None, "transcripts": transcripts, "transcript_error": None,
+        "image_list": image_list,
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
     })

@@ -88,7 +88,7 @@
 
             {% if target.role == "player" and profile %}
             <div class="profile-section">
-                <h2>Athletic Stats</h2>
+                <h2>Player Overview</h2>
                 <div class="stats-grid">
                     {% if profile.height %}
                     <div class="stat-card">
@@ -100,48 +100,6 @@
                     <div class="stat-card">
                         <span class="stat-label">Weight</span>
                         <span class="stat-value">{{ profile.weight }} <small>lbs</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.forty_yard %}
-                    <div class="stat-card">
-                        <span class="stat-label">40-Yard Dash</span>
-                        <span class="stat-value">{{ profile.forty_yard }} <small>sec</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.bench_press %}
-                    <div class="stat-card">
-                        <span class="stat-label">Bench Press</span>
-                        <span class="stat-value">{{ profile.bench_press }} <small>lbs</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.vertical %}
-                    <div class="stat-card">
-                        <span class="stat-label">Vertical</span>
-                        <span class="stat-value">{{ profile.vertical }} <small>in</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.squat %}
-                    <div class="stat-card">
-                        <span class="stat-label">Squat</span>
-                        <span class="stat-value">{{ profile.squat }} <small>lbs</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.clean %}
-                    <div class="stat-card">
-                        <span class="stat-label">Clean</span>
-                        <span class="stat-value">{{ profile.clean }} <small>lbs</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.broad_jump %}
-                    <div class="stat-card">
-                        <span class="stat-label">Broad Jump</span>
-                        <span class="stat-value">{{ profile.broad_jump }} <small>in</small></span>
-                    </div>
-                    {% endif %}
-                    {% if profile.pro_agility %}
-                    <div class="stat-card">
-                        <span class="stat-label">Pro Agility</span>
-                        <span class="stat-value">{{ profile.pro_agility }} <small>sec</small></span>
                     </div>
                     {% endif %}
                     {% if profile.wingspan %}
@@ -160,6 +118,70 @@
                     <div class="stat-card">
                         <span class="stat-label">Class</span>
                         <span class="stat-value">{{ profile.year }}</span>
+                    </div>
+                    {% endif %}
+                    {% if profile.stars %}
+                    <div class="stat-card" style="grid-column: 1 / -1;">
+                        <span class="stat-label">Stars</span>
+                        <span class="stat-value" style="font-size:22px; letter-spacing:3px; color:#f59e0b;">{% for i in range(profile.stars) %}★{% endfor %}{% for i in range(5 - profile.stars) %}☆{% endfor %}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if profile.forty_yard or profile.pro_agility or profile.vertical or profile.broad_jump %}
+            <div class=profile-section>
+                <h2>Field Stats</h2>
+                <div class=stats-grid>
+                    {% if profile.forty_yard %}
+                    <div class=stat-card>
+                        <span class=stat-label>40-Yard Dash</span>
+                        <span class=stat-value>{{ profile.forty_yard }} <small>sec</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.pro_agility %}
+                    <div class=stat-card>
+                        <span class=stat-label>Pro Agility</span>
+                        <span class=stat-value>{{ profile.pro_agility }} <small>sec</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.vertical %}
+                    <div class=stat-card>
+                        <span class=stat-label>Vertical</span>
+                        <span class=stat-value>{{ profile.vertical }} <small>in</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.broad_jump %}
+                    <div class=stat-card>
+                        <span class=stat-label>Broad Jump</span>
+                        <span class=stat-value>{{ profile.broad_jump }} <small>in</small></span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            {% if profile.bench_press or profile.squat or profile.clean %}
+            <div class=profile-section>
+                <h2>Lifting Stats</h2>
+                <div class=stats-grid>
+                    {% if profile.bench_press %}
+                    <div class=stat-card>
+                        <span class=stat-label>Bench Press</span>
+                        <span class=stat-value>{{ profile.bench_press }} <small>lbs</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.squat %}
+                    <div class=stat-card>
+                        <span class=stat-label>Squat</span>
+                        <span class=stat-value>{{ profile.squat }} <small>lbs</small></span>
+                    </div>
+                    {% endif %}
+                    {% if profile.clean %}
+                    <div class=stat-card>
+                        <span class=stat-label>Clean</span>
+                        <span class=stat-value>{{ profile.clean }} <small>lbs</small></span>
                     </div>
                     {% endif %}
                 </div>
@@ -324,6 +346,62 @@
             </div>
             {% endif %}
 
+            <!-- Admin Stars Rating -->
+            {% if current_user and current_user.is_admin and target.role == "player" %}
+            <div class="profile-section">
+                <h2>⭐ Star Rating <span style="font-size:13px; font-weight:400; color:var(--gray-400); margin-left:8px;">Admin only</span></h2>
+                <form method="post" action="/admin/users/{{ target.id }}/set-stars" style="display:flex; align-items:center; gap:12px;">
+                    <select name="stars" style="font-size:16px; padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:8px;">
+                        <option value="0" {{ "selected" if not profile.stars or profile.stars == 0 }}>0 — Unrated</option>
+                        <option value="1" {{ "selected" if profile.stars == 1 }}>★☆☆☆☆ — 1 Star</option>
+                        <option value="2" {{ "selected" if profile.stars == 2 }}>★★☆☆☆ — 2 Stars</option>
+                        <option value="3" {{ "selected" if profile.stars == 3 }}>★★★☆☆ — 3 Stars</option>
+                        <option value="4" {{ "selected" if profile.stars == 4 }}>★★★★☆ — 4 Stars</option>
+                        <option value="5" {{ "selected" if profile.stars == 5 }}>★★★★★ — 5 Stars</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Save Rating</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Profile Images -->
+            {% if image_list or (current_user and (current_user.id == target.id or current_user.is_admin)) %}
+            <div class="profile-section" id="images-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 style="margin:0;">Photos</h2>
+                    {% if current_user and (current_user.id == target.id or current_user.is_admin) %}
+                    <form method="post" action="/profile/images/upload" enctype="multipart/form-data" id="image-upload-form">
+                        <input type="hidden" name="redirect_to" value="/profile/{{ target.username }}">
+                        <label for="image-file-input" class="btn btn-outline btn-sm" style="cursor:pointer; margin:0;">+ Add Photo</label>
+                        <input type="file" id="image-file-input" name="image" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" multiple>
+                    </form>
+                    {% endif %}
+                </div>
+                {% if image_list %}
+                <div id="images-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
+                    {% for img in image_list %}
+                    <div class="image-card" style="position:relative; border-radius:10px; overflow:hidden; aspect-ratio:1/1; background:var(--gray-100); {% if loop.index > 5 %}display:none;{% endif %}" data-index="{{ loop.index }}">
+                        <img src="{{ img.file_url }}" alt="Photo" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block; cursor:pointer;" onclick="openLightbox({{ loop.index0 }})">
+                        {% if current_user and (current_user.id == target.id or current_user.is_admin) %}
+                        <form method="post" action="/profile/images/{{ img.id }}/delete" onsubmit="return confirm('Delete this photo?')" style="position:absolute; top:6px; right:6px;">
+                            <input type="hidden" name="redirect_to" value="/profile/{{ target.username }}">
+                            <button type="submit" style="background:rgba(0,0,0,0.55); color:#fff; border:none; border-radius:50%; width:26px; height:26px; font-size:14px; cursor:pointer; line-height:26px; text-align:center;">x</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if image_list | length > 5 %}
+                <div style="text-align:center; margin-top:12px;">
+                    <button id="show-more-images" class="btn btn-outline btn-sm" onclick="showAllImages()">Show All {{ image_list | length }} Photos</button>
+                </div>
+                {% endif %}
+                {% else %}
+                <p style="color:var(--gray-400); font-size:14px;">No photos uploaded yet.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <!-- Transcripts — coaches only, never visible to player -->
             {% if can_see_transcripts %}
             <div class="profile-section">
@@ -443,6 +521,65 @@ function copyProfile() {
         btn.textContent = 'Copied!';
         btn.classList.add('copied');
         setTimeout(() => { btn.textContent = 'Copy Link'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+</script>
+<!-- Lightbox -->
+<div id="lightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
+    <button onclick="closeLightbox()" style="position:absolute; top:18px; right:24px; background:none; border:none; color:#fff; font-size:32px; cursor:pointer; line-height:1;">&#x2715;</button>
+    <button id="lb-prev" onclick="moveLightbox(-1)" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:none; color:#fff; font-size:36px; cursor:pointer; border-radius:50%; width:52px; height:52px; line-height:1;">&#8249;</button>
+    <img id="lb-img" src="" alt="" style="max-width:90vw; max-height:85vh; object-fit:contain; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+    <div id="lb-counter" style="color:#aaa; font-size:13px; margin-top:12px;"></div>
+    <button id="lb-next" onclick="moveLightbox(1)" style="position:absolute; right:16px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:none; color:#fff; font-size:36px; cursor:pointer; border-radius:50%; width:52px; height:52px; line-height:1;">&#8250;</button>
+</div>
+
+<script>
+var lbImages = [{% if image_list %}{% for img in image_list %}"{{ img.file_url }}"{% if not loop.last %},{% endif %}{% endfor %}{% endif %}];
+var lbIndex = 0;
+
+function openLightbox(idx) {
+    lbIndex = idx;
+    updateLightbox();
+    var lb = document.getElementById('lightbox');
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
+}
+function moveLightbox(dir) {
+    lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+    updateLightbox();
+}
+function updateLightbox() {
+    document.getElementById('lb-img').src = lbImages[lbIndex];
+    document.getElementById('lb-counter').textContent = (lbIndex + 1) + ' / ' + lbImages.length;
+    document.getElementById('lb-prev').style.display = lbImages.length > 1 ? '' : 'none';
+    document.getElementById('lb-next').style.display = lbImages.length > 1 ? '' : 'none';
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+    if (e.target === this) closeLightbox();
+});
+document.addEventListener('keydown', function(e) {
+    var lb = document.getElementById('lightbox');
+    if (lb.style.display === 'none') return;
+    if (e.key === 'ArrowRight') moveLightbox(1);
+    else if (e.key === 'ArrowLeft') moveLightbox(-1);
+    else if (e.key === 'Escape') closeLightbox();
+});
+
+function showAllImages() {
+    document.querySelectorAll('.image-card').forEach(function(el) {
+        el.style.display = '';
+    });
+    var btn = document.getElementById('show-more-images');
+    if (btn) btn.style.display = 'none';
+}
+var imgInput = document.getElementById('image-file-input');
+if (imgInput) {
+    imgInput.addEventListener('change', function() {
+        if (this.files[0]) document.getElementById('image-upload-form').submit();
     });
 }
 </script>
