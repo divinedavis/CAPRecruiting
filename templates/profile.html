@@ -3,13 +3,13 @@
 
 {% set display_name = (profile.first_name ~ ' ' ~ profile.last_name).strip() if profile and (profile.first_name or profile.last_name) else target.username %}
 {% set og_desc %}{% if target.role == 'player' %}{% if profile and profile.position %}{{ profile.position }}{% endif %}{% if profile and profile.year %} · Class of {{ profile.year }}{% endif %}{% if profile and profile.school %} · {{ profile.school }}{% endif %} — View full recruiting profile on Collegiate Athletic Planning.{% else %}{% if profile and profile.title %}{{ profile.title }}{% endif %}{% if profile and profile.school %} at {{ profile.school }}{% endif %} — View coach profile on Collegiate Athletic Planning.{% endif %}{% endset %}
-{% set og_img = ('https://bearcatrecruiting.com' ~ profile.photo) if profile and profile.photo else 'https://bearcatrecruiting.com/static/og-default.png' %}
+{% set og_img = (profile.photo if profile.photo.startswith('http') else 'https://caprecruiting.com' ~ profile.photo) if profile and profile.photo else 'https://caprecruiting.com/static/og-default.png' %}
 
 {% block og_type %}profile{% endblock %}
 {% block og_title %}{{ display_name }} — Collegiate Athletic Planning{% endblock %}
 {% block og_description %}{{ og_desc }}{% endblock %}
 {% block og_image %}{{ og_img }}{% endblock %}
-{% block og_url %}https://bearcatrecruiting.com/profile/{{ target.username }}{% endblock %}
+{% block og_url %}https://caprecruiting.com/profile/{{ target.username }}{% endblock %}
 {% block tw_title %}{{ display_name }} — Collegiate Athletic Planning{% endblock %}
 {% block tw_description %}{{ og_desc }}{% endblock %}
 {% block tw_image %}{{ og_img }}{% endblock %}
@@ -45,6 +45,9 @@
                             {{ target.username }}
                         {% endif %}
                     </h1>
+                    {% if target.role == "player" and profile and profile.stars %}
+                    <div style="font-size:22px; letter-spacing:3px; color:#f59e0b; margin-top:2px; margin-bottom:4px;">{% for i in range(profile.stars) %}★{% endfor %}{% for i in range(5 - profile.stars) %}☆{% endfor %}</div>
+                    {% endif %}
                     <div class="profile-badges">
                         <span class="role-tag {{ target.role }}">{{ "🏈 Player" if target.role == "player" else "📋 Coach" }}</span>
                         {% if target.role == "player" and profile and profile.position %}
@@ -120,12 +123,7 @@
                         <span class="stat-value">{{ profile.year }}</span>
                     </div>
                     {% endif %}
-                    {% if profile.stars %}
-                    <div class="stat-card" style="grid-column: 1 / -1;">
-                        <span class="stat-label">Stars</span>
-                        <span class="stat-value" style="font-size:22px; letter-spacing:3px; color:#f59e0b;">{% for i in range(profile.stars) %}★{% endfor %}{% for i in range(5 - profile.stars) %}☆{% endfor %}</span>
-                    </div>
-                    {% endif %}
+
                 </div>
             </div>
 

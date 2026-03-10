@@ -15,14 +15,15 @@
 
         <form method="post" action="/login">
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" placeholder="Your username" required autocomplete="username">
+                <label>Username or Email</label>
+                <input type="text" name="username" placeholder="Username or email" required autocomplete="username">
             </div>
             <div class="form-group">
                 <label>Password</label>
                 <input type="password" name="password" placeholder="Your password" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+            <p style="text-align:center; margin-top:12px; font-size:14px;"><a href="/forgot-password">Forgot password?</a></p>
         </form>
         <p class="auth-alt">Don't have an account? <a href="/signup">Sign up</a></p>
     </div>

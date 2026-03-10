@@ -23,6 +23,12 @@ SPACES_REGION = os.environ.get("SPACES_REGION", "nyc3")
 SPACES_BUCKET = os.environ.get("SPACES_BUCKET", "cap-recruiting-videos")
 SPACES_ENDPOINT = f"https://{SPACES_REGION}.digitaloceanspaces.com"
 SPACES_CDN_URL  = os.environ.get("SPACES_CDN_URL", "")
+
+SMTP_HOST     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT     = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER     = os.environ.get("SMTP_USER", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SITE_URL      = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
 SPACES_BASE_URL = SPACES_CDN_URL if SPACES_CDN_URL else f"https://{SPACES_BUCKET}.{SPACES_REGION}.digitaloceanspaces.com"
 
 s3 = boto3.client(
@@ -192,6 +198,14 @@ class Transcript(Base):
     filename = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    token = Column(String, nullable=False, unique=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Integer, default=0)
+
 class ProfileImage(Base):
     __tablename__ = "profile_images"
     id = Column(Integer, primary_key=True)
@@ -344,6 +358,85 @@ async def signup_post(
     request.session["is_admin"] = bool(user.is_admin)
     return RedirectResponse("/profile/edit", status_code=302)
 
+async def send_reset_email(to_email: str, reset_url: str):
+    import aiosmtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Reset your Bearcats Recruiting password"
+    msg["From"] = f"Bearcats Recruiting <{SMTP_USER}>"
+    msg["To"] = to_email
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#0a1628;">Reset Your Password</h2>
+        <p>We received a request to reset your password. Click the button below to choose a new one.</p>
+        <p style="margin:28px 0;">
+            <a href="{reset_url}" style="background:#0a1628;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Reset Password</a>
+        </p>
+        <p style="color:#888;font-size:13px;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+        <p style="color:#bbb;font-size:12px;">Or copy this link: {reset_url}</p>
+    </div>"""
+    msg.attach(MIMEText(html, "html"))
+    try:
+        await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+    except Exception as e:
+        print(f"Email send error: {e}")
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_get(request: Request):
+    return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": False, "error": None})
+
+@app.post("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_post(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    email = (form.get("email") or "").strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    # Always show success to prevent email enumeration
+    if user:
+        import secrets as _secrets
+        from datetime import timedelta
+        token_str = _secrets.token_urlsafe(32)
+        expires = datetime.utcnow() + timedelta(hours=1)
+        db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id, PasswordResetToken.used == 0).delete()
+        db.add(PasswordResetToken(user_id=user.id, token=token_str, expires_at=expires))
+        db.commit()
+        reset_url = f"{SITE_URL}/reset-password/{token_str}"
+        await send_reset_email(email, reset_url)
+    return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": True, "error": None})
+
+@app.get("/reset-password/{token}", response_class=HTMLResponse)
+async def reset_password_get(token: str, request: Request, db: Session = Depends(get_db)):
+    rec = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token,
+        PasswordResetToken.used == 0,
+        PasswordResetToken.expires_at > datetime.utcnow()
+    ).first()
+    if not rec:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": True, "success": False, "error": None})
+    return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": None})
+
+@app.post("/reset-password/{token}", response_class=HTMLResponse)
+async def reset_password_post(token: str, request: Request, db: Session = Depends(get_db)):
+    rec = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token,
+        PasswordResetToken.used == 0,
+        PasswordResetToken.expires_at > datetime.utcnow()
+    ).first()
+    if not rec:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": True, "success": False, "error": None})
+    form = await request.form()
+    password = form.get("password", "")
+    confirm = form.get("confirm", "")
+    if len(password) < 8:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Password must be at least 8 characters."})
+    if password != confirm:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Passwords do not match."})
+    user = db.query(User).filter(User.id == rec.user_id).first()
+    user.password_hash = hash_password(password)
+    rec.used = 1
+    db.commit()
+    return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": True, "error": None})
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
@@ -355,7 +448,7 @@ async def login_post(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter((User.username == username) | (User.email == username)).first()
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password."})
     request.session["user_id"] = user.id

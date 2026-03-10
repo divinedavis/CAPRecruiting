@@ -98,6 +98,17 @@
                 </div>
             </div>
             {% endif %}
+            <!-- Share button top-left -->
+            <div style="position:absolute; top:14px; left:14px;">
+                <div onclick="event.preventDefault(); event.stopPropagation(); shareProfile('{{ item.user.username }}', '{{ p.first_name ~ ' ' ~ p.last_name if p and (p.first_name or p.last_name) else item.user.username }}')"
+                     style="width:44px; height:44px; border-radius:50%; background:#f3f4f6; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); transition:transform 0.15s, box-shadow 0.15s;"
+                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 14px rgba(0,0,0,0.25)';"
+                     onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)';"
+                     title="Share profile">
+                    <img src="/static/share-icon.svg" style="width:22px; height:22px; display:block;" alt="Share">
+                </div>
+            </div>
+
             {% if p and (p.hudl_url or p.x_url or p.instagram_url) %}
             <div style="position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:8px; align-items:center;">
                 {% if p.hudl_url %}
@@ -149,6 +160,20 @@ function applyYearFilter(yr) {
     if (yr) url.searchParams.set('year', yr);
     else url.searchParams.delete('year');
     window.location.href = url.toString();
+}
+</script>
+<script>
+function shareProfile(username, name) {
+    var url = 'https://caprecruiting.com/profile/' + username;
+    if (navigator.share) {
+        navigator.share({ title: name + ' — CAP Recruiting', url: url });
+    } else {
+        navigator.clipboard.writeText(url).then(function() {
+            alert('Profile link copied to clipboard!');
+        }).catch(function() {
+            prompt('Copy this link:', url);
+        });
+    }
 }
 </script>
 {% endblock %}
