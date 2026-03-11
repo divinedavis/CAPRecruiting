@@ -2,7 +2,7 @@
 
 A football recruiting platform connecting high school players with college coaches.
 
-**Live site:** [bearcatrecruiting.com](https://bearcatrecruiting.com)
+**Live site:** [caprecruiting.com](https://caprecruiting.com)
 
 ## Features
 
@@ -81,8 +81,8 @@ A football recruiting platform connecting high school players with college coach
 | SSL | Let's Encrypt / Certbot |
 | Real-time | WebSockets |
 | Auth | Starlette SessionMiddleware + bcrypt |
-| File storage | DigitalOcean Spaces (S3-compatible) + CDN |
+| File storage | DigitalOcean Spaces (S3-compatible) via boto3 + CDN |
 | Image processing | Pillow |
+| Email | aiosmtplib (Gmail SMTP) |
 | Process manager | systemd |
 | Hosting | DigitalOcean Droplet |
-
