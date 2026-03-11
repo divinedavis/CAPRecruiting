@@ -152,7 +152,7 @@
                     {% if profile.broad_jump %}
                     <div class=stat-card>
                         <span class=stat-label>Broad Jump</span>
-                        <span class=stat-value>{{ profile.broad_jump }} <small>in</small></span>
+                        <span class=stat-value>{{ profile.broad_jump }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -376,10 +376,16 @@
                     {% endif %}
                 </div>
                 {% if image_list %}
+                {% set pinned = image_list | selectattr("is_pinned") | list %}
+                {% set unpinned = image_list | rejectattr("is_pinned") | list %}
+                {% set ordered = pinned + unpinned %}
                 <div id="images-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
-                    {% for img in image_list %}
-                    <div class="image-card" style="position:relative; border-radius:10px; overflow:hidden; aspect-ratio:1/1; background:var(--gray-100); {% if loop.index > 5 %}display:none;{% endif %}" data-index="{{ loop.index }}">
+                    {% for img in ordered %}
+                    <div class="image-card" style="position:relative; border-radius:10px; overflow:hidden; aspect-ratio:1/1; background:var(--gray-100); {% if loop.index > 5 %}display:none;{% endif %}{{ ' outline:3px solid var(--gold);' if img.is_pinned else '' }}" data-index="{{ loop.index }}">
                         <img src="{{ img.file_url }}" alt="Photo" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block; cursor:pointer;" onclick="openLightbox({{ loop.index0 }})">
+                        {% if img.is_pinned %}
+                        <div style="position:absolute; top:6px; left:6px; background:var(--gold); color:var(--navy); border-radius:4px; font-size:10px; font-weight:700; padding:2px 5px;">📌</div>
+                        {% endif %}
                         {% if current_user and (current_user.id == target.id or current_user.is_admin) %}
                         <form method="post" action="/profile/images/{{ img.id }}/delete" onsubmit="return confirm('Delete this photo?')" style="position:absolute; top:6px; right:6px;">
                             <input type="hidden" name="redirect_to" value="/profile/{{ target.username }}">
@@ -389,9 +395,9 @@
                     </div>
                     {% endfor %}
                 </div>
-                {% if image_list | length > 5 %}
+                {% if ordered | length > 5 %}
                 <div style="text-align:center; margin-top:12px;">
-                    <button id="show-more-images" class="btn btn-outline btn-sm" onclick="showAllImages()">Show All {{ image_list | length }} Photos</button>
+                    <button id="show-more-images" class="btn btn-outline btn-sm" onclick="showAllImages()">Show All {{ ordered | length }} Photos</button>
                 </div>
                 {% endif %}
                 {% else %}
@@ -532,7 +538,7 @@ function copyProfile() {
 </div>
 
 <script>
-var lbImages = [{% if image_list %}{% for img in image_list %}"{{ img.file_url }}"{% if not loop.last %},{% endif %}{% endfor %}{% endif %}];
+var lbImages = [{% if image_list %}{% set pinned = image_list | selectattr("is_pinned") | list %}{% set unpinned = image_list | rejectattr("is_pinned") | list %}{% for img in (pinned + unpinned) %}"{{ img.file_url }}"{% if not loop.last %},{% endif %}{% endfor %}{% endif %}];
 var lbIndex = 0;
 
 function openLightbox(idx) {

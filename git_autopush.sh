@@ -9,6 +9,8 @@ git add .
 
 # Only commit if there are staged changes
 if ! git diff --cached --quiet; then
-    git commit -m "Auto-commit: 2026-02-28 14:19"
-    git push origin main
+    git commit -m "Auto-commit: $(date '+%Y-%m-%d %H:%M')"
 fi
+
+# Pull remote changes (rebase), then push
+git pull --rebase origin main && git push origin main

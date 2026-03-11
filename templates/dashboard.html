@@ -98,8 +98,8 @@
                 </div>
             </div>
             {% endif %}
-            <!-- Share button top-left -->
-            <div style="position:absolute; top:14px; left:14px;">
+            <!-- Share + Message buttons top-left -->
+            <div style="position:absolute; top:14px; left:14px; display:flex; flex-direction:column; gap:8px; align-items:center;">
                 <div onclick="event.preventDefault(); event.stopPropagation(); shareProfile('{{ item.user.username }}', '{{ p.first_name ~ ' ' ~ p.last_name if p and (p.first_name or p.last_name) else item.user.username }}')"
                      style="width:44px; height:44px; border-radius:50%; background:#f3f4f6; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); transition:transform 0.15s, box-shadow 0.15s;"
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 14px rgba(0,0,0,0.25)';"
@@ -107,6 +107,17 @@
                      title="Share profile">
                     <img src="/static/share-icon.svg" style="width:22px; height:22px; display:block;" alt="Share">
                 </div>
+                {% if user and (user.role == "coach" or user.is_admin) %}
+                <div onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/messages/{{ item.user.username }}';"
+                     style="width:44px; height:44px; border-radius:50%; background:#0a1628; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(10,22,40,0.3); transition:transform 0.15s, box-shadow 0.15s;"
+                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 14px rgba(10,22,40,0.45)';"
+                     onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 8px rgba(10,22,40,0.3)';"
+                     title="Message {{ p.first_name if p and p.first_name else item.user.username }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0b429" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                {% endif %}
             </div>
 
             {% if p and (p.hudl_url or p.x_url or p.instagram_url) %}

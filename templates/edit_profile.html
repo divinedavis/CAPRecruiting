@@ -18,12 +18,12 @@
             <div class="photo-upload-area">
                 <div class="photo-preview" id="photo-preview">
                     {% if profile and profile.photo %}
-                        <img src="{{ profile.photo }}" alt="Profile photo" id="preview-img">
+                        <img src="{{ profile.photo }}" alt="Profile photo" id="preview-img" class="avatar-img">
                     {% else %}
                         <div class="photo-placeholder" id="photo-placeholder">
                             {{ (profile.first_name[0] if profile and profile.first_name else user.username[0]) | upper }}
                         </div>
-                        <img src="" alt="" id="preview-img" style="display:none">
+                        <img src="" alt="" id="preview-img" class="avatar-img" style="display:none">
                     {% endif %}
                 </div>
                 <div class="photo-upload-controls">
@@ -31,6 +31,7 @@
                         <label for="photo-input" class="btn btn-outline btn-upload">
                             📷 {% if profile and profile.photo %}Change Photo{% else %}Upload Photo{% endif %}
                         </label>
+                        <input type="hidden" name="target_user_id" value="{{ user.id }}">
                         <input type="file" name="photo" id="photo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
                         <p class="photo-hint">JPG, PNG, GIF or WebP — max 5MB</p>
                     </form>
@@ -124,8 +125,23 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Broad Jump (inches)</label>
-                        <input type="text" name="broad_jump" value="{{ profile.broad_jump if profile else '' }}" placeholder="120">
+                        <label>Broad Jump</label>
+                        {% if profile and profile.broad_jump %}
+                            {% if "'" in profile.broad_jump %}
+                                {% set _bj_ft = profile.broad_jump.split("'")[0] %}
+                                {% set _bj_in = profile.broad_jump.split("'")[1].replace('"','') %}
+                            {% else %}
+                                {% set _bj_ft = (profile.broad_jump | int) // 12 %}
+                                {% set _bj_in = (profile.broad_jump | int) % 12 %}
+                            {% endif %}
+                        {% else %}
+                            {% set _bj_ft = '' %}
+                            {% set _bj_in = '' %}
+                        {% endif %}
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="number" name="broad_jump_feet" min="0" max="15" value="{{ _bj_ft }}" placeholder="10" style="width:80px"> <small>ft</small>
+                            <input type="number" name="broad_jump_inches" min="0" max="11" value="{{ _bj_in }}" placeholder="2" style="width:80px"> <small>in</small>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Pro Agility (sec)</label>
@@ -156,18 +172,19 @@
                 <h2>Scholarship Offers</h2>
                 <p class="section-hint">Add up to 5 schools that have offered you a scholarship</p>
                 {% for n in [1, 2, 3, 4, 5] %}
-                <div style="margin-bottom:14px;">
+                <div id="offer-row-{{ n }}" style="margin-bottom:14px;{% if n > 1 %} display:none;{% endif %}">
                     <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Offer {{ n }}</label>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <select id="offer{{ n }}_div" onchange="offerDivChange({{ n }})" style="flex:1; min-width:120px;">
                             <option value="">Division</option>
                             <option value="Division I">Division I</option>
                             <option value="Division II">Division II</option>
+                            <option value="Division III">Division III</option>
                         </select>
                         <select id="offer{{ n }}_conf" onchange="offerConfChange({{ n }})" style="flex:1.5; min-width:150px;">
                             <option value="">Conference</option>
                         </select>
-                        <select id="offer{{ n }}_school" name="offer{{ n }}" style="flex:2; min-width:160px;">
+                        <select id="offer{{ n }}_school" name="offer{{ n }}" style="flex:2; min-width:160px;" onchange="offerSchoolChanged({{ n }})">
                             <option value="">School</option>
                         </select>
                     </div>
@@ -179,18 +196,19 @@
                 <h2>School Visits</h2>
                 <p class="section-hint">Add up to 5 schools you have visited on an official or unofficial visit</p>
                 {% for n in [1, 2, 3, 4, 5] %}
-                <div style="margin-bottom:14px;">
+                <div id="visit-row-{{ n }}" style="margin-bottom:14px;{% if n > 1 %} display:none;{% endif %}">
                     <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Visit {{ n }}</label>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                         <select id="visit{{ n }}_div" onchange="visitDivChange({{ n }})" style="flex:1; min-width:120px;">
                             <option value="">Division</option>
                             <option value="Division I">Division I</option>
                             <option value="Division II">Division II</option>
+                            <option value="Division III">Division III</option>
                         </select>
                         <select id="visit{{ n }}_conf" onchange="visitConfChange({{ n }})" style="flex:1.5; min-width:150px;">
                             <option value="">Conference</option>
                         </select>
-                        <select id="visit{{ n }}_school" name="visit{{ n }}_school" style="flex:2; min-width:160px;">
+                        <select id="visit{{ n }}_school" name="visit{{ n }}_school" style="flex:2; min-width:160px;" onchange="visitSchoolChanged({{ n }})">
                             <option value="">School</option>
                         </select>
                         <input type="date" name="visit{{ n }}_date" id="visit{{ n }}_date" style="flex:1; min-width:140px;">
@@ -314,6 +332,7 @@
 
             <form method="post" action="/profile/videos/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
                 <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
+                <input type="hidden" name="target_user_id" value="{{ user.id }}">
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end;">
                     <div style="flex:1; min-width:140px;">
                         <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Title (optional)</label>
@@ -321,7 +340,7 @@
                     </div>
                     <div style="flex:2; min-width:200px;">
                         <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Video File (MP4, MOV, WebM — max 4GB / ~30 min)</label>
-                        <input type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/avi" required style="padding:8px;">
+                        <input type="file" name="video" accept="video/*" required style="padding:8px;">
                     </div>
                     <button type="submit" class="btn btn-primary" style="flex-shrink:0;">Upload</button>
                 </div>
@@ -381,14 +400,25 @@
             </form>
             {% endif %}
             {% if image_list %}
+            {% set pinned_count = image_list | selectattr("is_pinned") | list | length %}
+            <p style="font-size:12px; color:var(--gray-400); margin-bottom:10px;">📌 Pin up to 5 photos to show first on your profile. {{ pinned_count }}/5 pinned.</p>
             <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;">
                 {% for img in image_list %}
-                <div style="position:relative; border-radius:8px; overflow:hidden; aspect-ratio:1/1; background:var(--gray-100);">
+                <div style="position:relative; border-radius:8px; overflow:hidden; aspect-ratio:1/1; background:var(--gray-100); {{ 'outline:3px solid var(--gold);' if img.is_pinned else '' }}">
                     <img src="{{ img.file_url }}" alt="Photo" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;">
-                    <form method="post" action="/profile/images/{{ img.id }}/delete" onsubmit="return confirm('Delete this photo?')" style="position:absolute; top:4px; right:4px;">
-                        <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
-                        <button type="submit" style="background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:24px; height:24px; font-size:13px; cursor:pointer; line-height:24px; text-align:center;">&#x2715;</button>
-                    </form>
+                    {% if img.is_pinned %}
+                    <div style="position:absolute; top:4px; left:4px; background:var(--gold); color:var(--navy); border-radius:4px; font-size:10px; font-weight:700; padding:2px 5px;">📌 Pinned</div>
+                    {% endif %}
+                    <div style="position:absolute; top:4px; right:4px; display:flex; gap:4px;">
+                        <form method="post" action="/profile/images/{{ img.id }}/pin">
+                            <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
+                            <button type="submit" title="{{ 'Unpin' if img.is_pinned else 'Pin to profile' }}" style="background:{{ 'var(--gold)' if img.is_pinned else 'rgba(0,0,0,0.55)' }}; color:{{ 'var(--navy)' if img.is_pinned else '#fff' }}; border:none; border-radius:50%; width:24px; height:24px; font-size:12px; cursor:pointer; line-height:24px; text-align:center;">📌</button>
+                        </form>
+                        <form method="post" action="/profile/images/{{ img.id }}/delete" onsubmit="return confirm('Delete this photo?')">
+                            <input type="hidden" name="redirect_to" value="{{ profile_form_action | default('/profile/edit') }}">
+                            <button type="submit" style="background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:24px; height:24px; font-size:13px; cursor:pointer; line-height:24px; text-align:center;">&#x2715;</button>
+                        </form>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -566,6 +596,30 @@ const CFBD = {
     "SIAC": ["Albany State","Clark Atlanta","Fort Valley State","Kentucky State","Lane","Miles","Morehouse","Savannah State","Stillman","Tuskegee"],
     "Lone Star": ["Angelo State","Eastern New Mexico","Midwestern State","Sul Ross State","Texas A&M-Commerce","Texas A&M-Kingsville","West Texas A&M"],
     "SAA": ["Barton","Limestone","Newberry","North Greenville","Shorter","Young Harris"]
+  },
+  "Division III": {
+    "CCIW": ["Carthage","Elmhurst","Illinois Wesleyan","Millikin","North Central","North Park","Wheaton (IL)"],
+    "Centennial": ["Dickinson","Franklin & Marshall","Gettysburg","Johns Hopkins","McDaniel","Muhlenberg","Ursinus","Washington (MD)"],
+    "Commonwealth Coast": ["Curry","Endicott","Maine Maritime","Salve Regina","Western New England"],
+    "Empire 8": ["Alfred","Hartwick","Ithaca","Morrisville State","St. John Fisher","Utica"],
+    "Landmark": ["Catholic","Drew","Juniata","Moravian","Susquehanna"],
+    "Liberty League": ["Hobart","RPI","Rochester","St. Lawrence","Union (NY)"],
+    "MAC Freedom": ["Delaware Valley","King's","Lycoming","Misericordia","Wilkes"],
+    "MAC Commonwealth": ["Albright","Lebanon Valley","Messiah","Widener"],
+    "MIAA (D3)": ["Adrian","Albion","Alma","Calvin","Hope","Kalamazoo","Olivet","Trine"],
+    "MIAC": ["Augsburg","Bethel (MN)","Carleton","Concordia (MN)","Gustavus Adolphus","Hamline","Macalester","St. John's (MN)","St. Olaf","St. Thomas"],
+    "Midwest Conference": ["Carroll","Grinnell","Knox","Lake Forest","Lawrence","Monmouth (IL)","Ripon","St. Norbert"],
+    "NESCAC": ["Amherst","Bates","Bowdoin","Colby","Hamilton","Middlebury","Trinity (CT)","Tufts","Wesleyan","Williams"],
+    "NJAC": ["Kean","Montclair State","Rowan","William Paterson"],
+    "NCAC": ["Allegheny","Denison","DePauw","Hiram","Kenyon","Oberlin","Ohio Wesleyan","Wabash","Wittenberg","Wooster"],
+    "OAC": ["Baldwin Wallace","Capital","Heidelberg","Marietta","Mount Union","Muskingum","Ohio Northern","Otterbein"],
+    "ODAC": ["Averett","Bridgewater (VA)","Eastern Mennonite","Guilford","Hampden-Sydney","Randolph-Macon","Shenandoah","Washington & Lee"],
+    "PAC": ["Bethany (WV)","Carnegie Mellon","Geneva","Grove City","Thiel","Washington & Jefferson","Waynesburg","Westminster (PA)"],
+    "SCIAC": ["Cal Lutheran","Chapman","Claremont-Mudd-Scripps","La Verne","Occidental","Redlands","Whittier"],
+    "Southern Athletic (D3)": ["Berry","Centre","Hendrix","Millsaps","Oglethorpe","Rhodes","Sewanee","Trinity (TX)"],
+    "UAA": ["Case Western Reserve","Chicago","Emory","NYU","Rochester","Wash U"],
+    "WIAC": ["UW-Eau Claire","UW-La Crosse","UW-Oshkosh","UW-Platteville","UW-River Falls","UW-Stevens Point","UW-Stout","UW-Whitewater"],
+    "D3 Independents": ["Benedictine (IL)","Bethel (TN)","Brockport","Buffalo State","Cortland","Defiance","Dubuque","East Texas Baptist","Ferrum","Greenville","Hardin-Simmons","Huntingdon","John Carroll","Linfield","Luther","Mary Hardin-Baylor","McMurry","Mississippi College","Mount St. Joseph","Nebraska Wesleyan","North Central (MN)","Norwich","Pacific Lutheran","Puget Sound","Southwestern (TX)","Texas Lutheran","Thomas More","Wartburg","Whitworth","Wisconsin Lutheran"]
   }
 };
 
@@ -664,10 +718,54 @@ const SAVED_VISITS = [
   { school: "{{ (profile.visit5_school or '') | e if profile else '' }}", date: "{{ (profile.visit5_date or '') | e if profile else '' }}" }
 ];
 
+function offerSchoolChanged(n) {
+  const school = document.getElementById('offer'+n+'_school').value;
+  if (n < 5) {
+    const nextRow = document.getElementById('offer-row-'+(n+1));
+    if (school) {
+      nextRow.style.display = 'block';
+    } else {
+      for (let i = n + 1; i <= 5; i++) {
+        const row = document.getElementById('offer-row-'+i);
+        row.style.display = 'none';
+        document.getElementById('offer'+i+'_div').value = '';
+        document.getElementById('offer'+i+'_conf').innerHTML = '<option value="">Conference</option>';
+        document.getElementById('offer'+i+'_school').innerHTML = '<option value="">School</option>';
+      }
+    }
+  }
+}
+
+function visitSchoolChanged(n) {
+  const school = document.getElementById('visit'+n+'_school').value;
+  if (n < 5) {
+    const nextRow = document.getElementById('visit-row-'+(n+1));
+    if (school) {
+      nextRow.style.display = 'block';
+    } else {
+      // Hide this and all subsequent rows, clear their values
+      for (let i = n + 1; i <= 5; i++) {
+        const row = document.getElementById('visit-row-'+i);
+        row.style.display = 'none';
+        document.getElementById('visit'+i+'_div').value = '';
+        document.getElementById('visit'+i+'_conf').innerHTML = '<option value="">Conference</option>';
+        document.getElementById('visit'+i+'_school').innerHTML = '<option value="">School</option>';
+        document.getElementById('visit'+i+'_date').value = '';
+      }
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   for (let n = 1; n <= 5; n++) {
-    if (SAVED_OFFERS[n]) preloadOffer(n, SAVED_OFFERS[n]);
-    if (SAVED_VISITS[n] && SAVED_VISITS[n].school) preloadVisit(n, SAVED_VISITS[n].school, SAVED_VISITS[n].date);
+    if (SAVED_OFFERS[n]) {
+      preloadOffer(n, SAVED_OFFERS[n]);
+      if (n < 5) document.getElementById('offer-row-'+(n+1)).style.display = 'block';
+    }
+    if (SAVED_VISITS[n] && SAVED_VISITS[n].school) {
+      preloadVisit(n, SAVED_VISITS[n].school, SAVED_VISITS[n].date);
+      if (n < 5) document.getElementById('visit-row-'+(n+1)).style.display = 'block';
+    }
   }
 });
 </script>

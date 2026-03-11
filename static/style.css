@@ -691,19 +691,19 @@ textarea { resize: vertical; }
 /* ── Photo Upload ─────────────────────────────────────────────── */
 .photo-upload-area { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .photo-preview {
-    width: 100px; height: 100px;
+    width: 180px; height: 180px;
     border-radius: 50%;
     background: var(--navy);
     color: var(--gold);
     display: flex; align-items: center; justify-content: center;
-    font-size: 40px; font-weight: 800;
+    font-size: 76px; font-weight: 800;
     overflow: hidden; flex-shrink: 0;
     border: 3px solid var(--gray-200);
 }
 .photo-preview .avatar-img, .profile-avatar-lg .avatar-img, .player-avatar .avatar-img {
     width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
 }
-.photo-placeholder { font-size: 40px; font-weight: 800; color: var(--gold); }
+.photo-placeholder { font-size: 76px; font-weight: 800; color: var(--gold); }
 .photo-upload-controls { display: flex; flex-direction: column; gap: 8px; }
 .btn-upload { border-color: var(--gray-200); color: var(--gray-800); cursor: pointer; }
 .btn-upload:hover { border-color: var(--gold); }
