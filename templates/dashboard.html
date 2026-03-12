@@ -4,9 +4,9 @@
 <div class="container page-top">
     <div class="page-header">
         <div>
-            {% if team %}
-            <a href="/dashboard" class="back-link">← All Teams</a>
-            <h1>{{ team.name }}</h1>
+            {% if active_school %}
+            <a href="/dashboard" class="back-link">← All Schools</a>
+            <h1>{{ active_school }}</h1>
             <p class="page-sub">{{ player_data|length }} player{{ 's' if player_data|length != 1 else '' }} registered</p>
             {% else %}
             <h1>Player Directory</h1>
@@ -23,17 +23,27 @@
         {% endif %}
     </div>
 
-    {% if teams %}
-    <div class="team-filter-bar">
-        <span class="filter-label">Filter:</span>
-        <a href="/dashboard" class="team-pill {% if not active_team_id %}active{% endif %}">All Teams</a>
-        {% for t in teams %}
-        <a href="/dashboard?team_id={{ t.id }}{% if active_year %}&year={{ active_year }}{% endif %}" class="team-pill {% if active_team_id == t.id %}active{% endif %}">{{ t.name }}</a>
-        {% endfor %}
-    </div>
-    {% if active_team_id %}
-    <div class="team-filter-bar" style="margin-top:8px;">
-        <span class="filter-label">Year:</span>
+    {% if schools or positions %}
+    <div class="team-filter-bar" style="gap:12px;">
+        {% if schools %}
+        <span class="filter-label">School:</span>
+        <select onchange="applySchoolFilter(this.value)" style="padding:6px 14px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:220px;">
+            <option value="" {% if not active_school %}selected{% endif %}>All Schools</option>
+            {% for s in schools %}
+            <option value="{{ s }}" {% if active_school == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        {% if positions %}
+        <span class="filter-label" style="margin-left:8px;">Position:</span>
+        <select onchange="applyPositionFilter(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer;">
+            <option value="" {% if not active_position %}selected{% endif %}>All Positions</option>
+            {% for pos in positions %}
+            <option value="{{ pos }}" {% if active_position == pos %}selected{% endif %}>{{ pos }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <span class="filter-label" style="margin-left:8px;">Year:</span>
         <select onchange="applyYearFilter(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer;">
             <option value="" {% if not active_year %}selected{% endif %}>All Years</option>
             {% for yr in ["2025", "2026", "2027", "2028", "2029"] %}
@@ -41,7 +51,6 @@
             {% endfor %}
         </select>
     </div>
-    {% endif %}
     {% endif %}
 
     {% if player_data %}
@@ -166,6 +175,19 @@
     {% endif %}
 </div>
 <script>
+function applySchoolFilter(school) {
+    var url = new URL(window.location.href);
+    if (school) url.searchParams.set('school', school);
+    else url.searchParams.delete('school');
+    url.searchParams.delete('year');
+    window.location.href = url.toString();
+}
+function applyPositionFilter(pos) {
+    var url = new URL(window.location.href);
+    if (pos) url.searchParams.set('position', pos);
+    else url.searchParams.delete('position');
+    window.location.href = url.toString();
+}
 function applyYearFilter(yr) {
     var url = new URL(window.location.href);
     if (yr) url.searchParams.set('year', yr);

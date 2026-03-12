@@ -1,3 +1,4 @@
+import sqlite3
 import boto3
 from botocore.client import Config
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
@@ -300,6 +301,9 @@ async def signup_post(
     team_id: Optional[int] = Form(None),
     coach_team_id: Optional[int] = Form(None),
     new_team_name: str = Form(""),
+    school_name: str = Form(""),
+    school_city: str = Form(""),
+    school_state: str = Form(""),
     db: Session = Depends(get_db)
 ):
     username = username.strip()
@@ -314,10 +318,8 @@ async def signup_post(
 
     if role not in ("player", "coach"):
         return err("Invalid role selected.")
-    if role == "player" and not team_id:
-        return err("Players must select a high school team.")
-    if role == "player" and not db.query(Team).filter(Team.id == team_id).first():
-        return err("Invalid team selected.")
+    if role == "player" and not school_name.strip():
+        return err("Players must select their high school.")
     if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
         return err("Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces).")
     if db.query(User).filter(User.username == username).first():
@@ -351,7 +353,7 @@ async def signup_post(
     db.refresh(user)
 
     if role == "player":
-        db.add(PlayerProfile(user_id=user.id, team_id=team_id))
+        db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip()))
     else:
         db.add(CoachProfile(user_id=user.id, team_id=coach_tid))
     db.commit()
@@ -463,32 +465,39 @@ async def logout(request: Request):
     return RedirectResponse("/", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, team_id: Optional[int] = None, year: Optional[str] = None, db: Session = Depends(get_db)):
+async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
-    teams = db.query(Team).order_by(Team.name).all()
 
-    # Visitors must pick a team first
-    if not user_id and team_id is None:
-        return templates.TemplateResponse("team_select.html", {
-            "request": request,
-            "teams": teams,
-            "active_year": year,
-            "unread_count": 0
-        })
+    # Get distinct schools that have registered players
+    school_rows = (
+        db.query(PlayerProfile.school)
+        .join(User, User.id == PlayerProfile.user_id)
+        .filter(User.role == "player", PlayerProfile.school != "", PlayerProfile.school != None)
+        .distinct()
+        .order_by(PlayerProfile.school)
+        .all()
+    )
+    schools = [r[0] for r in school_rows]
 
-    # Filter by team when team_id is given
-    if team_id:
-        team = db.query(Team).filter(Team.id == team_id).first()
-        player_users = (
-            db.query(User)
-            .join(PlayerProfile, User.id == PlayerProfile.user_id)
-            .filter(User.role == "player", PlayerProfile.team_id == team_id)
-            .all()
-        )
-    else:
-        team = None
-        player_users = db.query(User).filter(User.role == "player").all()
+    # Get distinct positions
+    position_rows = (
+        db.query(PlayerProfile.position)
+        .join(User, User.id == PlayerProfile.user_id)
+        .filter(User.role == "player", PlayerProfile.position != "", PlayerProfile.position != None)
+        .distinct()
+        .order_by(PlayerProfile.position)
+        .all()
+    )
+    positions = [r[0] for r in position_rows]
+
+    # Filter players
+    query = db.query(User).join(PlayerProfile, User.id == PlayerProfile.user_id).filter(User.role == "player")
+    if school:
+        query = query.filter(PlayerProfile.school == school)
+    if position:
+        query = query.filter(PlayerProfile.position == position)
+    player_users = query.all()
 
     player_data = []
     for p in player_users:
@@ -502,10 +511,11 @@ async def dashboard(request: Request, team_id: Optional[int] = None, year: Optio
         "user": user,
         "player_data": player_data,
         "unread_count": unread_count,
-        "team": team,
-        "teams": teams,
-        "active_team_id": team_id,
-        "active_year": year
+        "schools": schools,
+        "positions": positions,
+        "active_school": school,
+        "active_year": year,
+        "active_position": position,
     })
 
 @app.get("/profile/edit", response_class=HTMLResponse)
@@ -1129,24 +1139,24 @@ async def admin_teams_create(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Admin access required.")
     form = await request.form()
     name = form.get("name", "").strip()
-    teams_raw = db.query(Team).order_by(Team.name).all()
-    teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
-    unread_count = unread_sender_count(db, user_id)
-    if not name:
+
+    def render(success, error):
+        teams_raw = db.query(Team).order_by(Team.name).all()
+        teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
         coaches_raw = db.query(User).filter(User.role == "coach").order_by(User.username).all()
-    coaches = [{"user": c, "profile": db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()} for c in coaches_raw]
-    return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "coaches": coaches, "unread_count": unread_count, "success": False, "error": "Team name cannot be empty."})
+        coaches = [{"user": c, "profile": db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()} for c in coaches_raw]
+        return templates.TemplateResponse("admin_teams.html", {
+            "request": request, "user": user, "teams": teams, "coaches": coaches,
+            "unread_count": unread_sender_count(db, user_id), "success": success, "error": error
+        })
+
+    if not name:
+        return render(False, "Team name cannot be empty.")
     if db.query(Team).filter(Team.name == name).first():
-        coaches_raw2 = db.query(User).filter(User.role == "coach").order_by(User.username).all()
-    coaches2 = [{"user": c, "profile": db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()} for c in coaches_raw2]
-    return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "coaches": coaches2, "unread_count": unread_count, "success": False, "error": f'A team named "{name}" already exists.'})
+        return render(False, f'A team named "{name}" already exists.')
     db.add(Team(name=name))
     db.commit()
-    teams_raw = db.query(Team).order_by(Team.name).all()
-    teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
-    coaches_raw3 = db.query(User).filter(User.role == "coach").order_by(User.username).all()
-    coaches3 = [{"user": c, "profile": db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()} for c in coaches_raw3]
-    return templates.TemplateResponse("admin_teams.html", {"request": request, "user": user, "teams": teams, "coaches": coaches3, "unread_count": unread_count, "success": True, "error": None})
+    return render(True, None)
 
 @app.get("/admin/users/{target_id}/edit-profile", response_class=HTMLResponse)
 async def admin_edit_profile_get(target_id: int, request: Request, db: Session = Depends(get_db)):
@@ -1536,3 +1546,25 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     await manager.send_to_user(peer.id, {"type": "unread", "count": unread})
 
     return JSONResponse({"ok": True, "message": payload})
+# ── School lookup endpoints ────────────────────────────────────────────────────
+
+@app.get("/api/schools/states")
+def schools_states():
+    conn = sqlite3.connect("/home/recruiting/bearcats/recruiting.db")
+    rows = conn.execute("SELECT DISTINCT state FROM schools ORDER BY state").fetchall()
+    conn.close()
+    return JSONResponse([r[0] for r in rows])
+
+@app.get("/api/schools/cities")
+def schools_cities(state: str):
+    conn = sqlite3.connect("/home/recruiting/bearcats/recruiting.db")
+    rows = conn.execute("SELECT DISTINCT city FROM schools WHERE state=? ORDER BY city", (state.upper(),)).fetchall()
+    conn.close()
+    return JSONResponse([r[0] for r in rows])
+
+@app.get("/api/schools/list")
+def schools_list(state: str, city: str):
+    conn = sqlite3.connect("/home/recruiting/bearcats/recruiting.db")
+    rows = conn.execute("SELECT DISTINCT name FROM schools WHERE state=? AND city=? ORDER BY name", (state.upper(), city)).fetchall()
+    conn.close()
+    return JSONResponse([r[0] for r in rows])

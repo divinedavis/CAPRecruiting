@@ -36,17 +36,29 @@
                 </div>
             </div>
 
-            <!-- Player team picker -->
-            <div class="form-group" id="player-team-group" style="display:none;">
-                <label>High School Team</label>
-                <select name="team_id" id="team-select">
-                    <option value="">— Select your team —</option>
-                    {% for t in teams %}
-                    <option value="{{ t.id }}" {% if selected_team_id == t.id %}selected{% endif %}>{{ t.name }}</option>
-                    {% endfor %}
-                </select>
-                <span class="field-hint">Select the team you play for</span>
-                <span class="field-error" id="team-error"></span>
+            <!-- Player school picker -->
+            <div id="player-team-group" style="display:none;">
+                <div class="form-group">
+                    <label>State</label>
+                    <select name="school_state" id="school-state">
+                        <option value="">— Select your state —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <select name="school_city" id="school-city" disabled>
+                        <option value="">— Select your city —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>High School</label>
+                    <select name="school_name" id="school-name" disabled>
+                        <option value="">— Select your school —</option>
+                    </select>
+                    <span class="field-hint">Select the high school you attend</span>
+                    <span class="field-error" id="school-error"></span>
+                </div>
+                <input type="hidden" name="team_id" id="team-select" value="">
             </div>
 
             <!-- Coach team picker -->
@@ -145,6 +157,55 @@ if (checkedRole) {
         coachTeamGroup.style.display = 'block';
     }
 }
+
+// ── School cascading dropdowns ────────────────────────────────────────────────
+const schoolState = document.getElementById('school-state');
+const schoolCity  = document.getElementById('school-city');
+const schoolName  = document.getElementById('school-name');
+
+// Load states on page load
+fetch('/api/schools/states').then(r => r.json()).then(function(states) {
+    states.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        schoolState.appendChild(opt);
+    });
+});
+
+schoolState.addEventListener('change', function() {
+    var state = this.value;
+    schoolCity.innerHTML = '<option value="">— Select your city —</option>';
+    schoolName.innerHTML = '<option value="">— Select your school —</option>';
+    schoolCity.disabled = true;
+    schoolName.disabled = true;
+    if (!state) return;
+    fetch('/api/schools/cities?state=' + encodeURIComponent(state))
+        .then(r => r.json()).then(function(cities) {
+            cities.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                schoolCity.appendChild(opt);
+            });
+            schoolCity.disabled = false;
+        });
+});
+
+schoolCity.addEventListener('change', function() {
+    var state = schoolState.value;
+    var city  = this.value;
+    schoolName.innerHTML = '<option value="">— Select your school —</option>';
+    schoolName.disabled = true;
+    if (!city) return;
+    fetch('/api/schools/list?state=' + encodeURIComponent(state) + '&city=' + encodeURIComponent(city))
+        .then(r => r.json()).then(function(schools) {
+            schools.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s; opt.textContent = s;
+                schoolName.appendChild(opt);
+            });
+            schoolName.disabled = false;
+        });
+});
 
 usernameInput.addEventListener('keypress', function(e) {
     if (e.key === ' ') {
