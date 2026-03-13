@@ -123,6 +123,18 @@
                         <span class="stat-value">{{ profile.year }}</span>
                     </div>
                     {% endif %}
+                    {% if profile.ncaa_eligibility_num %}
+                    <div class="stat-card">
+                        <span class="stat-label">NCAA Eligibility #</span>
+                        <span class="stat-value">{{ profile.ncaa_eligibility_num }}</span>
+                    </div>
+                    {% endif %}
+                    {% if profile.intended_major %}
+                    <div class="stat-card">
+                        <span class="stat-label">Intended Major</span>
+                        <span class="stat-value">{{ profile.intended_major }}</span>
+                    </div>
+                    {% endif %}
 
                 </div>
             </div>

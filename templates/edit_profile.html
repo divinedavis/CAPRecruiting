@@ -158,6 +158,81 @@
                         <input type="text" name="gpa" value="{{ profile.gpa if profile else '' }}" placeholder="3.8">
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Intended College Major</label>
+                        <select name="intended_major">
+                            <option value="">— Select a major —</option>
+                            <option value="Accounting" {{ "selected" if profile and profile.intended_major == "Accounting" else "" }}>Accounting</option>
+                            <option value="Aerospace Engineering" {{ "selected" if profile and profile.intended_major == "Aerospace Engineering" else "" }}>Aerospace Engineering</option>
+                            <option value="African American Studies" {{ "selected" if profile and profile.intended_major == "African American Studies" else "" }}>African American Studies</option>
+                            <option value="Agriculture" {{ "selected" if profile and profile.intended_major == "Agriculture" else "" }}>Agriculture</option>
+                            <option value="Anthropology" {{ "selected" if profile and profile.intended_major == "Anthropology" else "" }}>Anthropology</option>
+                            <option value="Architecture" {{ "selected" if profile and profile.intended_major == "Architecture" else "" }}>Architecture</option>
+                            <option value="Art" {{ "selected" if profile and profile.intended_major == "Art" else "" }}>Art</option>
+                            <option value="Biochemistry" {{ "selected" if profile and profile.intended_major == "Biochemistry" else "" }}>Biochemistry</option>
+                            <option value="Biology" {{ "selected" if profile and profile.intended_major == "Biology" else "" }}>Biology</option>
+                            <option value="Business Administration" {{ "selected" if profile and profile.intended_major == "Business Administration" else "" }}>Business Administration</option>
+                            <option value="Chemical Engineering" {{ "selected" if profile and profile.intended_major == "Chemical Engineering" else "" }}>Chemical Engineering</option>
+                            <option value="Chemistry" {{ "selected" if profile and profile.intended_major == "Chemistry" else "" }}>Chemistry</option>
+                            <option value="Civil Engineering" {{ "selected" if profile and profile.intended_major == "Civil Engineering" else "" }}>Civil Engineering</option>
+                            <option value="Communications" {{ "selected" if profile and profile.intended_major == "Communications" else "" }}>Communications</option>
+                            <option value="Computer Engineering" {{ "selected" if profile and profile.intended_major == "Computer Engineering" else "" }}>Computer Engineering</option>
+                            <option value="Computer Science" {{ "selected" if profile and profile.intended_major == "Computer Science" else "" }}>Computer Science</option>
+                            <option value="Criminal Justice" {{ "selected" if profile and profile.intended_major == "Criminal Justice" else "" }}>Criminal Justice</option>
+                            <option value="Cybersecurity" {{ "selected" if profile and profile.intended_major == "Cybersecurity" else "" }}>Cybersecurity</option>
+                            <option value="Data Science" {{ "selected" if profile and profile.intended_major == "Data Science" else "" }}>Data Science</option>
+                            <option value="Economics" {{ "selected" if profile and profile.intended_major == "Economics" else "" }}>Economics</option>
+                            <option value="Education" {{ "selected" if profile and profile.intended_major == "Education" else "" }}>Education</option>
+                            <option value="Electrical Engineering" {{ "selected" if profile and profile.intended_major == "Electrical Engineering" else "" }}>Electrical Engineering</option>
+                            <option value="English" {{ "selected" if profile and profile.intended_major == "English" else "" }}>English</option>
+                            <option value="Environmental Science" {{ "selected" if profile and profile.intended_major == "Environmental Science" else "" }}>Environmental Science</option>
+                            <option value="Finance" {{ "selected" if profile and profile.intended_major == "Finance" else "" }}>Finance</option>
+                            <option value="Forensic Science" {{ "selected" if profile and profile.intended_major == "Forensic Science" else "" }}>Forensic Science</option>
+                            <option value="Graphic Design" {{ "selected" if profile and profile.intended_major == "Graphic Design" else "" }}>Graphic Design</option>
+                            <option value="Health Sciences" {{ "selected" if profile and profile.intended_major == "Health Sciences" else "" }}>Health Sciences</option>
+                            <option value="History" {{ "selected" if profile and profile.intended_major == "History" else "" }}>History</option>
+                            <option value="Hospitality Management" {{ "selected" if profile and profile.intended_major == "Hospitality Management" else "" }}>Hospitality Management</option>
+                            <option value="Human Resources" {{ "selected" if profile and profile.intended_major == "Human Resources" else "" }}>Human Resources</option>
+                            <option value="Information Technology" {{ "selected" if profile and profile.intended_major == "Information Technology" else "" }}>Information Technology</option>
+                            <option value="International Business" {{ "selected" if profile and profile.intended_major == "International Business" else "" }}>International Business</option>
+                            <option value="Journalism" {{ "selected" if profile and profile.intended_major == "Journalism" else "" }}>Journalism</option>
+                            <option value="Kinesiology" {{ "selected" if profile and profile.intended_major == "Kinesiology" else "" }}>Kinesiology</option>
+                            <option value="Law (Pre-Law)" {{ "selected" if profile and profile.intended_major == "Law (Pre-Law)" else "" }}>Law (Pre-Law)</option>
+                            <option value="Liberal Arts" {{ "selected" if profile and profile.intended_major == "Liberal Arts" else "" }}>Liberal Arts</option>
+                            <option value="Management" {{ "selected" if profile and profile.intended_major == "Management" else "" }}>Management</option>
+                            <option value="Marketing" {{ "selected" if profile and profile.intended_major == "Marketing" else "" }}>Marketing</option>
+                            <option value="Mathematics" {{ "selected" if profile and profile.intended_major == "Mathematics" else "" }}>Mathematics</option>
+                            <option value="Mechanical Engineering" {{ "selected" if profile and profile.intended_major == "Mechanical Engineering" else "" }}>Mechanical Engineering</option>
+                            <option value="Media Studies" {{ "selected" if profile and profile.intended_major == "Media Studies" else "" }}>Media Studies</option>
+                            <option value="Medicine (Pre-Med)" {{ "selected" if profile and profile.intended_major == "Medicine (Pre-Med)" else "" }}>Medicine (Pre-Med)</option>
+                            <option value="Music" {{ "selected" if profile and profile.intended_major == "Music" else "" }}>Music</option>
+                            <option value="Nursing" {{ "selected" if profile and profile.intended_major == "Nursing" else "" }}>Nursing</option>
+                            <option value="Nutrition" {{ "selected" if profile and profile.intended_major == "Nutrition" else "" }}>Nutrition</option>
+                            <option value="Philosophy" {{ "selected" if profile and profile.intended_major == "Philosophy" else "" }}>Philosophy</option>
+                            <option value="Physics" {{ "selected" if profile and profile.intended_major == "Physics" else "" }}>Physics</option>
+                            <option value="Political Science" {{ "selected" if profile and profile.intended_major == "Political Science" else "" }}>Political Science</option>
+                            <option value="Psychology" {{ "selected" if profile and profile.intended_major == "Psychology" else "" }}>Psychology</option>
+                            <option value="Public Health" {{ "selected" if profile and profile.intended_major == "Public Health" else "" }}>Public Health</option>
+                            <option value="Public Policy" {{ "selected" if profile and profile.intended_major == "Public Policy" else "" }}>Public Policy</option>
+                            <option value="Religious Studies" {{ "selected" if profile and profile.intended_major == "Religious Studies" else "" }}>Religious Studies</option>
+                            <option value="Social Work" {{ "selected" if profile and profile.intended_major == "Social Work" else "" }}>Social Work</option>
+                            <option value="Sociology" {{ "selected" if profile and profile.intended_major == "Sociology" else "" }}>Sociology</option>
+                            <option value="Software Engineering" {{ "selected" if profile and profile.intended_major == "Software Engineering" else "" }}>Software Engineering</option>
+                            <option value="Sports Management" {{ "selected" if profile and profile.intended_major == "Sports Management" else "" }}>Sports Management</option>
+                            <option value="Statistics" {{ "selected" if profile and profile.intended_major == "Statistics" else "" }}>Statistics</option>
+                            <option value="Theater" {{ "selected" if profile and profile.intended_major == "Theater" else "" }}>Theater</option>
+                            <option value="Urban Planning" {{ "selected" if profile and profile.intended_major == "Urban Planning" else "" }}>Urban Planning</option>
+                            <option value="Undecided" {{ "selected" if profile and profile.intended_major == "Undecided" else "" }}>Undecided</option>
+                        </select>
+                    </div>
+                    {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                    <div class="form-group">
+                        <label>NCAA Eligibility #</label>
+                        <input type="number" name="ncaa_eligibility_num" value="{{ profile.ncaa_eligibility_num if profile else '' }}" placeholder="e.g. 1234567890">
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="form-section">

@@ -151,6 +151,8 @@ class PlayerProfile(Base):
     phone = Column(String, default="")
     contact_email = Column(String, default="")
     stars = Column(Integer, default=0)
+    ncaa_eligibility_num = Column(String, default="")
+    intended_major = Column(String, default="")
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -171,6 +173,7 @@ class CoachProfile(Base):
     photo = Column(String, default="")
     phone = Column(String, default="")
     contact_email = Column(String, default="")
+    college = Column(String, default="")
 
 class Video(Base):
     __tablename__ = "videos"
@@ -304,6 +307,9 @@ async def signup_post(
     school_name: str = Form(""),
     school_city: str = Form(""),
     school_state: str = Form(""),
+    coach_division: str = Form(""),
+    coach_conference: str = Form(""),
+    coach_college: str = Form(""),
     db: Session = Depends(get_db)
 ):
     username = username.strip()
@@ -355,7 +361,7 @@ async def signup_post(
     if role == "player":
         db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip()))
     else:
-        db.add(CoachProfile(user_id=user.id, team_id=coach_tid))
+        db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
     db.commit()
 
     request.session["user_id"] = user.id
@@ -587,6 +593,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.instagram_url = form.get("instagram_url", "")
         p.phone = form.get("phone", "")
         p.contact_email = form.get("contact_email", "")
+        p.intended_major = form.get("intended_major", "")
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
         c.first_name = form.get("first_name", "")
@@ -1233,6 +1240,8 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
             setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", ""))
+        p.ncaa_eligibility_num = form.get("ncaa_eligibility_num", "")
+        p.intended_major = form.get("intended_major", "")
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
         c.first_name = form.get("first_name", "")
