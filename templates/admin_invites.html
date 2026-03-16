@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Coach Invites — Collegiate Athletic Planning{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header">
+        <div>
+            <h1>Coach Invite Links</h1>
+            <p class="page-sub">Generate single-use invite links for coaches to sign up</p>
+        </div>
+        <a href="/admin/teams" class="btn btn-outline">← Admin</a>
+    </div>
+
+    <!-- Generate new invite -->
+    <div class="admin-form-card" style="max-width:520px; margin-bottom:32px;">
+        <h2>Generate New Invite</h2>
+        <form method="post" action="/admin/invites/create">
+            <div class="form-group">
+                <label>Note <span class="field-hint">Optional — e.g. coach's name or school</span></label>
+                <input type="text" name="note" placeholder="e.g. Coach Smith – Lincoln University" maxlength="100">
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Invite Link</button>
+        </form>
+    </div>
+
+    <!-- Invite list -->
+    <div>
+        <h2 style="font-size:20px; font-weight:800; color:var(--navy); margin-bottom:16px;">
+            All Invites <span style="font-size:14px; font-weight:400; color:var(--gray-400); margin-left:8px;">{{ invites|length }} total</span>
+        </h2>
+
+        {% if invites %}
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            {% for inv in invites %}
+            {% set expired = inv.expires_at <= now %}
+            <div style="background:var(--white); border:1.5px solid {% if inv.used %}var(--gray-200){% elif expired %}#fde8e8{% else %}var(--gray-200){% endif %}; border-radius:var(--radius); padding:16px 20px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
+                            {% if inv.used %}
+                            <span style="background:#dcfce7; color:#15803d; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;">Used</span>
+                            {% elif expired %}
+                            <span style="background:#fee2e2; color:#dc2626; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;">Expired</span>
+                            {% else %}
+                            <span style="background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;">Active</span>
+                            {% endif %}
+                            {% if inv.note %}
+                            <span style="font-weight:600; color:var(--navy); font-size:14px;">{{ inv.note }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if not inv.used and not expired %}
+                        <div style="display:flex; align-items:center; gap:8px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:8px; padding:8px 12px; margin-bottom:8px;">
+                            <input type="text" readonly value="{{ site_url }}/signup?invite={{ inv.token }}"
+                                id="invite-{{ inv.id }}"
+                                style="flex:1; border:none; background:transparent; font-size:13px; color:var(--gray-700); font-family:monospace; outline:none; min-width:0;">
+                            <button onclick="copyInvite('{{ inv.id }}', '{{ site_url }}/signup?invite={{ inv.token }}')"
+                                style="flex-shrink:0; background:var(--navy); color:var(--gold); border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;"
+                                id="copy-btn-{{ inv.id }}">Copy Link</button>
+                        </div>
+                        {% elif inv.used %}
+                        <div style="font-size:13px; color:var(--gray-500); margin-bottom:6px;">
+                            Used by <strong style="color:var(--navy);">@{{ used_by_users.get(inv.used_by, 'unknown') }}</strong>
+                        </div>
+                        {% endif %}
+
+                        <div style="font-size:12px; color:var(--gray-400);">
+                            Created {{ inv.created_at.strftime('%b %d, %Y') }}
+                            {% if not inv.used %}
+                            · Expires {{ inv.expires_at.strftime('%b %d, %Y') }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if not inv.used and not expired %}
+                    <form method="post" action="/admin/invites/{{ inv.token }}/revoke"
+                        onsubmit="return confirm('Revoke this invite link?')"
+                        style="flex-shrink:0;">
+                        <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--gray-400); font-size:14px;">No invite links generated yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function copyInvite(id, url) {
+    navigator.clipboard.writeText(url).then(function() {
+        var btn = document.getElementById('copy-btn-' + id);
+        btn.textContent = 'Copied!';
+        btn.style.background = '#16a34a';
+        setTimeout(function() {
+            btn.textContent = 'Copy Link';
+            btn.style.background = '';
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

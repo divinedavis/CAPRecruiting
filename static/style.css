@@ -103,6 +103,8 @@ textarea { resize: vertical; }
     border-color: var(--gold);
 }
 .btn-primary:hover { background: var(--gold-light); border-color: var(--gold-light); }
+.btn-danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+.btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
 .btn-outline {
     background: transparent;
     color: var(--white);

@@ -14,6 +14,13 @@
         {% endif %}
 
         <form method="post" action="/signup">
+            {% if invite_token %}<input type="hidden" name="invite_token" value="{{ invite_token }}">{% endif %}
+            {% if invite_valid %}
+            <div style="background:#dbeafe; border:1.5px solid #93c5fd; border-radius:10px; padding:12px 16px; margin-bottom:20px; font-size:14px; color:#1d4ed8; font-weight:600;">
+                ✅ You have a valid coach invite. Fill in your details below to create your coach account.
+            </div>
+            <input type="hidden" name="role" value="coach">
+            {% else %}
             <div class="role-select-section">
                 <label class="section-label">I am a...</label>
                 <div class="role-cards">
@@ -25,16 +32,9 @@
                             <span class="role-desc">Build my athletic profile</span>
                         </div>
                     </label>
-                    <label class="role-card">
-                        <input type="radio" name="role" value="coach" required>
-                        <div class="role-card-inner">
-                            <span class="role-icon">📋</span>
-                            <span class="role-name">Coach</span>
-                            <span class="role-desc">Scout and recruit players</span>
-                        </div>
-                    </label>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Player school picker -->
             <div id="player-team-group" style="display:none;">
@@ -244,6 +244,12 @@ if (checkedRole) {
         coachTeamGroup.style.display = 'block';
     }
 }
+
+// Auto-show coach fields if invite_valid
+{% if invite_valid %}
+playerTeamGroup.style.display = 'none';
+coachTeamGroup.style.display = 'block';
+{% endif %}
 
 // ── School cascading dropdowns ────────────────────────────────────────────────
 const schoolState = document.getElementById('school-state');

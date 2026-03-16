@@ -69,6 +69,9 @@
                     <a href="/messages/{{ target.username }}" class="btn btn-primary">💬 Message</a>
                     {% if current_user.is_admin %}
                     <a href="/admin/users/{{ target.id }}/edit-profile" class="btn btn-primary">Edit Profile</a>
+                    <form method="post" action="/admin/users/{{ target.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this profile? This cannot be undone.')">
+                        <button type="submit" class="btn btn-danger">Delete Profile</button>
+                    </form>
                     {% endif %}
                 </div>
                 {% elif current_user and current_user.id == target.id %}

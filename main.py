@@ -211,6 +211,17 @@ class PasswordResetToken(Base):
     expires_at = Column(DateTime, nullable=False)
     used = Column(Integer, default=0)
 
+class CoachInvite(Base):
+    __tablename__ = "coach_invites"
+    id = Column(Integer, primary_key=True)
+    token = Column(String, nullable=False, unique=True)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    note = Column(String, default="")
+
 class ProfileImage(Base):
     __tablename__ = "profile_images"
     id = Column(Integer, primary_key=True)
@@ -290,9 +301,21 @@ async def home(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("home.html", {"request": request})
 
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_get(request: Request, db: Session = Depends(get_db)):
+async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None):
     teams = db.query(Team).order_by(Team.name).all()
-    return templates.TemplateResponse("signup.html", {"request": request, "error": None, "teams": teams, "selected_team_id": None})
+    invite_valid = False
+    invite_error = None
+    if invite:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite, CoachInvite.used == False).first()
+        if inv and inv.expires_at > datetime.utcnow():
+            invite_valid = True
+        else:
+            invite_error = "This invite link is invalid or has expired."
+    return templates.TemplateResponse("signup.html", {
+        "request": request, "error": invite_error, "teams": teams,
+        "selected_team_id": None, "invite_token": invite if invite_valid else None,
+        "invite_valid": invite_valid
+    })
 
 @app.post("/signup", response_class=HTMLResponse)
 async def signup_post(
@@ -310,6 +333,7 @@ async def signup_post(
     coach_division: str = Form(""),
     coach_conference: str = Form(""),
     coach_college: str = Form(""),
+    invite_token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     username = username.strip()
@@ -324,6 +348,12 @@ async def signup_post(
 
     if role not in ("player", "coach"):
         return err("Invalid role selected.")
+    if role == "coach":
+        if not invite_token:
+            return err("Coach accounts require an invite link. Please contact an admin.")
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token, CoachInvite.used == False).first()
+        if not inv or inv.expires_at <= datetime.utcnow():
+            return err("This invite link is invalid or has expired.")
     if role == "player" and not school_name.strip():
         return err("Players must select their high school.")
     if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
@@ -364,6 +394,12 @@ async def signup_post(
         db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
     db.commit()
 
+    if role == "coach" and invite_token:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token).first()
+        if inv:
+            inv.used = True
+            inv.used_by = user.id
+            db.commit()
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
     return RedirectResponse("/profile/edit", status_code=302)
@@ -1268,6 +1304,64 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
     })
+
+@app.get("/admin/invites", response_class=HTMLResponse)
+async def admin_invites_get(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    invites = db.query(CoachInvite).order_by(CoachInvite.created_at.desc()).all()
+    used_by_users = {}
+    for inv in invites:
+        if inv.used_by:
+            u = db.query(User).filter(User.id == inv.used_by).first()
+            if u:
+                used_by_users[inv.used_by] = u.username
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    return templates.TemplateResponse("admin_invites.html", {
+        "request": request,
+        "invites": invites,
+        "used_by_users": used_by_users,
+        "site_url": site_url,
+        "now": datetime.utcnow(),
+    })
+
+@app.post("/admin/invites/create", response_class=HTMLResponse)
+async def admin_invites_create(request: Request, note: str = Form(""), db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    from datetime import timedelta
+    token = uuid.uuid4().hex
+    inv = CoachInvite(
+        token=token,
+        created_by=admin.id,
+        expires_at=datetime.utcnow() + timedelta(days=7),
+        note=note.strip()
+    )
+    db.add(inv)
+    db.commit()
+    return RedirectResponse("/admin/invites", status_code=302)
+
+@app.post("/admin/invites/{token}/revoke", response_class=HTMLResponse)
+async def admin_invites_revoke(token: str, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    inv = db.query(CoachInvite).filter(CoachInvite.token == token).first()
+    if inv and not inv.used:
+        inv.expires_at = datetime.utcnow()
+        db.commit()
+    return RedirectResponse("/admin/invites", status_code=302)
 
 @app.post("/admin/users/{target_id}/delete", response_class=HTMLResponse)
 async def admin_delete_user(target_id: int, request: Request, db: Session = Depends(get_db)):
