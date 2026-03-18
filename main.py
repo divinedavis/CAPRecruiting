@@ -199,11 +199,6 @@ class Transcript(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     title = Column(String, default="")
-    url = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)e__ = "transcripts"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    title = Column(String, default="")
     file_url = Column(String, nullable=False)
     filename = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
