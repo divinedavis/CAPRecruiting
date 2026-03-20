@@ -84,7 +84,7 @@ Base = declarative_base()
 # ── Models ─────────────────────────────────────────────────────────────────────
 
 class Team(Base):
-    __tablename__ = "teams"
+    __tablename__ = "transcripts"e__ = "teams"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
