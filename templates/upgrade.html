@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Plan — CAP Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top" style="max-width:920px;">
+  <div style="text-align:center; margin-bottom:40px;">
+    {% if request.query_params.get("new") %}
+    <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:12px 20px; display:inline-block; margin-bottom:20px; font-size:14px; color:#166534; font-weight:600;">
+      🎉 Welcome to CAP Recruiting! Choose a plan to unlock your full profile.
+    </div>
+    {% endif %}
+    <h1 style="font-size:32px; font-weight:800; color:#0a1628; margin-bottom:10px;">Unlock Your Full Profile</h1>
+    <p style="color:#6b7280; font-size:16px; max-width:560px; margin:0 auto;">The more coaches can see, the more opportunities you get. Upgrade to show transcripts, highlight videos, contact info, and more.</p>
+    {% if current_tier != "free" %}
+    <div style="display:inline-block; margin-top:14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600; color:#166534;">
+      Current plan: {{ current_tier | capitalize }}
+      &nbsp;·&nbsp;
+      <form method="post" action="/upgrade/manage" style="display:inline;">
+        <button type="submit" style="background:none; border:none; color:#0a1628; font-weight:700; font-size:13px; cursor:pointer; text-decoration:underline;">Manage / Cancel</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:24px; margin-bottom:32px;">
+
+    <!-- Essentials -->
+    <div style="background:#fff; border:2px solid {% if current_tier == 'essentials' %}#f0b429{% else %}#e5e7eb{% endif %}; border-radius:16px; padding:28px 24px; position:relative;">
+      {% if current_tier == 'essentials' %}<div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f0b429; color:#0a1628; font-size:11px; font-weight:800; padding:3px 12px; border-radius:20px; white-space:nowrap;">YOUR PLAN</div>{% endif %}
+      <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:8px;">Essentials</div>
+      <div style="font-size:36px; font-weight:800; color:#0a1628; margin-bottom:4px;">$10<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+      <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">Your profile photo and all stats visible to coaches.</p>
+      <ul style="list-style:none; padding:0; margin:0 0 24px; color:#374151; font-size:14px; line-height:2;">
+        <li>✅ Profile photo shown to coaches</li>
+        <li>✅ Full overview &amp; field stats</li>
+        <li>✅ Lifting stats</li>
+        <li>❌ Transcripts</li>
+        <li>❌ Photo gallery &amp; offers</li>
+        <li>❌ Messaging &amp; videos</li>
+      </ul>
+      {% if current_tier not in ('essentials','advanced','premium') %}
+      <form method="post" action="/upgrade/checkout">
+        <input type="hidden" name="tier" value="essentials">
+        <button type="submit" style="width:100%; background:#0a1628; color:#f0b429; font-weight:700; font-size:15px; padding:13px; border:none; border-radius:10px; cursor:pointer;">Get Essentials</button>
+      </form>
+      {% else %}
+      <div style="text-align:center; color:#9ca3af; font-size:13px; padding-top:8px;">{% if current_tier == 'essentials' %}Active{% else %}Included in your plan{% endif %}</div>
+      {% endif %}
+    </div>
+
+    <!-- Advanced -->
+    <div style="background:#fff; border:2px solid {% if current_tier == 'advanced' %}#f0b429{% else %}#0a1628{% endif %}; border-radius:16px; padding:28px 24px; position:relative; box-shadow:0 8px 30px rgba(10,22,40,0.12);">
+      <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#0a1628; color:#f0b429; font-size:11px; font-weight:800; padding:3px 12px; border-radius:20px; white-space:nowrap;">{% if current_tier == 'advanced' %}YOUR PLAN{% else %}MOST POPULAR{% endif %}</div>
+      <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:8px;">Advanced</div>
+      <div style="font-size:36px; font-weight:800; color:#0a1628; margin-bottom:4px;">$25<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+      <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">Show coaches your transcripts, photo gallery, offers, and visits.</p>
+      <ul style="list-style:none; padding:0; margin:0 0 24px; color:#374151; font-size:14px; line-height:2;">
+        <li>✅ Everything in Essentials</li>
+        <li>✅ Academic transcripts</li>
+        <li>✅ Photo gallery (up to 10)</li>
+        <li>✅ Scholarship offers</li>
+        <li>✅ Campus visits</li>
+        <li>❌ Messaging &amp; videos</li>
+      </ul>
+      {% if current_tier not in ('advanced','premium') %}
+      <form method="post" action="/upgrade/checkout">
+        <input type="hidden" name="tier" value="advanced">
+        <button type="submit" style="width:100%; background:#f0b429; color:#0a1628; font-weight:700; font-size:15px; padding:13px; border:none; border-radius:10px; cursor:pointer;">Get Advanced</button>
+      </form>
+      {% else %}
+      <div style="text-align:center; color:#9ca3af; font-size:13px; padding-top:8px;">{% if current_tier == 'advanced' %}Active{% else %}Included in your plan{% endif %}</div>
+      {% endif %}
+    </div>
+
+    <!-- Premium -->
+    <div style="background:#fff; border:2px solid {% if current_tier == 'premium' %}#f0b429{% else %}#e5e7eb{% endif %}; border-radius:16px; padding:28px 24px; position:relative;">
+      {% if current_tier == 'premium' %}<div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f0b429; color:#0a1628; font-size:11px; font-weight:800; padding:3px 12px; border-radius:20px; white-space:nowrap;">YOUR PLAN</div>{% endif %}
+      <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:8px;">Premium</div>
+      <div style="font-size:36px; font-weight:800; color:#0a1628; margin-bottom:4px;">$50<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+      <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">Full visibility — coaches can message you, watch your videos, and get your contact info.</p>
+      <ul style="list-style:none; padding:0; margin:0 0 24px; color:#374151; font-size:14px; line-height:2;">
+        <li>✅ Everything in Advanced</li>
+        <li>✅ Coaches can message you</li>
+        <li>✅ Highlight videos (up to 5)</li>
+        <li>✅ Contact info visible</li>
+        <li>✅ Maximum recruiting exposure</li>
+      </ul>
+      {% if current_tier != 'premium' %}
+      <form method="post" action="/upgrade/checkout">
+        <input type="hidden" name="tier" value="premium">
+        <button type="submit" style="width:100%; background:#0a1628; color:#f0b429; font-weight:700; font-size:15px; padding:13px; border:none; border-radius:10px; cursor:pointer;">Get Premium</button>
+      </form>
+      {% else %}
+      <div style="text-align:center; color:#9ca3af; font-size:13px; padding-top:8px;">Active</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  
+  <p style="text-align:center; color:#9ca3af; font-size:12px; margin-top:16px;">Secure payment via Stripe &nbsp;·&nbsp; Cancel anytime</p>
+</div>
+{% endblock %}

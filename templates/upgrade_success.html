@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}You're Upgraded! — CAP Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top" style="max-width:520px; text-align:center;">
+  <div style="background:#fff; border:1.5px solid #e5e7eb; border-radius:16px; padding:48px 36px; box-shadow:0 8px 30px rgba(10,22,40,0.08);">
+    <div style="font-size:56px; margin-bottom:16px;">🎉</div>
+    <h1 style="font-size:26px; font-weight:800; color:#0a1628; margin-bottom:10px;">You're on {{ tier | capitalize }}!</h1>
+    <p style="color:#6b7280; font-size:15px; margin-bottom:28px;">Your account has been upgraded. You now have full access to all {{ tier }} features.</p>
+    <a href="/dashboard" style="display:inline-block; background:#0a1628; color:#f0b429; font-weight:700; font-size:15px; padding:13px 32px; border-radius:10px; text-decoration:none; margin-bottom:12px;">Browse Players</a><br>
+    <a href="/upgrade" style="color:#6b7280; font-size:13px; text-decoration:underline;">Manage your plan</a>
+  </div>
+</div>
+{% endblock %}

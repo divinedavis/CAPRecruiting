@@ -13,6 +13,7 @@ import os
 import asyncio
 import uuid
 import bcrypt
+import stripe
 from datetime import datetime
 from typing import Optional, Dict, List
 
@@ -98,6 +99,8 @@ class User(Base):
     role = Column(String, nullable=False)  # 'player' or 'coach'
     is_admin = Column(Boolean, default=False)
     subscription_tier = Column(String, default="free")  # free, essentials, advanced, premium
+    stripe_customer_id = Column(String, default="")
+    stripe_subscription_id = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class PlayerProfile(Base):
@@ -278,6 +281,17 @@ def unread_sender_count(db: Session, user_id: int) -> int:
     return result or 0
 
 
+
+# ── Stripe Config ──────────────────────────────────────────────────────────────
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICES = {
+    "essentials": os.environ.get("STRIPE_PRICE_ESSENTIALS", ""),
+    "advanced":   os.environ.get("STRIPE_PRICE_ADVANCED", ""),
+    "premium":    os.environ.get("STRIPE_PRICE_PREMIUM", ""),
+}
+
 # ── Subscription Tier Helpers ──────────────────────────────────────────────────
 TIER_ORDER = {"free": 0, "essentials": 1, "advanced": 2, "premium": 3}
 
@@ -285,12 +299,18 @@ def tier_gte(tier: str, required: str) -> bool:
     return TIER_ORDER.get(tier or "free", 0) >= TIER_ORDER.get(required, 0)
 
 def viewer_tier(user) -> str:
-    """Return effective tier for a viewer. Players and admins are treated as premium."""
+    """Kept for compatibility — now unused for gating. Gating is on the player's tier."""
     if user is None:
         return "free"
-    if user.is_admin or user.role == "player":
+    return "premium"  # viewers (coaches/admins) always see whatever the player exposes
+
+def player_tier(target_user) -> str:
+    """Return the tier of the player being viewed — this controls what coaches can see."""
+    if target_user is None:
+        return "free"
+    if target_user.is_admin:
         return "premium"
-    return user.subscription_tier or "free"
+    return target_user.subscription_tier or "free"
 
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
@@ -418,6 +438,9 @@ async def signup_post(
             db.commit()
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
+    request.session["role"] = user.role
+    if role == "player":
+        return RedirectResponse("/upgrade?new=1", status_code=302)
     return RedirectResponse("/profile/edit", status_code=302)
 
 async def send_reset_email(to_email: str, reset_url: str):
@@ -515,6 +538,7 @@ async def login_post(
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password."})
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
+    request.session["role"] = user.role
     return RedirectResponse("/dashboard", status_code=302)
 
 @app.get("/logout")
@@ -561,12 +585,11 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
     for p in player_users:
         prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
         if not year or (prof and prof.year == year):
-            player_data.append({"user": p, "profile": prof})
+            player_data.append({"user": p, "profile": prof, "tier": p.subscription_tier or "free"})
 
     unread_count = unread_sender_count(db, user_id) if user_id else 0
-    vt = viewer_tier(user)
-    can_click_profiles = bool(user and (user.is_admin or user.role == "player" or tier_gte(vt, "essentials")))
-    can_message_from_dashboard = bool(user and (user.is_admin or tier_gte(vt, "premium")))
+    can_click_profiles = bool(user is not None)
+    can_message_from_dashboard = bool(user and (user.role == "coach" or user.is_admin))
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
@@ -747,15 +770,16 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
                     visit_list.append({"school": school, "date": fmt_date})
 
     unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
-    vt = viewer_tier(current_user)
-    can_view_photos   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "advanced")
-    can_view_offers   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "advanced")
-    can_view_visits   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "advanced")
-    can_view_videos   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "premium")
-    can_view_contact  = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "premium")
-    can_message       = bool(current_user and not is_owner and (current_user.is_admin or tier_gte(vt, "premium")))
-    # Override transcript gating: advanced+ coaches only
-    if not (is_owner or (current_user and current_user.is_admin) or tier_gte(vt, "advanced")):
+    pt = player_tier(target)  # gating is based on the PLAYER's paid tier
+    is_admin_viewer = bool(current_user and current_user.is_admin)
+    can_view_photos   = is_owner or is_admin_viewer or tier_gte(pt, "advanced")
+    can_view_offers   = is_owner or is_admin_viewer or tier_gte(pt, "advanced")
+    can_view_visits   = is_owner or is_admin_viewer or tier_gte(pt, "advanced")
+    can_view_videos   = is_owner or is_admin_viewer or tier_gte(pt, "premium")
+    can_view_contact  = is_owner or is_admin_viewer or tier_gte(pt, "premium")
+    can_message       = bool(not is_owner and (is_admin_viewer or (current_user and current_user.role == "coach" and tier_gte(pt, "premium"))))
+    # Transcripts: only coaches can view; requires player to be advanced+
+    if not (is_owner or is_admin_viewer or (current_user and current_user.role == "coach" and tier_gte(pt, "advanced"))):
         can_see_transcripts = False
         transcript_list = []
     if not can_view_photos:
@@ -1098,9 +1122,11 @@ async def download_transcript(transcript_id: int, request: Request, db: Session 
     t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
     if not t:
         raise HTTPException(status_code=404)
+    transcript_owner = db.query(User).filter(User.id == t.user_id).first()
+    _pt = player_tier(transcript_owner)
     if current_user.id != t.user_id and not current_user.is_admin:
-        if current_user.role != "coach" or not tier_gte(viewer_tier(current_user), "advanced"):
-            raise HTTPException(status_code=403, detail="Advanced plan required to download transcripts")
+        if current_user.role != "coach" or not tier_gte(_pt, "advanced"):
+            raise HTTPException(status_code=403, detail="Player must be on Advanced plan or higher")
     key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
     obj = s3.get_object(Bucket=SPACES_BUCKET, Key=key)
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else "pdf"
@@ -1124,9 +1150,11 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
     t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
     if not t:
         raise HTTPException(status_code=404)
+    transcript_owner2 = db.query(User).filter(User.id == t.user_id).first()
+    _pt2 = player_tier(transcript_owner2)
     if current_user.id != t.user_id and not current_user.is_admin:
-        if current_user.role != "coach" or not tier_gte(viewer_tier(current_user), "advanced"):
-            raise HTTPException(status_code=403, detail="Advanced plan required to view transcripts")
+        if current_user.role != "coach" or not tier_gte(_pt2, "advanced"):
+            raise HTTPException(status_code=403, detail="Player must be on Advanced plan or higher")
     ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
     if ext == "pdf":
         viewer_url = t.file_url
@@ -1461,8 +1489,6 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
-    if user and user.role == "coach" and not user.is_admin and not tier_gte(viewer_tier(user), "premium"):
-        return RedirectResponse("/dashboard?upgrade=messages", status_code=302)
 
     from sqlalchemy import or_
 
@@ -1510,8 +1536,6 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
-    if user and user.role == "coach" and not user.is_admin and not tier_gte(viewer_tier(user), "premium"):
-        return RedirectResponse("/dashboard?upgrade=messages", status_code=302)
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1652,9 +1676,6 @@ async def conversation_post(username: str, request: Request, db: Session = Depen
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
-    sender = db.query(User).filter(User.id == user_id).first()
-    if sender and sender.role == "coach" and not sender.is_admin and not tier_gte(viewer_tier(sender), "premium"):
-        return RedirectResponse("/dashboard?upgrade=messages", status_code=302)
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
         raise HTTPException(status_code=404)
@@ -1724,6 +1745,171 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     await manager.send_to_user(peer.id, {"type": "unread", "count": unread})
 
     return JSONResponse({"ok": True, "message": payload})
+
+# ── Stripe Routes ──────────────────────────────────────────────────────────────
+
+@app.get("/upgrade", response_class=HTMLResponse)
+async def upgrade_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player":
+        return RedirectResponse("/dashboard", status_code=302)
+    unread_count = unread_sender_count(db, user_id)
+    current_tier = user.subscription_tier or "free"
+    return templates.TemplateResponse("upgrade.html", {
+        "request": request,
+        "user": user,
+        "unread_count": unread_count,
+        "current_tier": current_tier,
+        "stripe_key": STRIPE_PUBLISHABLE_KEY,
+    })
+
+@app.post("/upgrade/checkout")
+async def create_checkout(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player":
+        return RedirectResponse("/dashboard", status_code=302)
+
+    form = await request.form()
+    tier = form.get("tier", "")
+    if tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
+        return RedirectResponse("/upgrade", status_code=302)
+
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+
+    # Get or create Stripe customer
+    if user.stripe_customer_id:
+        customer_id = user.stripe_customer_id
+    else:
+        customer = stripe.Customer.create(
+            email=user.email,
+            name=user.username,
+            metadata={"user_id": str(user.id)}
+        )
+        customer_id = customer.id
+        user.stripe_customer_id = customer_id
+        db.commit()
+
+    # If user has an existing subscription, redirect to portal instead
+    if user.stripe_subscription_id:
+        portal = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=f"{site_url}/dashboard",
+        )
+        return RedirectResponse(portal.url, status_code=302)
+
+    session = stripe.checkout.Session.create(
+        customer=customer_id,
+        payment_method_types=["card"],
+        line_items=[{"price": STRIPE_PRICES[tier], "quantity": 1}],
+        mode="subscription",
+        success_url=f"{site_url}/upgrade/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{site_url}/upgrade",
+        metadata={"user_id": str(user.id), "tier": tier},
+        subscription_data={"metadata": {"user_id": str(user.id), "tier": tier}},
+    )
+    return RedirectResponse(session.url, status_code=302)
+
+@app.get("/upgrade/success", response_class=HTMLResponse)
+async def upgrade_success(request: Request, session_id: str = "", db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("upgrade_success.html", {
+        "request": request,
+        "user": user,
+        "unread_count": unread_count,
+        "tier": user.subscription_tier or "free",
+    })
+
+@app.post("/upgrade/manage")
+async def manage_subscription(request: Request, db: Session = Depends(get_db)):
+    """Redirect coach to Stripe Customer Portal to cancel/change plan."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player" or not user.stripe_customer_id:
+        return RedirectResponse("/upgrade", status_code=302)
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    portal = stripe.billing_portal.Session.create(
+        customer=user.stripe_customer_id,
+        return_url=f"{site_url}/dashboard",
+    )
+    return RedirectResponse(portal.url, status_code=302)
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    try:
+        if STRIPE_WEBHOOK_SECRET:
+            event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        else:
+            import json
+            event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid webhook")
+
+    def get_user_from_meta(meta):
+        uid = meta.get("user_id")
+        return db.query(User).filter(User.id == int(uid)).first() if uid else None
+
+    def set_tier(user, tier, sub_id=""):
+        if user:
+            user.subscription_tier = tier
+            if sub_id:
+                user.stripe_subscription_id = sub_id
+            db.commit()
+
+    etype = event["type"]
+
+    if etype in ("checkout.session.completed",):
+        obj = event["data"]["object"]
+        meta = obj.get("metadata", {})
+        user = get_user_from_meta(meta)
+        tier = meta.get("tier", "free")
+        sub_id = obj.get("subscription", "")
+        set_tier(user, tier, sub_id)
+
+    elif etype in ("customer.subscription.updated",):
+        obj = event["data"]["object"]
+        meta = obj.get("metadata", {})
+        user = get_user_from_meta(meta)
+        status = obj.get("status", "")
+        if status == "active":
+            tier = meta.get("tier", "free")
+            set_tier(user, tier, obj["id"])
+        elif status in ("canceled", "unpaid", "past_due"):
+            set_tier(user, "free", "")
+
+    elif etype in ("customer.subscription.deleted",):
+        obj = event["data"]["object"]
+        meta = obj.get("metadata", {})
+        user = get_user_from_meta(meta)
+        if user:
+            user.subscription_tier = "free"
+            user.stripe_subscription_id = ""
+            db.commit()
+
+    elif etype == "invoice.payment_failed":
+        obj = event["data"]["object"]
+        cust_id = obj.get("customer", "")
+        user = db.query(User).filter(User.stripe_customer_id == cust_id).first()
+        if user:
+            user.subscription_tier = "free"
+            user.stripe_subscription_id = ""
+            db.commit()
+
+    return JSONResponse({"ok": True})
+
 # ── School lookup endpoints ────────────────────────────────────────────────────
 
 @app.get("/api/schools/states")

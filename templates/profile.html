@@ -82,14 +82,13 @@
                 </div>
                 {% elif current_user %}
                 <div class="profile-actions">
-                    <a href="mailto:admin@caprecruiting.com?subject=Upgrade Request" class="btn btn-primary" style="background:#f0b429; color:#0a1628;" title="Premium plan required for messaging">&#x1F512; Upgrade to Message</a>
+                    <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628;" title="Premium plan required for messaging">&#x1F512; Upgrade to Message</a>
                 </div>
                 {% else %}
                 <div class="profile-actions">
                     <a href="/login" class="btn btn-primary">Sign in to Message</a>
                 </div>
                 {% endif %}
-                </div>
             </div>
 
             {% if profile and profile.bio %}
@@ -177,7 +176,6 @@
                         <span class=stat-value>{{ profile.broad_jump }}</span>
                     </div>
                     {% endif %}
-                </div>
             </div>
             {% endif %}
             {% endif %}
@@ -204,7 +202,6 @@
                         <span class=stat-value>{{ profile.clean }} <small>lbs</small></span>
                     </div>
                     {% endif %}
-                </div>
             </div>
             {% endif %}
 
@@ -247,7 +244,6 @@
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
-                </div>
             </div>
             {% endif %}
             <!-- Videos -->
@@ -259,9 +255,8 @@
                     {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view videos</p>
                     {% else %}
-                    <p><a href="mailto:admin@caprecruiting.com?subject=Upgrade Request">Upgrade to Premium</a> to view videos</p>
+                    <p><a href="/upgrade">Upgrade to Premium</a> to view videos</p>
                     {% endif %}
-                </div>
             </div>
             {% elif videos or is_owner %}
             <div class="profile-section">
@@ -350,9 +345,8 @@
                     {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view campus visits</p>
                     {% else %}
-                    <p><a href="mailto:admin@caprecruiting.com?subject=Upgrade Request">Upgrade to Advanced</a> to view campus visits</p>
+                    <p><a href="/upgrade">Upgrade to Advanced</a> to view campus visits</p>
                     {% endif %}
-                </div>
             </div>
             {% endif %}
 
@@ -488,7 +482,6 @@
                         <a href="mailto:{{ profile.contact_email }}" class="contact-value">{{ profile.contact_email }}</a>
                     </div>
                     {% endif %}
-                </div>
             </div>
             {% elif profile and (profile.phone or profile.contact_email) %}
             <div class="profile-section">
@@ -498,9 +491,8 @@
                     {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view contact information</p>
                     {% else %}
-                    <p><a href="mailto:admin@caprecruiting.com?subject=Upgrade Request">Upgrade to Premium</a> to view contact info</p>
+                    <p><a href="/upgrade">Upgrade to Premium</a> to view contact info</p>
                     {% endif %}
-                </div>
             </div>
             {% endif %}
         </div>
