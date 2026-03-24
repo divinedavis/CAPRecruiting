@@ -1,88 +1,108 @@
-# Bearcats Recruiting
+# CAP Recruiting
 
 A football recruiting platform connecting high school players with college coaches.
 
 **Live site:** [caprecruiting.com](https://caprecruiting.com)
 
+## What It Does
+
+CAP Recruiting gives high school football players a professional recruiting profile that coaches can discover and evaluate. Players control how much of their profile is visible by choosing a subscription tier — the higher the tier, the more coaches can see. Coaches get free access to browse and evaluate players.
+
+### Player Tiers
+
+| Tier | Price | What Coaches See |
+|------|-------|-----------------|
+| **Free** | — | Visitors only — preview cards, no profile access |
+| **Essentials** | $10/mo | Profile photo, overview, field & lifting stats |
+| **Advanced** | $25/mo | + Transcripts, photo gallery, scholarship offers, campus visits |
+| **Premium** | $50/mo | + Highlight videos, contact info, direct messaging |
+
+Subscriptions are handled via Stripe. Players choose a plan on signup and can upgrade or cancel anytime.
+
+---
+
 ## Features
 
 ### Player Profiles
-- Personal info — first/last name, school, city/state, class year
-- **Player Overview** — height, weight, GPA, class year
-- **Field Stats** — 40-yard dash, pro agility (sec), vertical, broad jump (in)
-- **Lifting Stats** — bench press, squat, clean (lbs)
+- Personal info — name, school, city/state, class year
+- **Player Overview** — height, weight, wingspan, GPA, NCAA eligibility #, intended major
+- **Field Stats** — 40-yard dash, pro agility, vertical, broad jump
+- **Lifting Stats** — bench press, squat, clean
 - Profile photo upload
 - Bio, social links (Hudl, X/Twitter, Instagram)
 - External links (MaxPreps, highlight reels, custom)
-- Scholarship offers and campus visits
+- Scholarship offers (up to 5) and campus visits (up to 5)
 
 ### Coach Profiles
 - School, title, division, conference, bio
 - External links
 
 ### Photos
-- Players and admins can upload up to 20 photos per profile
-- In-page lightbox viewer with previous/next navigation and keyboard support
-- Grid preview showing 5 photos with "Show All" button
-- Multi-photo selection on upload
+- Players upload up to 20 photos; coaches see them on Advanced+ players
+- In-page lightbox with keyboard navigation
+- Grid preview with "Show All" expand
 
 ### Transcripts
-- Players and admins can upload up to 4 transcripts per profile (PDF, DOC, DOCX)
-- In-page viewer — PDFs embed directly, DOCX uses Google Docs viewer
-- Visible to coaches and admins only
+- Players upload up to 4 transcripts (PDF, DOC, DOCX)
+- Visible to coaches on Advanced+ players only
+- In-page viewer — PDFs embed directly, DOCX via Google Docs viewer
 
 ### Videos
-- Players can upload and pin highlight videos
-- Pinned video shown first on profile
+- Players upload and pin highlight videos (up to 5)
+- Visible to coaches on Premium players only
 
 ### Messaging
-- Real-time WebSocket chat between any two users
-- Unread message badge showing count of unique senders
+- Coaches can message Premium-tier players (coach-initiated only)
+- Real-time WebSocket chat with unread message badges
+
+### Subscriptions (Stripe)
+- Players choose Essentials / Advanced / Premium on signup
+- Stripe Checkout for payment, Customer Portal for self-serve cancel/upgrade
+- Webhooks auto-update player tier on payment success, failure, or cancellation
+- Admins can manually override any player's tier from the admin panel
 
 ### Admin Panel
-- Full user management — view, edit, and delete any account
-- Edit any player or coach profile via `/admin/users/{id}/edit-profile`
-- Upload/delete photos, transcripts, and videos for any player
-- **Star ratings** — admins can assign 0–5 stars to players, visible on profiles and the player directory
+- Full user management — view, edit, delete any account
+- Manually set subscription tier for any player
+- Star ratings (0–5) visible on profiles and player directory
 - Coach evaluations — visible to coaches and admins only
-- Team management
+- Team management and coach invite links
+- Email notification on every new player signup
 
 ### Player Directory
-- Visitors can browse players by team without signing up
-- Filter by class year (dropdown) after selecting a team
+- Visitors can browse player cards without signing up
+- Filter by school, position, and class year
 - Player cards show avatar, position, stats, offers, and star rating
-- Social icons (Hudl, X, Instagram) on each card
+- Visitors cannot click into profiles (login required)
 
 ### Auth & Accounts
-- Sign up as player or coach
+- Player signup requires selecting a paid tier (no free tier for registered players)
+- Coach signup requires an admin-issued invite link
 - Login with username or email
-- Admin accounts with elevated permissions
-- Delete account (admin only)
+- Password reset via email
 
-### Performance
-- Images resized and compressed on upload (max 1200px, JPEG 82%)
+### Performance & SEO
+- All media served via DigitalOcean Spaces CDN
+- Open Graph + Twitter Card meta tags on every profile
+- Gzip compression via Nginx
 - Lazy loading on all image grids
-- All media (photos, videos, transcripts) served via DigitalOcean Spaces CDN
 
-### Sharing
-- Open Graph + Twitter Card meta tags on every page
-- Player profiles generate preview cards with photo, name, and position
-- iMessage / social share preview with site logo
+---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|-------|------------|
 | Backend | FastAPI (Python) |
-| Database | SQLite via SQLAlchemy |
+| Database | SQLite via SQLAlchemy ORM |
 | Templates | Jinja2 |
 | Server | Uvicorn (ASGI, 2 workers) |
 | Reverse proxy | Nginx |
 | SSL | Let's Encrypt / Certbot |
 | Real-time | WebSockets |
 | Auth | Starlette SessionMiddleware + bcrypt |
+| Payments | Stripe (Checkout, Customer Portal, Webhooks) |
 | File storage | DigitalOcean Spaces (S3-compatible) via boto3 + CDN |
-| Image processing | Pillow |
 | Email | aiosmtplib (Gmail SMTP) |
 | Process manager | systemd |
-| Hosting | DigitalOcean Droplet |
+| Hosting | DigitalOcean Droplet (NYC3) |
