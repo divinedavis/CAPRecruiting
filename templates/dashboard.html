@@ -53,11 +53,30 @@
     </div>
     {% endif %}
 
+
+<div id="upgrade-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:36px 32px; max-width:420px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="font-size:40px; margin-bottom:12px;">&#128274;</div>
+    <h2 style="color:#0a1628; font-size:22px; margin-bottom:10px;">Upgrade to View Profiles</h2>
+    <p style="color:#6b7280; font-size:14px; margin-bottom:24px;">Get full access to player profiles, transcripts, contact info, and more.<br><br><strong>Essentials &#8211; $10/mo</strong> &mdash; profiles &amp; stats<br><strong>Advanced &#8211; $25/mo</strong> &mdash; + transcripts, photos, offers<br><strong>Premium &#8211; $50/mo</strong> &mdash; + messaging, videos, contact</p>
+    <a href="mailto:admin@caprecruiting.com?subject=Upgrade Request" style="display:inline-block; background:#0a1628; color:#f0b429; font-weight:700; padding:12px 28px; border-radius:8px; text-decoration:none; font-size:15px; margin-bottom:12px;">Contact Us to Upgrade</a><br>
+    <button onclick="document.getElementById(&#39;upgrade-modal&#39;).style.display=&#39;none&#39;" style="background:none; border:none; color:#6b7280; font-size:13px; cursor:pointer; margin-top:8px;">Close</button>
+  </div>
+</div>
+{% if request.query_params.get("upgrade") %}
+<div style="background:#fef3c7; border:1.5px solid #f0b429; border-radius:10px; padding:14px 20px; margin-bottom:20px; text-align:center; font-size:14px; color:#92400e;">
+  <strong>Upgrade required</strong> &mdash; <a href="mailto:admin@caprecruiting.com?subject=Upgrade Request" style="color:#0a1628; font-weight:700;">Contact us</a> to unlock this feature.
+</div>
+{% endif %}
     {% if player_data %}
     <div class="player-grid">
         {% for item in player_data %}
         {% set p = item.profile %}
+        {% if can_click_profiles %}
         <a href="/profile/{{ item.user.username }}" class="player-card" style="position:relative; text-align:center;">
+        {% else %}
+        <div class="player-card" style="position:relative; text-align:center; cursor:default;" onclick="showUpgradePrompt(event)">
+        {% endif %}
             <!-- Avatar centered -->
             <div style="display:flex; justify-content:center; margin-bottom:12px;">
                 <div class="player-avatar" style="width:108px; height:108px; font-size:44px;">
@@ -116,7 +135,7 @@
                      title="Share profile">
                     <img src="/static/share-icon.svg" style="width:22px; height:22px; display:block;" alt="Share">
                 </div>
-                {% if user and (user.role == "coach" or user.is_admin) %}
+                {% if can_message_from_dashboard %}
                 <div onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/messages/{{ item.user.username }}';"
                      style="width:44px; height:44px; border-radius:50%; background:#0a1628; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(10,22,40,0.3); transition:transform 0.15s, box-shadow 0.15s;"
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 14px rgba(10,22,40,0.45)';"
@@ -163,7 +182,7 @@
                 {% endif %}
             </div>
             {% endif %}
-        </a>
+        {% if can_click_profiles %}</a>{% else %}</div>{% endif %}
         {% endfor %}
     </div>
     {% else %}
@@ -196,6 +215,11 @@ function applyYearFilter(yr) {
 }
 </script>
 <script>
+function showUpgradePrompt(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById("upgrade-modal").style.display = "flex";
+}
 function shareProfile(username, name) {
     var url = 'https://caprecruiting.com/profile/' + username;
     if (navigator.share) {

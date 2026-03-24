@@ -97,6 +97,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)  # 'player' or 'coach'
     is_admin = Column(Boolean, default=False)
+    subscription_tier = Column(String, default="free")  # free, essentials, advanced, premium
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class PlayerProfile(Base):
@@ -275,6 +276,21 @@ def unread_sender_count(db: Session, user_id: int) -> int:
         Message.read == False
     ).scalar()
     return result or 0
+
+
+# ── Subscription Tier Helpers ──────────────────────────────────────────────────
+TIER_ORDER = {"free": 0, "essentials": 1, "advanced": 2, "premium": 3}
+
+def tier_gte(tier: str, required: str) -> bool:
+    return TIER_ORDER.get(tier or "free", 0) >= TIER_ORDER.get(required, 0)
+
+def viewer_tier(user) -> str:
+    """Return effective tier for a viewer. Players and admins are treated as premium."""
+    if user is None:
+        return "free"
+    if user.is_admin or user.role == "player":
+        return "premium"
+    return user.subscription_tier or "free"
 
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
@@ -548,6 +564,9 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
             player_data.append({"user": p, "profile": prof})
 
     unread_count = unread_sender_count(db, user_id) if user_id else 0
+    vt = viewer_tier(user)
+    can_click_profiles = bool(user and (user.is_admin or user.role == "player" or tier_gte(vt, "essentials")))
+    can_message_from_dashboard = bool(user and (user.is_admin or tier_gte(vt, "premium")))
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
@@ -558,6 +577,8 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
         "active_school": school,
         "active_year": year,
         "active_position": position,
+        "can_click_profiles": can_click_profiles,
+        "can_message_from_dashboard": can_message_from_dashboard,
     })
 
 @app.get("/profile/edit", response_class=HTMLResponse)
@@ -726,6 +747,26 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
                     visit_list.append({"school": school, "date": fmt_date})
 
     unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
+    vt = viewer_tier(current_user)
+    can_view_photos   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "advanced")
+    can_view_offers   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "advanced")
+    can_view_visits   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "advanced")
+    can_view_videos   = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "premium")
+    can_view_contact  = is_owner or bool(current_user and current_user.is_admin) or tier_gte(vt, "premium")
+    can_message       = bool(current_user and not is_owner and (current_user.is_admin or tier_gte(vt, "premium")))
+    # Override transcript gating: advanced+ coaches only
+    if not (is_owner or (current_user and current_user.is_admin) or tier_gte(vt, "advanced")):
+        can_see_transcripts = False
+        transcript_list = []
+    if not can_view_photos:
+        image_list = []
+    if not can_view_visits:
+        visit_list = []
+        has_visits = False
+    if not can_view_videos:
+        videos = []
+        has_more_videos = False
+        total_video_count = 0
     return templates.TemplateResponse("profile.html", {
         "request": request,
         "target": target,
@@ -744,6 +785,13 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "image_list": image_list,
         "transcript_list": transcript_list,
         "can_see_transcripts": can_see_transcripts,
+        "viewer_tier": vt,
+        "can_view_photos": can_view_photos,
+        "can_view_offers": can_view_offers,
+        "can_view_visits": can_view_visits,
+        "can_view_videos": can_view_videos,
+        "can_view_contact": can_view_contact,
+        "can_message": can_message,
     })
 
 @app.get("/videos/{username}", response_class=HTMLResponse)
@@ -1050,8 +1098,9 @@ async def download_transcript(transcript_id: int, request: Request, db: Session 
     t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
     if not t:
         raise HTTPException(status_code=404)
-    if current_user.id != t.user_id and current_user.role != "coach" and not current_user.is_admin:
-        raise HTTPException(status_code=403)
+    if current_user.id != t.user_id and not current_user.is_admin:
+        if current_user.role != "coach" or not tier_gte(viewer_tier(current_user), "advanced"):
+            raise HTTPException(status_code=403, detail="Advanced plan required to download transcripts")
     key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
     obj = s3.get_object(Bucket=SPACES_BUCKET, Key=key)
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else "pdf"
@@ -1075,8 +1124,9 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
     t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
     if not t:
         raise HTTPException(status_code=404)
-    if current_user.id != t.user_id and current_user.role != "coach" and not current_user.is_admin:
-        raise HTTPException(status_code=403)
+    if current_user.id != t.user_id and not current_user.is_admin:
+        if current_user.role != "coach" or not tier_gte(viewer_tier(current_user), "advanced"):
+            raise HTTPException(status_code=403, detail="Advanced plan required to view transcripts")
     ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
     if ext == "pdf":
         viewer_url = t.file_url
@@ -1146,6 +1196,24 @@ async def admin_set_stars(target_id: int, request: Request, db: Session = Depend
     if target:
         return RedirectResponse(f"/profile/{target.username}", status_code=302)
     return RedirectResponse("/dashboard", status_code=302)
+
+@app.post("/admin/users/{target_id}/set-tier", response_class=HTMLResponse)
+async def admin_set_tier(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    form = await request.form()
+    tier = form.get("subscription_tier", "free")
+    if tier not in ("free", "essentials", "advanced", "premium"):
+        tier = "free"
+    target = db.query(User).filter(User.id == target_id).first()
+    if target:
+        target.subscription_tier = tier
+        db.commit()
+    return RedirectResponse(f"/admin/users/{target_id}/edit-profile", status_code=302)
 
 @app.get("/admin/teams", response_class=HTMLResponse)
 async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
@@ -1393,6 +1461,8 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
+    if user and user.role == "coach" and not user.is_admin and not tier_gte(viewer_tier(user), "premium"):
+        return RedirectResponse("/dashboard?upgrade=messages", status_code=302)
 
     from sqlalchemy import or_
 
@@ -1440,6 +1510,8 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
+    if user and user.role == "coach" and not user.is_admin and not tier_gte(viewer_tier(user), "premium"):
+        return RedirectResponse("/dashboard?upgrade=messages", status_code=302)
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1580,6 +1652,9 @@ async def conversation_post(username: str, request: Request, db: Session = Depen
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
+    sender = db.query(User).filter(User.id == user_id).first()
+    if sender and sender.role == "coach" and not sender.is_admin and not tier_gte(viewer_tier(sender), "premium"):
+        return RedirectResponse("/dashboard?upgrade=messages", status_code=302)
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
         raise HTTPException(status_code=404)

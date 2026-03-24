@@ -64,25 +64,32 @@
                     {% endif %}
                 </div>
 
-                {% if current_user and current_user.id != target.id %}
+                {% if is_owner %}
                 <div class="profile-actions">
-                    <a href="/messages/{{ target.username }}" class="btn btn-primary">💬 Message</a>
-                    {% if current_user.is_admin %}
+                    <a href="/profile/edit" class="btn btn-outline">&#x270F;&#xFE0F; Edit Profile</a>
+                </div>
+                {% elif current_user and current_user.is_admin %}
+                <div class="profile-actions">
+                    <a href="/messages/{{ target.username }}" class="btn btn-primary">&#x1F4AC; Message</a>
                     <a href="/admin/users/{{ target.id }}/edit-profile" class="btn btn-primary">Edit Profile</a>
                     <form method="post" action="/admin/users/{{ target.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this profile? This cannot be undone.')">
                         <button type="submit" class="btn btn-danger">Delete Profile</button>
                     </form>
-                    {% endif %}
                 </div>
-                {% elif current_user and current_user.id == target.id %}
+                {% elif can_message %}
                 <div class="profile-actions">
-                    <a href="/profile/edit" class="btn btn-outline">✏️ Edit Profile</a>
+                    <a href="/messages/{{ target.username }}" class="btn btn-primary">&#x1F4AC; Message</a>
+                </div>
+                {% elif current_user %}
+                <div class="profile-actions">
+                    <a href="mailto:admin@caprecruiting.com?subject=Upgrade Request" class="btn btn-primary" style="background:#f0b429; color:#0a1628;" title="Premium plan required for messaging">&#x1F512; Upgrade to Message</a>
                 </div>
                 {% else %}
                 <div class="profile-actions">
                     <a href="/login" class="btn btn-primary">Sign in to Message</a>
                 </div>
                 {% endif %}
+                </div>
             </div>
 
             {% if profile and profile.bio %}
@@ -202,7 +209,7 @@
             {% endif %}
 
             <!-- Scholarship Offers -->
-            {% if target.role == "player" and profile and (profile.offer1 or profile.offer2 or profile.offer3 or profile.offer4 or profile.offer5) %}
+            {% if can_view_offers and target.role == "player" and profile and (profile.offer1 or profile.offer2 or profile.offer3 or profile.offer4 or profile.offer5) %}
             <div class="profile-section">
                 <h2>Scholarship Offers</h2>
                 <div style="display:flex; flex-wrap:wrap; gap:8px;">
@@ -244,7 +251,19 @@
             </div>
             {% endif %}
             <!-- Videos -->
-            {% if videos or is_owner %}
+            {% if not can_view_videos and not is_owner and target.role == "player" %}
+            <div class="profile-section">
+                <h2>Videos</h2>
+                <div class="contact-locked">
+                    <span style="font-size:24px;">&#x1F512;</span>
+                    {% if not current_user %}
+                    <p><a href="/login">Sign in</a> to view videos</p>
+                    {% else %}
+                    <p><a href="mailto:admin@caprecruiting.com?subject=Upgrade Request">Upgrade to Premium</a> to view videos</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif videos or is_owner %}
             <div class="profile-section">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                     <h2 style="margin-bottom:0;">Videos</h2>
@@ -323,12 +342,16 @@
                     {% endfor %}
                 </div>
             </div>
-            {% elif not current_user and has_visits %}
+            {% elif has_visits %}
             <div class="profile-section">
                 <h2>Campus Visits</h2>
                 <div class="contact-locked">
                     <span style="font-size:24px;">🔒</span>
+                    {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view campus visits</p>
+                    {% else %}
+                    <p><a href="mailto:admin@caprecruiting.com?subject=Upgrade Request">Upgrade to Advanced</a> to view campus visits</p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -449,7 +472,7 @@
             {% endif %}
 
             <!-- Contact Info — logged-in users only -->
-            {% if current_user and profile and (profile.phone or profile.contact_email) %}
+            {% if can_view_contact and profile and (profile.phone or profile.contact_email) %}
             <div class="profile-section">
                 <h2>Contact</h2>
                 <div class="contact-list">
@@ -467,12 +490,16 @@
                     {% endif %}
                 </div>
             </div>
-            {% elif not current_user and profile and (profile.phone or profile.contact_email) %}
+            {% elif profile and (profile.phone or profile.contact_email) %}
             <div class="profile-section">
                 <h2>Contact</h2>
                 <div class="contact-locked">
                     <span style="font-size:24px;">🔒</span>
+                    {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view contact information</p>
+                    {% else %}
+                    <p><a href="mailto:admin@caprecruiting.com?subject=Upgrade Request">Upgrade to Premium</a> to view contact info</p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
