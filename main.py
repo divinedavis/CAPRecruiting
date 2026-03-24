@@ -809,7 +809,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "image_list": image_list,
         "transcript_list": transcript_list,
         "can_see_transcripts": can_see_transcripts,
-        "viewer_tier": vt,
+        "viewer_tier": pt,
         "can_view_photos": can_view_photos,
         "can_view_offers": can_view_offers,
         "can_view_visits": can_view_visits,

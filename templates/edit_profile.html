@@ -3,9 +3,12 @@
 {% block content %}
 <div class="container page-top">
     <div class="edit-layout">
-        <div class="edit-header">
-            <h1>Edit Your Profile</h1>
-            <p>Keep your profile up to date so coaches can find you</p>
+        <div class="edit-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div>
+                <h1>Edit Your Profile</h1>
+                <p>Keep your profile up to date so coaches can find you</p>
+            </div>
+            <a href="/profile/{{ user.username }}" class="btn btn-outline" style="flex-shrink:0;">View My Profile</a>
         </div>
 
         {% if success %}
