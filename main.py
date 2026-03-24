@@ -440,6 +440,8 @@ async def signup_post(
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
     if role == "player":
+        import asyncio
+        asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
         return RedirectResponse("/upgrade?new=1", status_code=302)
     return RedirectResponse("/profile/edit", status_code=302)
 
@@ -466,6 +468,43 @@ async def send_reset_email(to_email: str, reset_url: str):
         await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
     except Exception as e:
         print(f"Email send error: {e}")
+
+async def send_player_signup_notification(player_username: str, player_email: str, school: str):
+    try:
+        import aiosmtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        # Get all admin emails
+        db = SessionLocal()
+        try:
+            admins = db.query(User).filter(User.is_admin == True).all()
+            admin_emails = [a.email for a in admins if a.email]
+        finally:
+            db.close()
+        if not admin_emails:
+            admin_emails = [SMTP_USER]
+        site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+        for admin_email in admin_emails:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"New Player Signup: {player_username}"
+            msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+            msg["To"] = admin_email
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+                <h2 style="color:#0a1628;">New Player Signed Up</h2>
+                <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Username</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{player_username}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Email</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{player_email}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">School</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{school or "—"}</td></tr>
+                </table>
+                <a href="{site_url}/profile/{player_username}" style="background:#0a1628;color:#f0b429;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">View Profile</a>
+            </div>
+            """
+            msg.attach(MIMEText(html, "html"))
+            await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+    except Exception:
+        pass  # Don't fail signup if email fails
+
 
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_get(request: Request):
