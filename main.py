@@ -1806,28 +1806,25 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
 
     doc = fitz.open(TEMPLATE_PDF)
 
-    # ── Page 1: overlay full_name and date_top ───────────────────────────
+    # ── Page 1: overlay player name (y=131) and effective date (y=114) ──
     p0 = doc[0]
-    # Cover the placeholder underscores, then write text
-    # Full name: covers the "_____" line at y=150, x=90. Overlay text at y=148
-    p0.draw_rect(fitz.Rect(90, 137, 320, 156), color=(1,1,1), fill=(1,1,1))
-    p0.insert_text((91, 150), full_name, fontsize=11, color=(0,0,0))
-    # Date top: covers at x=342, y=166 area
-    p0.draw_rect(fitz.Rect(342, 153, 545, 172), color=(1,1,1), fill=(1,1,1))
-    p0.insert_text((343, 166), date_top, fontsize=11, color=(0,0,0))
+    # Player name — covers the "______" blank line at y=131
+    p0.draw_rect(fitz.Rect(72, 119, 360, 137), color=(1,1,1), fill=(1,1,1))
+    p0.insert_text((73, 131), full_name, fontsize=11, color=(0,0,0))
+    # Effective date — covers the blank after "effective as of" at y=114
+    p0.draw_rect(fitz.Rect(300, 101, 545, 120), color=(1,1,1), fill=(1,1,1))
+    p0.insert_text((302, 114), date_top, fontsize=11, color=(0,0,0))
 
-    # ── Page 2: overlay signature image, print_name, sign_date ──────────
-    p1 = doc[1]
-    # Signature image goes in the space at top of page 2 (above "Print Name" at y=117)
-    sig_rect = fitz.Rect(67, 30, 370, 100)
-    p1.insert_image(sig_rect, stream=sig_bytes)
-
-    # Print name
-    p1.draw_rect(fitz.Rect(90, 121, 330, 142), color=(1,1,1), fill=(1,1,1))
-    p1.insert_text((91, 134), print_name, fontsize=11, color=(0,0,0))
-    # Sign date
-    p1.draw_rect(fitz.Rect(342, 137, 545, 158), color=(1,1,1), fill=(1,1,1))
-    p1.insert_text((343, 150), sign_date, fontsize=11, color=(0,0,0))
+    # ── Page 3 (index 2): CLIENT SIGNATURE, DATE, Print Name ────────────
+    p2 = doc[2]
+    # Signature image — in the space below "CLIENT SIGNATURE:" (y=217) and above "DATE:" (y=267)
+    sig_rect = fitz.Rect(72, 222, 380, 262)
+    p2.insert_image(sig_rect, stream=sig_bytes)
+    # Date signed — after "DATE:" at y=267
+    p2.draw_rect(fitz.Rect(110, 255, 400, 275), color=(1,1,1), fill=(1,1,1))
+    p2.insert_text((112, 269), sign_date, fontsize=11, color=(0,0,0))
+    # Print name — below date
+    p2.insert_text((72, 290), f"Print Name: {print_name}", fontsize=11, color=(0,0,0))
 
     os.makedirs(SIGNED_DOCS_DIR, exist_ok=True)
     filename = f"signed_{contract.id}_{uuid.uuid4().hex[:10]}.pdf"
