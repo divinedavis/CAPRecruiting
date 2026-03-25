@@ -336,6 +336,10 @@ async def home(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/dashboard", status_code=302)
     return templates.TemplateResponse("home.html", {"request": request})
 
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    return templates.TemplateResponse("pricing.html", {"request": request})
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None):
     teams = db.query(Team).order_by(Team.name).all()
