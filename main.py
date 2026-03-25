@@ -75,7 +75,36 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "change-me"))
+_session_secret = os.environ.get("SESSION_SECRET", "")
+if not _session_secret or _session_secret == "change-me":
+    raise RuntimeError("SESSION_SECRET environment variable must be set to a strong random value")
+app.add_middleware(SessionMiddleware, secret_key=_session_secret)
+
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as _StarletteResponse
+
+CSRF_EXEMPT_PATHS = {"/stripe/webhook"}
+
+class _CSRFMiddleware(BaseHTTPMiddleware):
+    _SAFE = {"GET", "HEAD", "OPTIONS", "TRACE"}
+
+    async def dispatch(self, request, call_next):
+        if request.method not in self._SAFE and request.url.path not in CSRF_EXEMPT_PATHS:
+            host = request.headers.get("host", "").split(":")[0]
+            origin = request.headers.get("origin", "")
+            referer = request.headers.get("referer", "")
+            from urllib.parse import urlparse
+            ok = False
+            if origin:
+                ok = urlparse(origin).hostname == host
+            elif referer:
+                ok = urlparse(referer).hostname == host
+            if not ok:
+                return _StarletteResponse("Forbidden: CSRF check failed", status_code=403)
+        return await call_next(request)
+
+app.add_middleware(_CSRFMiddleware)
 
 SQLALCHEMY_DATABASE_URL = "sqlite:////home/recruiting/bearcats/recruiting.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -429,8 +458,8 @@ async def signup_post(
         return err("Username already taken.")
     if db.query(User).filter(User.email == email).first():
         return err("Email already registered.")
-    if len(password) < 6:
-        return err("Password must be at least 6 characters.")
+    if len(password) < 8:
+        return err("Password must be at least 8 characters.")
 
     # Resolve coach team: create new team if name provided, else use selected id
     coach_tid = None
@@ -964,6 +993,16 @@ async def upload_video(
     ext = video.filename.rsplit(".", 1)[-1].lower() if "." in video.filename else ""
     if ext not in VIDEO_ALLOWED_EXTENSIONS:
         return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
+    # Magic byte check
+    _video_header = await video.read(512)
+    await video.seek(0)
+    try:
+        import magic as _magic
+        _detected = _magic.from_buffer(_video_header, mime=True)
+        if not _detected.startswith("video/"):
+            return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
+    except Exception:
+        pass
 
     key = f"videos/{upload_user_id}/{uuid.uuid4().hex}.{ext}"
     content_type = video.content_type or f"video/{ext}"
@@ -1164,6 +1203,16 @@ async def upload_transcript(
     contents = await transcript.read()
     if len(contents) > TRANSCRIPT_MAX_BYTES:
         return RedirectResponse(redirect_to + "?transcript_error=size", status_code=302)
+    # Magic byte check
+    try:
+        import magic as _magic
+        _detected = _magic.from_buffer(contents[:512], mime=True)
+        _allowed_mimes = {"application/pdf", "application/msword",
+                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+        if _detected not in _allowed_mimes:
+            return RedirectResponse(redirect_to + "?transcript_error=type", status_code=302)
+    except Exception:
+        pass
 
     import io
     key = f"transcripts/{target_user_id}/{uuid.uuid4().hex}.{ext}"
@@ -1777,7 +1826,12 @@ async def serve_signed_doc(filename: str, request: Request, db: Session = Depend
     if not user or not user.is_admin:
         raise HTTPException(status_code=403)
     filepath = os.path.join(SIGNED_DOCS_DIR, filename)
-    if not os.path.exists(filepath):
+    # Guard against path traversal
+    real_filepath = os.path.realpath(filepath)
+    real_docs_dir = os.path.realpath(SIGNED_DOCS_DIR)
+    if not real_filepath.startswith(real_docs_dir + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if not os.path.exists(real_filepath):
         raise HTTPException(status_code=404)
     from fastapi.responses import FileResponse
     return FileResponse(filepath, media_type="application/pdf",
@@ -1853,9 +1907,23 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
-    # Verify the user owns this connection via session cookie
-    session_id = websocket.cookies.get("session")
-    if not session_id:
+    # Verify the session cookie belongs to this user_id
+    session_cookie = websocket.cookies.get("session")
+    if not session_cookie:
+        await websocket.close(code=4001)
+        return
+    # Decode and verify session matches requested user_id
+    try:
+        import itsdangerous as _itsd
+        import json as _json
+        from base64 import b64decode as _b64d
+        _signer = _itsd.TimestampSigner(str(_session_secret))
+        _data = _signer.unsign(session_cookie, max_age=None)
+        _session_data = _json.loads(_b64d(_data))
+        if _session_data.get("user_id") != user_id:
+            await websocket.close(code=4003)
+            return
+    except Exception:
         await websocket.close(code=4001)
         return
 
