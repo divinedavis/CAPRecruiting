@@ -359,7 +359,8 @@ async def signup_post(
     username: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    role: str = Form(...),
+    role: str = Form("player"),
+    tier: str = Form("essentials"),
     team_id: Optional[int] = Form(None),
     coach_team_id: Optional[int] = Form(None),
     new_team_name: str = Form(""),
@@ -379,7 +380,9 @@ async def signup_post(
     def err(msg):
         return templates.TemplateResponse("signup.html", {
             "request": request, "error": msg,
-            "teams": teams, "selected_team_id": team_id
+            "teams": teams, "selected_team_id": team_id,
+            "selected_tier": tier,
+            "invite_token": invite_token, "invite_valid": False,
         })
 
     if role not in ("player", "coach"):
@@ -442,7 +445,29 @@ async def signup_post(
     if role == "player":
         import asyncio
         asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
-        return RedirectResponse("/upgrade?new=1", status_code=302)
+        # Create Stripe customer and checkout session immediately
+        _tier = tier if tier in STRIPE_PRICES and STRIPE_PRICES[tier] else "essentials"
+        try:
+            customer = stripe.Customer.create(
+                email=user.email, name=user.username,
+                metadata={"user_id": str(user.id)}
+            )
+            user.stripe_customer_id = customer.id
+            db.commit()
+            site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+            session = stripe.checkout.Session.create(
+                customer=customer.id,
+                payment_method_types=["card"],
+                line_items=[{"price": STRIPE_PRICES[_tier], "quantity": 1}],
+                mode="subscription",
+                success_url=f"{site_url}/upgrade/success?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{site_url}/pricing",
+                metadata={"user_id": str(user.id), "tier": _tier},
+                subscription_data={"metadata": {"user_id": str(user.id), "tier": _tier}},
+            )
+            return RedirectResponse(session.url, status_code=302)
+        except Exception:
+            return RedirectResponse("/upgrade", status_code=302)
     return RedirectResponse("/profile/edit", status_code=302)
 
 async def send_reset_email(to_email: str, reset_url: str):
