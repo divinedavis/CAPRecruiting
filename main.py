@@ -307,6 +307,11 @@ STRIPE_PRICES = {
     "advanced":   os.environ.get("STRIPE_PRICE_ADVANCED", ""),
     "premium":    os.environ.get("STRIPE_PRICE_PREMIUM", ""),
 }
+STRIPE_PRICES_YEARLY = {
+    "essentials": os.environ.get("STRIPE_PRICE_ESSENTIALS_YEARLY", ""),
+    "advanced":   os.environ.get("STRIPE_PRICE_ADVANCED_YEARLY", ""),
+    "premium":    os.environ.get("STRIPE_PRICE_PREMIUM_YEARLY", ""),
+}
 
 # ── Subscription Tier Helpers ──────────────────────────────────────────────────
 TIER_ORDER = {"free": 0, "essentials": 1, "advanced": 2, "premium": 3}
@@ -2059,7 +2064,9 @@ async def create_checkout(request: Request, db: Session = Depends(get_db)):
 
     form = await request.form()
     tier = form.get("tier", "")
-    if tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
+    billing = form.get("billing", "monthly")
+    price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
+    if tier not in price_map or not price_map[tier]:
         return RedirectResponse("/upgrade", status_code=302)
 
     site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
@@ -2088,7 +2095,7 @@ async def create_checkout(request: Request, db: Session = Depends(get_db)):
     session = stripe.checkout.Session.create(
         customer=customer_id,
         payment_method_types=["card"],
-        line_items=[{"price": STRIPE_PRICES[tier], "quantity": 1}],
+        line_items=[{"price": price_map[tier], "quantity": 1}],
         mode="subscription",
         success_url=f"{site_url}/upgrade/success?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{site_url}/upgrade",
