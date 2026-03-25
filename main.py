@@ -75,7 +75,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-app.add_middleware(SessionMiddleware, secret_key="bearcats-recruiting-secret-2024-xK9mP")
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "change-me"))
 
 SQLALCHEMY_DATABASE_URL = "sqlite:////home/recruiting/bearcats/recruiting.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
