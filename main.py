@@ -250,6 +250,8 @@ class Message(Base):
     content = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
     read = Column(Boolean, default=False)
+    deleted_by_sender = Column(Boolean, default=False)
+    deleted_by_receiver = Column(Boolean, default=False)
 
 Base.metadata.create_all(bind=engine)
 
@@ -1561,9 +1563,12 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
 
     from sqlalchemy import or_
 
-    # Single query: all messages where user is sender OR receiver
+    # Single query: all messages visible to this user (not soft-deleted)
     all_msgs = db.query(Message).filter(
-        or_(Message.sender_id == user_id, Message.receiver_id == user_id)
+        or_(
+            (Message.sender_id == user_id) & (Message.deleted_by_sender == False),
+            (Message.receiver_id == user_id) & (Message.deleted_by_receiver == False)
+        )
     ).all()
 
     # Collect unique peer IDs (anyone I messaged or who messaged me)
@@ -1579,8 +1584,8 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
             continue
         last_msg = db.query(Message).filter(
             or_(
-                (Message.sender_id == user_id) & (Message.receiver_id == pid),
-                (Message.sender_id == pid) & (Message.receiver_id == user_id)
+                (Message.sender_id == user_id) & (Message.receiver_id == pid) & (Message.deleted_by_sender == False),
+                (Message.sender_id == pid) & (Message.receiver_id == user_id) & (Message.deleted_by_receiver == False)
             )
         ).order_by(Message.timestamp.desc()).first()
         unread = db.query(Message).filter(
@@ -1592,11 +1597,19 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
 
     conversations.sort(key=lambda x: x["last_msg"].timestamp if x["last_msg"] else datetime.min, reverse=True)
     total_unread = unread_sender_count(db, user_id)
+    # All players for the "new message" picker (admins + coaches can message anyone)
+    all_players = db.query(User).filter(User.role == "player").order_by(User.username).all()
+    player_profiles_map = {}
+    for p in all_players:
+        prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
+        player_profiles_map[p.id] = prof
     return templates.TemplateResponse("messages.html", {
         "request": request,
         "user": user,
         "conversations": conversations,
-        "unread_count": total_unread
+        "unread_count": total_unread,
+        "all_players": all_players,
+        "player_profiles_map": player_profiles_map,
     })
 
 @app.get("/messages/{username}", response_class=HTMLResponse)
@@ -1610,8 +1623,8 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
         raise HTTPException(status_code=404, detail="User not found")
 
     msgs = db.query(Message).filter(
-        ((Message.sender_id == user_id) & (Message.receiver_id == peer.id)) |
-        ((Message.sender_id == peer.id) & (Message.receiver_id == user_id))
+        ((Message.sender_id == user_id) & (Message.receiver_id == peer.id) & (Message.deleted_by_sender == False)) |
+        ((Message.sender_id == peer.id) & (Message.receiver_id == user_id) & (Message.deleted_by_receiver == False))
     ).order_by(Message.timestamp.asc()).all()
 
     for m in msgs:
@@ -1629,6 +1642,47 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
     })
 
 
+
+
+@app.post("/messages/{username}/delete-thread", response_class=HTMLResponse)
+async def delete_thread(username: str, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    peer = db.query(User).filter(User.username == username).first()
+    if not peer:
+        raise HTTPException(status_code=404)
+    # Soft-delete: mark messages as deleted for the current user's side
+    db.query(Message).filter(
+        Message.sender_id == user_id, Message.receiver_id == peer.id
+    ).update({"deleted_by_sender": True})
+    db.query(Message).filter(
+        Message.sender_id == peer.id, Message.receiver_id == user_id
+    ).update({"deleted_by_receiver": True})
+    db.commit()
+    return RedirectResponse("/messages", status_code=302)
+
+
+@app.post("/messages/delete-conversations", response_class=HTMLResponse)
+async def delete_conversations(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    form = await request.form()
+    peer_ids = form.getlist("peer_id")
+    for pid_str in peer_ids:
+        try:
+            pid = int(pid_str)
+        except ValueError:
+            continue
+        db.query(Message).filter(
+            Message.sender_id == user_id, Message.receiver_id == pid
+        ).update({"deleted_by_sender": True})
+        db.query(Message).filter(
+            Message.sender_id == pid, Message.receiver_id == user_id
+        ).update({"deleted_by_receiver": True})
+    db.commit()
+    return RedirectResponse("/messages", status_code=302)
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):

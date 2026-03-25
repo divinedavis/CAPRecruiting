@@ -12,7 +12,13 @@
                     <span class="chat-peer-role">{{ "Player" if peer.role == "player" else "Coach" }}</span>
                 </div>
             </div>
-            <a href="/profile/{{ peer.username }}" class="btn btn-outline btn-sm">View Profile</a>
+            <div style="display:flex; gap:8px;">
+                <a href="/profile/{{ peer.username }}" class="btn btn-outline btn-sm">View Profile</a>
+                <form method="post" action="/messages/{{ peer.username }}/delete-thread" style="margin:0;"
+                      onsubmit="return confirm('Delete this entire conversation? It will be removed from your view.')">
+                    <button type="submit" class="btn btn-sm" style="background:#fee2e2; color:#dc2626; border:1.5px solid #fca5a5;">Delete Thread</button>
+                </form>
+            </div>
         </div>
 
         <div class="chat-messages" id="chat-messages">

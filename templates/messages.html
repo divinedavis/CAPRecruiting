@@ -2,41 +2,148 @@
 {% block title %}Messages — Collegiate Athletic Planning{% endblock %}
 {% block content %}
 <div class="container page-top">
-    <div class="page-header">
+    <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <h1>Messages</h1>
-        <a href="/dashboard" class="btn btn-outline">Back to Players</a>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <button id="select-all-btn" onclick="toggleSelectAll()" class="btn btn-outline btn-sm" style="display:none;">Select All</button>
+            <button id="delete-selected-btn" onclick="deleteSelected()" class="btn btn-sm" style="display:none; background:#dc2626; color:#fff; border:none;">Delete Selected</button>
+            <button onclick="document.getElementById('new-msg-modal').style.display='flex'" class="btn btn-primary" style="font-size:22px; line-height:1; padding:6px 16px; border-radius:50px;">+</button>
+        </div>
     </div>
 
     {% if conversations %}
-    <div class="conversations-list">
+    <form id="delete-form" method="post" action="/messages/delete-conversations">
+    <div class="conversations-list" id="conv-list">
         {% for conv in conversations %}
-        <a href="/messages/{{ conv.peer.username }}" class="conversation-item {{ 'unread' if conv.unread > 0 else '' }}">
-            <div class="conv-avatar">{{ conv.peer.username[0] | upper }}</div>
-            <div class="conv-info">
-                <div class="conv-name">
-                    {{ conv.peer.username }}
-                    <span class="conv-role-tag">{{ "Player" if conv.peer.role == "player" else "Coach" }}</span>
+        <div class="conv-row" style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" name="peer_id" value="{{ conv.peer.id }}"
+                   class="conv-checkbox" style="display:none; width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:#0a1628;"
+                   onchange="onCheckboxChange()">
+            <a href="/messages/{{ conv.peer.username }}" class="conversation-item {{ 'unread' if conv.unread > 0 else '' }}" style="flex:1;">
+                <div class="conv-avatar">{{ conv.peer.username[0] | upper }}</div>
+                <div class="conv-info">
+                    <div class="conv-name">
+                        {{ conv.peer.username }}
+                        <span class="conv-role-tag">{{ "Player" if conv.peer.role == "player" else "Coach" }}</span>
+                    </div>
+                    <div class="conv-preview">{{ conv.last_msg.content[:60] + "..." if conv.last_msg and conv.last_msg.content|length > 60 else (conv.last_msg.content if conv.last_msg else "") }}</div>
                 </div>
-                <div class="conv-preview">{{ conv.last_msg.content[:60] + "..." if conv.last_msg and conv.last_msg.content|length > 60 else (conv.last_msg.content if conv.last_msg else "") }}</div>
-            </div>
-            <div class="conv-meta">
-                {% if conv.last_msg %}
-                <span class="conv-time">{{ conv.last_msg.timestamp.strftime("%b %d") }}</span>
-                {% endif %}
-                {% if conv.unread > 0 %}
-                <span class="badge">{{ conv.unread }}</span>
-                {% endif %}
-            </div>
-        </a>
+                <div class="conv-meta">
+                    {% if conv.last_msg %}
+                    <span class="conv-time">{{ conv.last_msg.timestamp.strftime("%b %d") }}</span>
+                    {% endif %}
+                    {% if conv.unread > 0 %}
+                    <span class="badge">{{ conv.unread }}</span>
+                    {% endif %}
+                </div>
+            </a>
+        </div>
         {% endfor %}
     </div>
+    </form>
     {% else %}
     <div class="empty-state">
         <div class="empty-icon">💬</div>
         <h3>No messages yet</h3>
-        <p>Visit a player or coach profile to start a conversation.</p>
+        <p>Tap <strong>+</strong> to start a conversation with a player.</p>
         <a href="/dashboard" class="btn btn-primary">Browse Players</a>
     </div>
     {% endif %}
 </div>
+
+<!-- New Message Modal -->
+<div id="new-msg-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:12px; width:100%; max-width:460px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="padding:20px 20px 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e7eb;">
+            <h3 style="margin:0; font-size:18px; font-weight:800; color:#0a1628;">New Message</h3>
+            <button onclick="document.getElementById('new-msg-modal').style.display='none'" style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280; line-height:1;">&times;</button>
+        </div>
+        <div style="padding:12px 20px;">
+            <input type="text" id="player-search" placeholder="Search players..." oninput="filterPlayers(this.value)"
+                   style="width:100%; padding:10px 14px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:15px; outline:none; box-sizing:border-box;">
+        </div>
+        <div id="player-list" style="overflow-y:auto; flex:1; padding:0 12px 12px;">
+            {% for p in all_players %}
+            {% set prof = player_profiles_map.get(p.id) %}
+            <a href="/messages/{{ p.username }}" class="player-pick-row"
+               data-name="{{ (prof.first_name ~ ' ' ~ prof.last_name if prof and (prof.first_name or prof.last_name) else p.username) | lower }}"
+               style="display:flex; align-items:center; gap:12px; padding:10px 8px; border-radius:8px; text-decoration:none; color:#0a1628; transition:background 0.15s;"
+               onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                {% if prof and prof.photo %}
+                <img src="{{ prof.photo }}" style="width:42px; height:42px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                {% else %}
+                <div style="width:42px; height:42px; border-radius:50%; background:#0a1628; color:#f0b429; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; flex-shrink:0;">
+                    {{ (prof.first_name[0] if prof and prof.first_name else p.username[0]) | upper }}
+                </div>
+                {% endif %}
+                <div>
+                    <div style="font-weight:700; font-size:15px;">
+                        {% if prof and (prof.first_name or prof.last_name) %}{{ prof.first_name }} {{ prof.last_name }}{% else %}{{ p.username }}{% endif %}
+                    </div>
+                    <div style="font-size:12px; color:#6b7280;">@{{ p.username }}{% if prof and prof.school %} · {{ prof.school }}{% endif %}</div>
+                </div>
+            </a>
+            {% else %}
+            <p style="color:#9ca3af; font-size:14px; padding:12px 8px;">No players found.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Select / delete logic ────────────────────────────────────────
+let selectMode = false;
+
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.conv-checkbox');
+    const allChecked = [...checkboxes].every(c => c.checked);
+    checkboxes.forEach(c => c.checked = !allChecked);
+    document.getElementById('select-all-btn').textContent = allChecked ? 'Select All' : 'Deselect All';
+    onCheckboxChange();
+}
+
+function onCheckboxChange() {
+    const any = [...document.querySelectorAll('.conv-checkbox')].some(c => c.checked);
+    document.getElementById('delete-selected-btn').style.display = any ? '' : 'none';
+}
+
+// Show checkboxes when hovering the list (desktop UX hint)
+document.addEventListener('DOMContentLoaded', () => {
+    const rows = document.querySelectorAll('.conv-row');
+    if (!rows.length) return;
+
+    // Show select-all button always if there are conversations
+    document.getElementById('select-all-btn').style.display = '';
+
+    rows.forEach(row => {
+        const cb = row.querySelector('.conv-checkbox');
+        const link = row.querySelector('.conversation-item');
+        row.addEventListener('mouseenter', () => { if (cb) cb.style.display = ''; });
+        row.addEventListener('mouseleave', () => { if (cb && !cb.checked) cb.style.display = 'none'; });
+        // Prevent link navigation when clicking checkbox area
+        if (cb) cb.addEventListener('click', e => e.stopPropagation());
+    });
+});
+
+function deleteSelected() {
+    const checked = document.querySelectorAll('.conv-checkbox:checked');
+    if (!checked.length) return;
+    if (!confirm(`Delete ${checked.length} conversation${checked.length > 1 ? 's' : ''}? They will be removed from your view.`)) return;
+    document.getElementById('delete-form').submit();
+}
+
+// ── Player search modal ──────────────────────────────────────────
+function filterPlayers(query) {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('.player-pick-row').forEach(row => {
+        const name = row.dataset.name || '';
+        row.style.display = (!q || name.includes(q)) ? '' : 'none';
+    });
+}
+
+// Close modal on backdrop click
+document.getElementById('new-msg-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
 {% endblock %}
