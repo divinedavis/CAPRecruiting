@@ -1,5 +1,20 @@
 {% extends "base.html" %}
-{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Collegiate Athletic Planning{% endblock %}
+{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Collegiate Athletic Planning
+<script>
+function toggleEval(btn) {
+    const p = btn.previousElementSibling;
+    const full = p.dataset.full;
+    const short = p.dataset.short;
+    if (btn.textContent === 'See more') {
+        p.textContent = full;
+        btn.textContent = 'See less';
+    } else {
+        p.textContent = short + '...';
+        btn.textContent = 'See more';
+    }
+}
+</script>
+{% endblock %}
 
 {% set display_name = (profile.first_name ~ ' ' ~ profile.last_name).strip() if profile and (profile.first_name or profile.last_name) else target.username %}
 {% set og_desc %}{% if target.role == 'player' %}{% if profile and profile.position %}{{ profile.position }}{% endif %}{% if profile and profile.year %} · Class of {{ profile.year }}{% endif %}{% if profile and profile.school %} · {{ profile.school }}{% endif %} — View full recruiting profile on Collegiate Athletic Planning.{% else %}{% if profile and profile.title %}{{ profile.title }}{% endif %}{% if profile and profile.school %} at {{ profile.school }}{% endif %} — View coach profile on Collegiate Athletic Planning.{% endif %}{% endset %}
@@ -355,9 +370,23 @@
             <div class="profile-section">
                 <h2>📋 Coach Evaluations <span style="font-size:13px; font-weight:400; color:var(--gray-400); margin-left:8px;">Visible to coaches only</span></h2>
                 <form method="post" action="/profile/{{ target.username }}/evaluate" style="margin-bottom:20px;">
-                    <textarea name="content" rows="4" placeholder="Write your scouting evaluation..." required style="width:100%; margin-bottom:8px;"></textarea>
+                    <div style="position:relative;">
+                        <textarea name="content" id="eval-textarea" rows="3" maxlength="140"
+                            placeholder="Write your scouting evaluation... (140 chars max)"
+                            required
+                            style="width:100%; margin-bottom:4px; padding-right:12px;"
+                            oninput="updateEvalCount(this)"></textarea>
+                        <div style="text-align:right; font-size:12px; color:var(--gray-400); margin-bottom:8px;">
+                            <span id="eval-count">0</span>/140
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-primary btn-sm">Submit Evaluation</button>
                 </form>
+                <script>
+                function updateEvalCount(el) {
+                    document.getElementById('eval-count').textContent = el.value.length;
+                }
+                </script>
                 {% if eval_list %}
                 <div style="display:flex; flex-direction:column; gap:12px;">
                     {% for ev in eval_list %}
@@ -366,7 +395,15 @@
                             <span style="font-size:13px; font-weight:700; color:var(--navy);">📋 {{ ev.coach_name }}</span>
                             <span style="font-size:12px; color:var(--gray-400);">{{ ev.date }}</span>
                         </div>
-                        <p style="font-size:14px; color:var(--gray-700); margin:0; line-height:1.5;">{{ ev.content }}</p>
+                        {% set full = ev.content %}
+                        {% set short = full[:140] %}
+                        {% if full|length > 140 %}
+                        <p class="eval-text" data-full="{{ full | e }}" data-short="{{ short | e }}"
+                           style="font-size:14px; color:var(--gray-700); margin:0; line-height:1.5;">{{ short }}...</p>
+                        <button onclick="toggleEval(this)" style="background:none; border:none; color:var(--gold); font-size:13px; font-weight:600; cursor:pointer; padding:4px 0; margin-top:2px;">See more</button>
+                        {% else %}
+                        <p style="font-size:14px; color:var(--gray-700); margin:0; line-height:1.5;">{{ full }}</p>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
