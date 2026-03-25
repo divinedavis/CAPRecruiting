@@ -1323,7 +1323,8 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
     teams = []
     for t in teams_raw:
         count = db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()
-        teams.append({"id": t.id, "name": t.name, "player_count": count})
+        if count > 0:
+            teams.append({"id": t.id, "name": t.name, "player_count": count})
     coaches_raw = db.query(User).filter(User.role == "coach").order_by(User.username).all()
     coaches = []
     for c in coaches_raw:

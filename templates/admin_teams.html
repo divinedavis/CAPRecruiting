@@ -10,25 +10,7 @@
         <a href="/dashboard" class="btn btn-outline">← Back to Dashboard</a>
     </div>
 
-    {% if success %}
-    <div class="alert alert-success">Team created successfully.</div>
-    {% endif %}
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
-
-    <div class="admin-panel">
-        <div class="admin-form-card">
-            <h2>Add New Team</h2>
-            <form method="post" action="/admin/teams/create">
-                <div class="form-group">
-                    <label>Team Name</label>
-                    <input type="text" name="name" placeholder="e.g. Lincoln High Eagles" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Create Team</button>
-            </form>
-        </div>
-
+    <div class="admin-panel" style="display:block;">
         <div class="admin-teams-list">
             <h2>All Teams <span style="font-size:14px; font-weight:400; color:var(--gray-400); margin-left:8px;">{{ teams|length }} total</span></h2>
             {% if teams %}
