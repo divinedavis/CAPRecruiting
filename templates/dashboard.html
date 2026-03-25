@@ -135,7 +135,7 @@
                      title="Share profile">
                     <img src="/static/share-icon.svg" style="width:22px; height:22px; display:block;" alt="Share">
                 </div>
-                {% if can_message_from_dashboard and item.tier == premium %}
+                {% if can_message_from_dashboard and (user.is_admin or item.tier == "premium") %}
                 <div onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/messages/{{ item.user.username }}';"
                      style="width:44px; height:44px; border-radius:50%; background:#0a1628; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(10,22,40,0.3); transition:transform 0.15s, box-shadow 0.15s;"
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 14px rgba(10,22,40,0.45)';"
