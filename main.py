@@ -362,7 +362,7 @@ async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None):
+async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly"):
     teams = db.query(Team).order_by(Team.name).all()
     invite_valid = False
     invite_error = None
@@ -375,7 +375,9 @@ async def signup_get(request: Request, db: Session = Depends(get_db), invite: st
     return templates.TemplateResponse("signup.html", {
         "request": request, "error": invite_error, "teams": teams,
         "selected_team_id": None, "invite_token": invite if invite_valid else None,
-        "invite_valid": invite_valid
+        "invite_valid": invite_valid,
+        "selected_tier": tier,
+        "selected_billing": billing,
     })
 
 @app.post("/signup", response_class=HTMLResponse)
@@ -386,6 +388,7 @@ async def signup_post(
     password: str = Form(...),
     role: str = Form("player"),
     tier: str = Form("essentials"),
+    billing: str = Form("monthly"),
     team_id: Optional[int] = Form(None),
     coach_team_id: Optional[int] = Form(None),
     new_team_name: str = Form(""),
@@ -471,7 +474,10 @@ async def signup_post(
         import asyncio
         asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
         # Create Stripe customer and checkout session immediately
-        _tier = tier if tier in STRIPE_PRICES and STRIPE_PRICES[tier] else "essentials"
+        _price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
+        _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
+        if _tier not in _price_map or not _price_map[_tier]:
+            _price_map = STRIPE_PRICES
         try:
             customer = stripe.Customer.create(
                 email=user.email, name=user.username,
@@ -483,7 +489,7 @@ async def signup_post(
             session = stripe.checkout.Session.create(
                 customer=customer.id,
                 payment_method_types=["card"],
-                line_items=[{"price": STRIPE_PRICES[_tier], "quantity": 1}],
+                line_items=[{"price": _price_map[_tier], "quantity": 1}],
                 mode="subscription",
                 success_url=f"{site_url}/upgrade/success?session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{site_url}/pricing",
