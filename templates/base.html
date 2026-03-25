@@ -29,15 +29,12 @@
     </script>
 </head>
 <body>
-<nav class="navbar">
+<nav class="navbar" id="main-nav">
     <div class="nav-inner">
         <a href="/" class="nav-brand">
-            <img src="/static/cap-logo.png" alt="Collegiate Athletic Planning" style="height:48px; width:auto; display:block;">
+            <img src="/static/cap-logo.png" alt="CAP" style="height:46px; width:auto; display:block;">
         </a>
-        <button class="hamburger" id="hamburger" onclick="toggleNav()" aria-label="Open menu">
-            <span></span><span></span><span></span>
-        </button>
-        <div class="nav-links">
+        <div class="nav-links" id="nav-links">
             {% if request.session.get("user_id") %}
                 <a href="/dashboard">Players</a>
                 <a href="/messages" class="msg-link">
@@ -62,28 +59,9 @@
                 <a href="/pricing" class="btn btn-primary">Sign Up</a>
             {% endif %}
         </div>
-    </div>
-    <div class="nav-mobile" id="nav-mobile">
-        {% if request.session.get("user_id") %}
-            <a href="/dashboard">Players</a>
-            <a href="/messages">Messages
-                {% if unread_count and unread_count > 0 %}<span class="msg-badge">{{ unread_count }}</span>{% endif %}
-            </a>
-            {% if request.session.get("is_admin") %}
-            <a href="/admin/teams">Admin</a>
-            <a href="/legal">Legal</a>
-            <a href="/admin/invites">Invites</a>
-            {% else %}
-            {% if request.session.get("role") == "player" %}
-            <a href="/upgrade" style="color:#f0b429; font-weight:700;">Upgrade</a>
-            {% endif %}
-            {% endif %}
-            <a href="/logout" style="color:rgba(255,255,255,0.5);">Logout</a>
-        {% else %}
-            <a href="/dashboard">Browse Players</a>
-            <a href="/login">Login</a>
-            <a href="/pricing" style="color:#f0b429; font-weight:700;">Sign Up</a>
-        {% endif %}
+        <button class="hamburger" id="hamburger" onclick="toggleNav()" aria-label="Open menu">
+            <span></span><span></span><span></span>
+        </button>
     </div>
 </nav>
 
@@ -142,17 +120,24 @@
 <script>
 function toggleNav() {
     const btn = document.getElementById('hamburger');
-    const menu = document.getElementById('nav-mobile');
+    const links = document.getElementById('nav-links');
     btn.classList.toggle('open');
-    menu.classList.toggle('open');
+    links.classList.toggle('mobile-open');
 }
-// Close menu when a link is clicked
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('#nav-mobile a').forEach(function(a) {
+    document.querySelectorAll('#nav-links a').forEach(function(a) {
         a.addEventListener('click', function() {
             document.getElementById('hamburger').classList.remove('open');
-            document.getElementById('nav-mobile').classList.remove('open');
+            document.getElementById('nav-links').classList.remove('mobile-open');
         });
+    });
+    // Close on outside click
+    document.addEventListener('click', function(e) {
+        const nav = document.getElementById('main-nav');
+        if (!nav.contains(e.target)) {
+            document.getElementById('hamburger').classList.remove('open');
+            document.getElementById('nav-links').classList.remove('mobile-open');
+        }
     });
 });
 </script>
