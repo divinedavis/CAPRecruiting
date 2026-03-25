@@ -31,7 +31,7 @@
 <body>
 <nav class="navbar" id="main-nav">
     <div class="nav-inner">
-        <a href="/" class="nav-brand">
+        <a href="{% if request.session.get('user_id') %}/dashboard{% else %}/{% endif %}" class="nav-brand">
             <img src="/static/cap-logo.png" alt="CAP" style="height:46px; width:auto; display:block;">
         </a>
         <div class="nav-links" id="nav-links">
