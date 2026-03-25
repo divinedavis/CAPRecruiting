@@ -34,6 +34,9 @@
         <a href="/" class="nav-brand">
             <img src="/static/cap-logo.png" alt="Collegiate Athletic Planning" style="height:48px; width:auto; display:block;">
         </a>
+        <button class="hamburger" id="hamburger" onclick="toggleNav()" aria-label="Open menu">
+            <span></span><span></span><span></span>
+        </button>
         <div class="nav-links">
             {% if request.session.get("user_id") %}
                 <a href="/dashboard">Players</a>
@@ -61,6 +64,30 @@
         </div>
     </div>
 </nav>
+<!-- Mobile nav dropdown -->
+<div class="nav-mobile" id="nav-mobile">
+    {% if request.session.get("user_id") %}
+        <a href="/dashboard">🏈 Players</a>
+        <a href="/messages" class="msg-link">
+            💬 Messages
+            {% if unread_count and unread_count > 0 %}<span class="msg-badge">{{ unread_count }}</span>{% endif %}
+        </a>
+        {% if request.session.get("is_admin") %}
+        <a href="/admin/teams">⚙️ Admin</a>
+        <a href="/legal">📋 Legal</a>
+        <a href="/admin/invites">✉️ Invites</a>
+        {% else %}
+        {% if request.session.get("role") == "player" %}
+        <a href="/upgrade" class="btn-primary">⭐ Upgrade</a>
+        {% endif %}
+        {% endif %}
+        <a href="/logout" class="nav-logout">Logout</a>
+    {% else %}
+        <a href="/dashboard">Browse Players</a>
+        <a href="/login">Login</a>
+        <a href="/pricing" class="btn-primary">Sign Up</a>
+    {% endif %}
+</div>
 
 <main class="main-content">
     {% block content %}{% endblock %}
@@ -114,5 +141,22 @@
 })();
 </script>
 {% endif %}
+<script>
+function toggleNav() {
+    const btn = document.getElementById('hamburger');
+    const menu = document.getElementById('nav-mobile');
+    btn.classList.toggle('open');
+    menu.classList.toggle('open');
+}
+// Close menu when a link is clicked
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('#nav-mobile a').forEach(function(a) {
+        a.addEventListener('click', function() {
+            document.getElementById('hamburger').classList.remove('open');
+            document.getElementById('nav-mobile').classList.remove('open');
+        });
+    });
+});
+</script>
 </body>
 </html>

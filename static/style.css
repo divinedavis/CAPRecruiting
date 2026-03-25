@@ -867,3 +867,182 @@ textarea { resize: vertical; }
 .contact-value:hover { color: var(--gold); text-decoration: underline; }
 .contact-locked { display: flex; align-items: center; gap: 12px; color: var(--gray-400); font-size: 15px; }
 .contact-locked a { color: var(--gold); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE / RESPONSIVE OVERHAUL
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hamburger button ──────────────────────────────────────────── */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 4px;
+    z-index: 200;
+    flex-shrink: 0;
+}
+.hamburger span {
+    display: block;
+    width: 24px;
+    height: 2.5px;
+    background: #fff;
+    border-radius: 3px;
+    transition: all 0.22s;
+    transform-origin: center;
+}
+.hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+
+/* ── Mobile nav dropdown ──────────────────────────────────────── */
+.nav-mobile {
+    display: none;
+    background: var(--navy);
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding: 8px 0 12px;
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    z-index: 99;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.nav-mobile.open { display: block; }
+.nav-mobile a {
+    display: flex;
+    align-items: center;
+    color: rgba(255,255,255,0.88);
+    font-size: 16px;
+    font-weight: 500;
+    padding: 13px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.nav-mobile a:last-child { border-bottom: none; }
+.nav-mobile a:hover, .nav-mobile a:active { background: rgba(255,255,255,0.07); }
+.nav-mobile a.btn-primary { background: var(--gold); color: var(--navy); font-weight: 700; margin: 8px 16px 0; border-radius: 8px; padding: 12px 24px; border-bottom: none; }
+.nav-mobile a.btn-outline { border: 1.5px solid rgba(255,255,255,0.35); margin: 4px 16px 0; border-radius: 8px; padding: 11px 24px; border-bottom: none; }
+.nav-mobile a.nav-logout { color: rgba(255,255,255,0.5); font-size: 14px; }
+.nav-mobile .msg-badge {
+    background: var(--gold); color: var(--navy);
+    font-size: 11px; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px;
+    margin-left: 8px;
+}
+
+/* ── BREAKPOINT: 768px ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+    /* Navbar */
+    .hamburger { display: flex; }
+    .nav-links { display: none !important; }
+    .nav-inner { height: 58px; padding: 0 16px; }
+    .nav-brand img { height: 40px; }
+    .navbar { position: sticky; top: 0; }
+
+    /* Hero */
+    .hero { flex-direction: column; padding: 40px 20px; min-height: auto; text-align: center; gap: 28px; }
+    .hero h1 { font-size: 32px; }
+    .hero-sub { font-size: 16px; }
+    .hero-art { display: none; }
+    .hero-stats { justify-content: center; flex-wrap: wrap; gap: 12px; }
+    .hero-actions { justify-content: center; }
+    .hero-badge { font-size: 12px; }
+
+    /* Layout */
+    .container { padding: 0 14px; }
+    .page-top { padding-top: 20px; padding-bottom: 32px; }
+    .page-header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+    .page-header h1 { font-size: 24px; }
+    .header-actions { width: 100%; display: flex; gap: 8px; }
+    .header-actions .btn { flex: 1; justify-content: center; text-align: center; }
+
+    /* Forms */
+    .form-row { grid-template-columns: 1fr !important; gap: 0; }
+    .form-actions { flex-direction: column; }
+    .form-actions .btn { width: 100%; justify-content: center; }
+    .auth-card { padding: 28px 20px; }
+
+    /* Dashboard filter bar */
+    .team-filter-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+    .team-filter-bar .filter-label { margin-left: 0 !important; font-size: 12px; }
+    .team-filter-bar select { width: 100% !important; min-width: unset !important; font-size: 14px; padding: 10px 14px; }
+
+    /* Player grid */
+    .player-grid { grid-template-columns: 1fr !important; gap: 14px; }
+
+    /* Player card mobile fixes */
+    .player-card { padding: 16px; }
+
+    /* Profile page */
+    .profile-layout { flex-direction: column; gap: 16px; }
+    .profile-header-card { flex-direction: column; align-items: center; text-align: center; padding: 20px 16px; gap: 14px; }
+    .profile-avatar-lg { width: 120px; height: 120px; font-size: 50px; }
+    .profile-identity h1 { font-size: 22px; }
+    .profile-badges { justify-content: center; }
+    .profile-actions { margin-left: 0; justify-content: center; width: 100%; flex-wrap: wrap; }
+    .profile-actions .btn { flex: 1; min-width: 120px; justify-content: center; text-align: center; }
+    .profile-section { padding: 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .share-bar { flex-direction: column; gap: 8px; }
+    .share-input-group { width: 100%; }
+
+    /* Photo upload */
+    .photo-upload-area { flex-direction: column; align-items: center; gap: 16px; }
+    .photo-preview { width: 120px; height: 120px; font-size: 50px; }
+    .photo-placeholder { font-size: 50px; }
+
+    /* Edit profile */
+    .edit-layout { max-width: 100%; }
+    .edit-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+    .form-section { padding: 16px; }
+    .link-input-group { gap: 8px; }
+
+    /* Chat */
+    .chat-layout {
+        height: calc(100dvh - 58px);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        margin: 0;
+    }
+    .chat-header { padding: 10px 14px; gap: 10px; }
+    .chat-header .btn { font-size: 12px; padding: 5px 10px; }
+    .chat-messages { padding: 14px; gap: 10px; }
+    .message { max-width: 85%; }
+    .chat-input-form { padding: 10px 14px; gap: 8px; }
+
+    /* Messages list */
+    .conversation-item { padding: 13px 14px; gap: 10px; }
+    .conv-avatar { width: 40px; height: 40px; font-size: 16px; flex-shrink: 0; }
+
+    /* Teams / admin */
+    .admin-panel { grid-template-columns: 1fr !important; gap: 20px; }
+    .teams-table { font-size: 13px; }
+    .teams-table th, .teams-table td { padding: 8px; }
+
+    /* Empty state */
+    .empty-state { padding: 48px 16px; }
+    .empty-icon { font-size: 48px; }
+
+    /* Features */
+    .feature-grid { grid-template-columns: 1fr !important; }
+
+    /* Misc */
+    .section-title { font-size: 24px; }
+    .btn-lg { padding: 12px 22px; font-size: 15px; }
+    .role-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+
+/* ── Very small phones (< 390px) ──────────────────────────────── */
+@media (max-width: 390px) {
+    .hero h1 { font-size: 28px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .profile-actions .btn { font-size: 13px; padding: 8px 10px; }
+    .teams-table th:nth-child(1), .teams-table td:nth-child(1) { display: none; } /* hide # column */
+}
