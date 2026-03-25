@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signed — Collegiate Athletic Planning</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+        .card { background: #fff; border-radius: 16px; padding: 48px 36px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+        .check { font-size: 56px; margin-bottom: 20px; }
+        h1 { font-size: 26px; font-weight: 800; color: #0a1628; margin-bottom: 12px; }
+        p { color: #6b7280; font-size: 15px; line-height: 1.6; }
+        .name { font-weight: 700; color: #059669; }
+        .footer { margin-top: 32px; font-size: 12px; color: #9ca3af; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="check">✅</div>
+    <h1>Agreement Signed</h1>
+    <p>Thank you, <span class="name">{{ contract.player_name }}</span>.<br>
+    Your signature has been recorded and the CAP team has been notified.</p>
+    {% if contract.signed_at %}
+    <p style="margin-top:12px; font-size:13px; color:#9ca3af;">Signed {{ contract.signed_at.strftime("%B %d, %Y at %I:%M %p") }} UTC</p>
+    {% endif %}
+    <div class="footer">Collegiate Athletic Planning · caprecruiting.com</div>
+</div>
+</body>
+</html>

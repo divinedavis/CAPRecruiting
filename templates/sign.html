@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Agreement — Collegiate Athletic Planning</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; color: #0a1628; }
+        .wrapper { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+        .logo-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+        .logo-bar img { height: 48px; }
+        .logo-bar h1 { font-size: 18px; font-weight: 800; color: #0a1628; }
+        .logo-bar p { font-size: 13px; color: #6b7280; }
+        .card { background: #fff; border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 16px; font-weight: 800; color: #0a1628; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #f0b429; }
+        label { display: block; font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 5px; }
+        input[type=text], input[type=date] {
+            width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb;
+            border-radius: 8px; font-size: 15px; outline: none; transition: border 0.15s;
+        }
+        input:focus { border-color: #0a1628; }
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .contract-text { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; font-size: 13px; line-height: 1.7; color: #374151; max-height: 340px; overflow-y: auto; margin-top: 4px; }
+        .contract-text h3 { font-size: 14px; color: #0a1628; margin: 14px 0 6px; }
+        .contract-text h3:first-child { margin-top: 0; }
+        .sig-canvas-wrap { border: 2px dashed #d1d5db; border-radius: 8px; background: #fafafa; position: relative; overflow: hidden; touch-action: none; }
+        canvas { display: block; width: 100%; height: 140px; cursor: crosshair; touch-action: none; }
+        .sig-clear { position: absolute; top: 8px; right: 10px; background: none; border: none; color: #9ca3af; font-size: 12px; cursor: pointer; font-weight: 600; }
+        .sig-clear:hover { color: #dc2626; }
+        .btn-done { width: 100%; padding: 14px; background: #0a1628; color: #f0b429; border: none; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 8px; letter-spacing: 0.5px; transition: opacity 0.15s; }
+        .btn-done:hover { opacity: 0.88; }
+        .err { background: #fee2e2; color: #dc2626; border-radius: 8px; padding: 10px 14px; font-size: 14px; margin-bottom: 16px; }
+        .for-label { font-size: 14px; color: #6b7280; margin-bottom: 2px; }
+        .for-name { font-size: 22px; font-weight: 800; color: #0a1628; }
+        @media (max-width: 500px) { .row-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+
+    <div class="logo-bar">
+        <div>
+            <h1>Collegiate Athletic Planning</h1>
+            <p>caprecruiting.com</p>
+        </div>
+    </div>
+
+    {% if request.query_params.get("error") %}
+    <div class="err">Please draw your signature and fill in your name before submitting.</div>
+    {% endif %}
+
+    <div class="card">
+        <div class="for-label">Recruiting Agreement for:</div>
+        <div class="for-name">{{ contract.player_name }}</div>
+    </div>
+
+    <form method="post" action="/sign/{{ contract.token }}" id="sign-form">
+        <input type="hidden" name="signature_data" id="signature_data">
+
+        <!-- Top fields: full name + date -->
+        <div class="card">
+            <h2>Your Information</h2>
+            <div class="row-2">
+                <div>
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" placeholder="Your legal full name" required>
+                </div>
+                <div>
+                    <label>Today's Date</label>
+                    <input type="date" name="date_top" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agreement text -->
+        <div class="card">
+            <h2>Athlete Recruiting Services Agreement</h2>
+            <div class="contract-text">
+                <h3>1. Services Provided</h3>
+                <p>Collegiate Athletic Planning (CAP) agrees to provide recruiting services to the Athlete named above, including but not limited to: profile development, video distribution, direct outreach to college coaching staffs, scheduling of campus visits, and ongoing recruiting guidance throughout the process.</p>
+                <h3>2. Athlete Responsibilities</h3>
+                <p>The Athlete agrees to: (a) maintain academic eligibility per NCAA/NAIA requirements; (b) provide accurate and current information including GPA, test scores, and athletic statistics; (c) communicate promptly with CAP staff regarding interest levels, visit scheduling, and offer decisions; and (d) notify CAP immediately upon making a verbal or written commitment to any institution.</p>
+                <h3>3. Term</h3>
+                <p>This Agreement is effective upon the date signed below and continues until the Athlete signs a National Letter of Intent (NLI) or otherwise concludes the recruiting process. Either party may terminate with 30 days written notice.</p>
+                <h3>4. Confidentiality</h3>
+                <p>Both parties agree to maintain confidentiality regarding any non-public information shared during the course of services, including but not limited to communication logs, offer details, and strategic plans developed by CAP on behalf of the Athlete.</p>
+                <h3>5. Limitation of Liability</h3>
+                <p>CAP does not guarantee placement at any particular institution. Our services are advisory in nature. CAP shall not be liable for decisions made by college coaching staffs or admissions offices. Total liability under this agreement shall not exceed the fees paid to CAP by the Athlete.</p>
+                <h3>6. Agreement</h3>
+                <p>By signing below, the Athlete (and parent/guardian if under 18) acknowledges they have read, understood, and agree to all terms of this Recruiting Services Agreement.</p>
+            </div>
+        </div>
+
+        <!-- Signature section -->
+        <div class="card">
+            <h2>Athlete Signature</h2>
+            <p style="font-size:13px; color:#6b7280; margin-bottom:14px;">Draw your signature below using your mouse or finger.</p>
+            <div class="sig-canvas-wrap">
+                <canvas id="sig-canvas"></canvas>
+                <button type="button" class="sig-clear" onclick="clearSig()">Clear</button>
+            </div>
+            <div style="margin-top:20px;" class="row-2">
+                <div>
+                    <label>Print Name</label>
+                    <input type="text" name="print_name" placeholder="Print your full name" required>
+                </div>
+                <div>
+                    <label>Date Signed</label>
+                    <input type="date" name="sign_date" required>
+                </div>
+            </div>
+            <button type="submit" class="btn-done" id="done-btn">Done — Submit Signature</button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+const canvas = document.getElementById('sig-canvas');
+
+function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * ratio;
+    canvas.height = 140 * ratio;
+    canvas.getContext('2d').scale(ratio, ratio);
+    signaturePad.clear();
+}
+
+const signaturePad = new SignaturePad(canvas, {
+    minWidth: 1.5, maxWidth: 3,
+    penColor: "#0a1628"
+});
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function clearSig() { signaturePad.clear(); }
+
+// Set today's date on both date fields
+const today = new Date().toISOString().split('T')[0];
+document.querySelectorAll('input[type=date]').forEach(el => el.value = today);
+
+document.getElementById('sign-form').addEventListener('submit', function(e) {
+    if (signaturePad.isEmpty()) {
+        e.preventDefault();
+        alert('Please draw your signature before submitting.');
+        return;
+    }
+    document.getElementById('signature_data').value = signaturePad.toDataURL('image/png');
+});
+</script>
+</body>
+</html>

@@ -253,6 +253,20 @@ class Message(Base):
     deleted_by_sender = Column(Boolean, default=False)
     deleted_by_receiver = Column(Boolean, default=False)
 
+
+class LegalContract(Base):
+    __tablename__ = "legal_contracts"
+    id = Column(Integer, primary_key=True)
+    token = Column(String(64), unique=True, nullable=False)
+    player_name = Column(String, nullable=False)
+    status = Column(String, default="pending")   # pending / signed
+    signed_pdf_path = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    signed_at = Column(DateTime, nullable=True)
+    signer_ip = Column(String, nullable=True)
+    hidden = Column(Boolean, default=False)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1684,6 +1698,151 @@ async def delete_conversations(request: Request, db: Session = Depends(get_db)):
     db.commit()
     return RedirectResponse("/messages", status_code=302)
 
+
+# ════════════════════════════════════════════════════════════════════════════
+# LEGAL  ─ /legal
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.get("/legal", response_class=HTMLResponse)
+async def legal_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    contracts = (db.query(LegalContract)
+                   .filter(LegalContract.hidden == False)
+                   .order_by(LegalContract.created_at.desc()).all())
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("legal.html", {
+        "request": request, "user": user,
+        "contracts": contracts, "unread_count": unread_count,
+    })
+
+
+@app.post("/legal/create", response_class=HTMLResponse)
+async def legal_create(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403)
+    form = await request.form()
+    player_name = form.get("player_name", "").strip()
+    if not player_name:
+        return RedirectResponse("/legal", status_code=302)
+    token = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    contract = LegalContract(token=token, player_name=player_name, created_by_id=user_id)
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+    return RedirectResponse("/legal", status_code=302)
+
+
+@app.post("/legal/{contract_id}/hide", response_class=HTMLResponse)
+async def legal_hide(contract_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403)
+    contract = db.query(LegalContract).filter(LegalContract.id == contract_id).first()
+    if contract:
+        contract.hidden = True
+        db.commit()
+    return RedirectResponse("/legal", status_code=302)
+
+
+@app.get("/legal/docs/{filename}")
+async def serve_signed_doc(filename: str, request: Request, db: Session = Depends(get_db)):
+    """Serve signed PDFs — admin only."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403)
+    filepath = os.path.join(SIGNED_DOCS_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404)
+    from fastapi.responses import FileResponse
+    return FileResponse(filepath, media_type="application/pdf",
+                        headers={"Content-Disposition": f"inline; filename={filename}"})
+
+
+@app.get("/sign/{token}", response_class=HTMLResponse)
+async def sign_page(token: str, request: Request, db: Session = Depends(get_db)):
+    contract = db.query(LegalContract).filter(LegalContract.token == token).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Signing link not found or has expired.")
+    if contract.status == "signed":
+        return templates.TemplateResponse("sign_done.html", {"request": request, "contract": contract})
+    return templates.TemplateResponse("sign.html", {"request": request, "contract": contract})
+
+
+@app.post("/sign/{token}", response_class=HTMLResponse)
+async def sign_submit(token: str, request: Request, db: Session = Depends(get_db)):
+    import fitz, base64
+    contract = db.query(LegalContract).filter(LegalContract.token == token).first()
+    if not contract or contract.status == "signed":
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    full_name    = form.get("full_name", "").strip()
+    date_top     = form.get("date_top", "").strip()
+    print_name   = form.get("print_name", "").strip()
+    sign_date    = form.get("sign_date", "").strip()
+    signature_data = form.get("signature_data", "").strip()
+
+    if not signature_data or not full_name:
+        return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
+
+    # Strip data URI prefix
+    if "base64," in signature_data:
+        signature_data = signature_data.split("base64,", 1)[1]
+    sig_bytes = base64.b64decode(signature_data)
+
+    doc = fitz.open(TEMPLATE_PDF)
+
+    # ── Page 1: overlay full_name and date_top ───────────────────────────
+    p0 = doc[0]
+    # Cover the placeholder underscores, then write text
+    # Full name: covers the "_____" line at y=150, x=90. Overlay text at y=148
+    p0.draw_rect(fitz.Rect(90, 137, 320, 156), color=(1,1,1), fill=(1,1,1))
+    p0.insert_text((91, 150), full_name, fontsize=11, color=(0,0,0))
+    # Date top: covers at x=342, y=166 area
+    p0.draw_rect(fitz.Rect(342, 153, 545, 172), color=(1,1,1), fill=(1,1,1))
+    p0.insert_text((343, 166), date_top, fontsize=11, color=(0,0,0))
+
+    # ── Page 2: overlay signature image, print_name, sign_date ──────────
+    p1 = doc[1]
+    # Signature image goes in the space at top of page 2 (above "Print Name" at y=117)
+    sig_rect = fitz.Rect(67, 30, 370, 100)
+    p1.insert_image(sig_rect, stream=sig_bytes)
+
+    # Print name
+    p1.draw_rect(fitz.Rect(90, 121, 330, 142), color=(1,1,1), fill=(1,1,1))
+    p1.insert_text((91, 134), print_name, fontsize=11, color=(0,0,0))
+    # Sign date
+    p1.draw_rect(fitz.Rect(342, 137, 545, 158), color=(1,1,1), fill=(1,1,1))
+    p1.insert_text((343, 150), sign_date, fontsize=11, color=(0,0,0))
+
+    os.makedirs(SIGNED_DOCS_DIR, exist_ok=True)
+    filename = f"signed_{contract.id}_{uuid.uuid4().hex[:10]}.pdf"
+    filepath = os.path.join(SIGNED_DOCS_DIR, filename)
+    doc.save(filepath)
+    doc.close()
+
+    contract.status = "signed"
+    contract.signed_pdf_path = filename
+    contract.signed_at = datetime.utcnow()
+    contract.signer_ip = request.client.host if request.client else None
+    db.commit()
+
+    return templates.TemplateResponse("sign_done.html", {"request": request, "contract": contract})
+
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
     # Verify the user owns this connection via session cookie
@@ -1706,6 +1865,9 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
         manager.disconnect(user_id, websocket)
 
 UPLOAD_DIR = "/home/recruiting/bearcats/static/uploads"
+SIGNED_DOCS_DIR = "/home/recruiting/bearcats/signed_docs"
+TEMPLATE_PDF = "/home/recruiting/bearcats/static/docs/cap_agreement.pdf"
+
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 
 @app.post("/profile/upload-photo")

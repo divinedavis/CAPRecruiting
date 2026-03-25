@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Legal — Collegiate Athletic Planning{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <h1>Legal</h1>
+        <button onclick="document.getElementById('new-contract-modal').style.display='flex'"
+                class="btn btn-primary" style="font-size:22px; line-height:1; padding:6px 18px; border-radius:50px;">+</button>
+    </div>
+
+    {% if contracts %}
+    <div class="conversations-list" style="margin-top:8px;">
+        {% for c in contracts %}
+        <div style="display:flex; align-items:center; gap:0; position:relative;">
+            <a href="#" onclick="openContract(event, '{{ c.status }}', '{{ c.signed_pdf_path or '' }}', '{{ c.token }}')"
+               class="conversation-item" style="flex:1; text-decoration:none;">
+                <div class="conv-avatar" style="background:{% if c.status == 'signed' %}#059669{% else %}#6b7280{% endif %};">
+                    {{ c.player_name[0] | upper }}
+                </div>
+                <div class="conv-info">
+                    <div class="conv-name">
+                        {{ c.player_name }}
+                        {% if c.status == "signed" %}
+                        <span style="font-size:11px; font-weight:700; background:#d1fae5; color:#059669; padding:2px 8px; border-radius:20px; margin-left:6px;">SIGNED</span>
+                        {% else %}
+                        <span style="font-size:11px; font-weight:700; background:#fef3c7; color:#d97706; padding:2px 8px; border-radius:20px; margin-left:6px;">PENDING</span>
+                        {% endif %}
+                    </div>
+                    <div class="conv-preview">
+                        {% if c.status == "signed" %}Signed {{ c.signed_at.strftime("%b %d, %Y") if c.signed_at else "" }}{% else %}Awaiting signature{% endif %}
+                    </div>
+                </div>
+                <div class="conv-meta">
+                    <span class="conv-time">{{ c.created_at.strftime("%b %d") }}</span>
+                </div>
+            </a>
+            <form method="post" action="/legal/{{ c.id }}/hide" style="margin:0; flex-shrink:0;"
+                  onsubmit="return confirm('Remove this contract from your view?')">
+                <button type="submit" title="Delete" style="background:none; border:none; cursor:pointer; color:#d1d5db; font-size:18px; padding:0 14px; line-height:1; transition:color 0.15s;"
+                        onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#d1d5db'">×</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No contracts yet</h3>
+        <p>Tap <strong>+</strong> to create a signing link for a player.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- New Contract Modal -->
+<div id="new-contract-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:12px; width:100%; max-width:420px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <h3 style="margin:0; font-size:18px; font-weight:800; color:#0a1628;">New Signing Link</h3>
+            <button onclick="document.getElementById('new-contract-modal').style.display='none'"
+                    style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">&times;</button>
+        </div>
+        <form method="post" action="/legal/create">
+            <div class="form-group">
+                <label style="font-weight:700; color:#0a1628; display:block; margin-bottom:6px;">Player Full Name</label>
+                <input type="text" name="player_name" placeholder="e.g. Bennett Brautigan" required
+                       style="width:100%; padding:10px 14px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:15px; box-sizing:border-box;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px;">Generate Link</button>
+        </form>
+    </div>
+</div>
+
+<!-- View Contract Modal (pending → show link, signed → open PDF) -->
+<div id="view-contract-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:12px; width:100%; max-width:500px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <h3 style="margin:0; font-size:18px; font-weight:800; color:#0a1628;" id="modal-title">Signing Link</h3>
+            <button onclick="document.getElementById('view-contract-modal').style.display='none'"
+                    style="background:none; border:none; font-size:22px; cursor:pointer; color:#6b7280;">&times;</button>
+        </div>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<script>
+function openContract(e, status, signedPath, token) {
+    e.preventDefault();
+    const modal = document.getElementById('view-contract-modal');
+    const title = document.getElementById('modal-title');
+    const body  = document.getElementById('modal-body');
+
+    if (status === 'signed' && signedPath) {
+        window.open('/legal/docs/' + signedPath, '_blank');
+        return;
+    }
+
+    // Pending — show the signing link
+    const link = window.location.origin + '/sign/' + token;
+    title.textContent = 'Signing Link';
+    body.innerHTML = `
+        <p style="color:#6b7280; font-size:14px; margin-bottom:12px;">Share this link with the player to collect their signature. No account required.</p>
+        <div style="display:flex; gap:8px; align-items:center; background:#f3f4f6; border-radius:8px; padding:10px 14px;">
+            <span id="sign-link" style="font-size:13px; color:#0a1628; word-break:break-all; flex:1;">${link}</span>
+            <button onclick="copyLink('${link}')" style="background:#0a1628; color:#f0b429; border:none; border-radius:6px; padding:6px 14px; font-weight:700; cursor:pointer; flex-shrink:0;">Copy</button>
+        </div>
+        <div id="copy-confirm" style="display:none; color:#059669; font-size:13px; font-weight:600; margin-top:8px;">✓ Copied to clipboard</div>
+        <a href="${link}" target="_blank" class="btn btn-outline" style="display:block; text-align:center; margin-top:14px; font-size:14px;">Preview Signing Page →</a>
+    `;
+    modal.style.display = 'flex';
+}
+
+function copyLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        document.getElementById('copy-confirm').style.display = '';
+        setTimeout(() => { document.getElementById('copy-confirm').style.display = 'none'; }, 2000);
+    });
+}
+
+document.getElementById('new-contract-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+document.getElementById('view-contract-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

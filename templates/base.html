@@ -45,6 +45,7 @@
                 </a>
                 {% if request.session.get("is_admin") %}
                 <a href="/admin/teams" class="btn btn-outline">Admin</a>
+                <a href="/legal" class="btn btn-outline">Legal</a>
                 <a href="/admin/invites" class="btn btn-outline">Invites</a>
                 {% else %}
                 {% if request.session.get("role") == "player" %}
