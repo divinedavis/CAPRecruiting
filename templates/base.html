@@ -63,31 +63,29 @@
             {% endif %}
         </div>
     </div>
-</nav>
-<!-- Mobile nav dropdown -->
-<div class="nav-mobile" id="nav-mobile">
-    {% if request.session.get("user_id") %}
-        <a href="/dashboard">🏈 Players</a>
-        <a href="/messages" class="msg-link">
-            💬 Messages
-            {% if unread_count and unread_count > 0 %}<span class="msg-badge">{{ unread_count }}</span>{% endif %}
-        </a>
-        {% if request.session.get("is_admin") %}
-        <a href="/admin/teams">⚙️ Admin</a>
-        <a href="/legal">📋 Legal</a>
-        <a href="/admin/invites">✉️ Invites</a>
+    <div class="nav-mobile" id="nav-mobile">
+        {% if request.session.get("user_id") %}
+            <a href="/dashboard">Players</a>
+            <a href="/messages">Messages
+                {% if unread_count and unread_count > 0 %}<span class="msg-badge">{{ unread_count }}</span>{% endif %}
+            </a>
+            {% if request.session.get("is_admin") %}
+            <a href="/admin/teams">Admin</a>
+            <a href="/legal">Legal</a>
+            <a href="/admin/invites">Invites</a>
+            {% else %}
+            {% if request.session.get("role") == "player" %}
+            <a href="/upgrade" style="color:#f0b429; font-weight:700;">Upgrade</a>
+            {% endif %}
+            {% endif %}
+            <a href="/logout" style="color:rgba(255,255,255,0.5);">Logout</a>
         {% else %}
-        {% if request.session.get("role") == "player" %}
-        <a href="/upgrade" class="btn-primary">⭐ Upgrade</a>
+            <a href="/dashboard">Browse Players</a>
+            <a href="/login">Login</a>
+            <a href="/pricing" style="color:#f0b429; font-weight:700;">Sign Up</a>
         {% endif %}
-        {% endif %}
-        <a href="/logout" class="nav-logout">Logout</a>
-    {% else %}
-        <a href="/dashboard">Browse Players</a>
-        <a href="/login">Login</a>
-        <a href="/pricing" class="btn-primary">Sign Up</a>
-    {% endif %}
-</div>
+    </div>
+</nav>
 
 <main class="main-content">
     {% block content %}{% endblock %}

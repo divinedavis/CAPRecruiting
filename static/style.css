@@ -903,12 +903,8 @@ textarea { resize: vertical; }
     display: none;
     background: var(--navy);
     border-top: 1px solid rgba(255,255,255,0.12);
-    padding: 8px 0 12px;
-    position: absolute;
-    top: 100%;
-    left: 0; right: 0;
-    z-index: 99;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    padding: 4px 0 8px;
+    width: 100%;
 }
 .nav-mobile.open { display: block; }
 .nav-mobile a {
