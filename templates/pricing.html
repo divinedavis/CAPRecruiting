@@ -1,61 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Choose Your Plan — CAP Recruiting{% endblock %}
 {% block content %}
-<div class="container page-top" style="max-width:920px;">
-  <div style="text-align:center; margin-bottom:40px;">
+<div class="container page-top" style="max-width:960px;">
+  <div style="text-align:center; margin-bottom:32px;">
     <h1 style="font-size:32px; font-weight:800; color:#0a1628; margin-bottom:10px;">Get Recruited</h1>
     <p style="color:#6b7280; font-size:16px; max-width:560px; margin:0 auto;">Choose a plan to create your profile. The higher your plan, the more coaches can see — transcripts, videos, contact info, and more.</p>
   </div>
 
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:24px; margin-bottom:40px;">
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:24px; margin-bottom:40px;">
 
     <!-- Essentials -->
     <div style="background:#fff; border:2px solid #e5e7eb; border-radius:16px; padding:28px 24px;">
       <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:8px;">Essentials</div>
-      <div style="font-size:36px; font-weight:800; color:#0a1628; margin-bottom:4px;">$10<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+      <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px;">
+        <div style="font-size:36px; font-weight:800; color:#0a1628;">$10<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+        <div style="font-size:14px; font-weight:600; color:#166534;">or $120/yr</div>
+      </div>
+      <p style="font-size:12px; color:#9ca3af; margin-bottom:14px;">Two months free with annual billing</p>
       <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">Your photo and stats visible to every college coach.</p>
       <ul style="list-style:none; padding:0; margin:0 0 24px; color:#374151; font-size:14px; line-height:2;">
-        <li>✅ Profile photo</li>
-        <li>✅ Player overview &amp; stats</li>
-        <li>✅ Field &amp; lifting stats</li>
-        <li>❌ Transcripts</li>
-        <li>❌ Photo gallery &amp; offers</li>
-        <li>❌ Messaging &amp; videos</li>
+        <li>&#x2705; Profile photo</li>
+        <li>&#x2705; Player overview &amp; stats</li>
+        <li>&#x2705; Field &amp; lifting stats</li>
+        <li>&#x274C; Transcripts</li>
+        <li>&#x274C; Photo gallery &amp; offers</li>
+        <li>&#x274C; Messaging &amp; videos</li>
       </ul>
-      <a href="/signup?tier=essentials" style="display:block; text-align:center; background:#0a1628; color:#f0b429; font-weight:700; font-size:15px; padding:13px; border-radius:10px; text-decoration:none;">Get Started</a>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <a href="/signup?tier=essentials&billing=monthly" style="display:block; text-align:center; background:#0a1628; color:#f0b429; font-weight:700; font-size:14px; padding:11px 6px; border-radius:10px; text-decoration:none;">Monthly</a>
+        <a href="/signup?tier=essentials&billing=yearly" style="display:block; text-align:center; background:#166534; color:#fff; font-weight:700; font-size:14px; padding:11px 6px; border-radius:10px; text-decoration:none;">Yearly</a>
+      </div>
     </div>
 
     <!-- Advanced -->
     <div style="background:#fff; border:2px solid #0a1628; border-radius:16px; padding:28px 24px; position:relative; box-shadow:0 8px 30px rgba(10,22,40,0.12);">
       <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#0a1628; color:#f0b429; font-size:11px; font-weight:800; padding:3px 12px; border-radius:20px; white-space:nowrap;">MOST POPULAR</div>
       <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:8px;">Advanced</div>
-      <div style="font-size:36px; font-weight:800; color:#0a1628; margin-bottom:4px;">$25<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+      <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px;">
+        <div style="font-size:36px; font-weight:800; color:#0a1628;">$25<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+        <div style="font-size:14px; font-weight:600; color:#166534;">or $300/yr</div>
+      </div>
+      <p style="font-size:12px; color:#9ca3af; margin-bottom:14px;">Two months free with annual billing</p>
       <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">Show coaches your transcripts, photo gallery, offers, and visits.</p>
       <ul style="list-style:none; padding:0; margin:0 0 24px; color:#374151; font-size:14px; line-height:2;">
-        <li>✅ Everything in Essentials</li>
-        <li>✅ Academic transcripts</li>
-        <li>✅ Photo gallery (up to 10)</li>
-        <li>✅ Scholarship offers</li>
-        <li>✅ Campus visits</li>
-        <li>❌ Messaging &amp; videos</li>
+        <li>&#x2705; Everything in Essentials</li>
+        <li>&#x2705; Academic transcripts</li>
+        <li>&#x2705; Photo gallery (up to 10)</li>
+        <li>&#x2705; Scholarship offers</li>
+        <li>&#x2705; Campus visits</li>
+        <li>&#x274C; Messaging &amp; videos</li>
       </ul>
-      <a href="/signup?tier=advanced" style="display:block; text-align:center; background:#f0b429; color:#0a1628; font-weight:700; font-size:15px; padding:13px; border-radius:10px; text-decoration:none;">Get Started</a>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <a href="/signup?tier=advanced&billing=monthly" style="display:block; text-align:center; background:#f0b429; color:#0a1628; font-weight:700; font-size:14px; padding:11px 6px; border-radius:10px; text-decoration:none;">Monthly</a>
+        <a href="/signup?tier=advanced&billing=yearly" style="display:block; text-align:center; background:#166534; color:#fff; font-weight:700; font-size:14px; padding:11px 6px; border-radius:10px; text-decoration:none;">Yearly</a>
+      </div>
     </div>
 
     <!-- Premium -->
     <div style="background:#fff; border:2px solid #e5e7eb; border-radius:16px; padding:28px 24px;">
       <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:8px;">Premium</div>
-      <div style="font-size:36px; font-weight:800; color:#0a1628; margin-bottom:4px;">$50<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+      <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px;">
+        <div style="font-size:36px; font-weight:800; color:#0a1628;">$50<span style="font-size:16px; font-weight:500; color:#6b7280;">/mo</span></div>
+        <div style="font-size:14px; font-weight:600; color:#166534;">or $600/yr</div>
+      </div>
+      <p style="font-size:12px; color:#9ca3af; margin-bottom:14px;">Two months free with annual billing</p>
       <p style="font-size:13px; color:#6b7280; margin-bottom:16px;">Full visibility — coaches can message you, watch videos, and get your contact info.</p>
       <ul style="list-style:none; padding:0; margin:0 0 24px; color:#374151; font-size:14px; line-height:2;">
-        <li>✅ Everything in Advanced</li>
-        <li>✅ Coaches can message you</li>
-        <li>✅ Highlight videos (up to 5)</li>
-        <li>✅ Contact info visible</li>
-        <li>✅ Maximum recruiting exposure</li>
-        <li>✅ Recruiting assistance via CAP team</li>
+        <li>&#x2705; Everything in Advanced</li>
+        <li>&#x2705; Coaches can message you</li>
+        <li>&#x2705; Highlight videos (up to 5)</li>
+        <li>&#x2705; Contact info visible</li>
+        <li>&#x2705; Maximum recruiting exposure</li>
+        <li>&#x2705; Recruiting assistance via CAP team</li>
       </ul>
-      <a href="/signup?tier=premium" style="display:block; text-align:center; background:#0a1628; color:#f0b429; font-weight:700; font-size:15px; padding:13px; border-radius:10px; text-decoration:none;">Get Started</a>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <a href="/signup?tier=premium&billing=monthly" style="display:block; text-align:center; background:#0a1628; color:#f0b429; font-weight:700; font-size:14px; padding:11px 6px; border-radius:10px; text-decoration:none;">Monthly</a>
+        <a href="/signup?tier=premium&billing=yearly" style="display:block; text-align:center; background:#166534; color:#fff; font-weight:700; font-size:14px; padding:11px 6px; border-radius:10px; text-decoration:none;">Yearly</a>
+      </div>
     </div>
 
   </div>
