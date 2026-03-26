@@ -396,6 +396,90 @@ TRANSCRIPT_CONTENT_TYPES = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+
+# ── College offer division lookup (mirrors CFBD data in edit_profile.html) ────
+_OFFER_DIV = {}
+_CFBD = {
+  "D1": [
+    "Boston College","Clemson","Duke","Florida State","Georgia Tech","Louisville","Miami (FL)","NC State","North Carolina","Pittsburgh","SMU","Stanford","Syracuse","Virginia","Virginia Tech","Wake Forest",
+    "Illinois","Indiana","Iowa","Maryland","Michigan","Michigan State","Minnesota","Nebraska","Northwestern","Ohio State","Oregon","Penn State","Purdue","Rutgers","UCLA","USC","Washington","Wisconsin",
+    "Arizona","Arizona State","Baylor","BYU","Cincinnati","Colorado","Houston","Iowa State","Kansas","Kansas State","Oklahoma State","TCU","Texas Tech","UCF","Utah","West Virginia",
+    "Alabama","Arkansas","Auburn","Florida","Georgia","Kentucky","LSU","Mississippi State","Missouri","Oklahoma","Ole Miss","South Carolina","Tennessee","Texas","Texas A&M","Vanderbilt",
+    "Charlotte","East Carolina","FAU","Memphis","North Texas","Rice","South Florida","Tulane","Tulsa","UTSA",
+    "FIU","Jacksonville State","Kennesaw State","Liberty","Louisiana Tech","Middle Tennessee","New Mexico State","Sam Houston","UTEP","Western Kentucky",
+    "Akron","Ball State","Bowling Green","Buffalo","Central Michigan","Eastern Michigan","Kent State","Miami (OH)","Northern Illinois","Ohio","Toledo","Western Michigan",
+    "Air Force","Boise State","Colorado State","Fresno State","Hawaii","Nevada","New Mexico","San Diego State","San Jose State","UNLV","Utah State","Wyoming",
+    "Appalachian State","Arkansas State","Coastal Carolina","Georgia Southern","Georgia State","James Madison","Louisiana","Louisiana Monroe","Marshall","Old Dominion","South Alabama","Southern Miss","Texas State","Troy",
+    "Army","Connecticut","Massachusetts","Navy","Notre Dame",
+    "Delaware","Elon","Hampton","Maine","Monmouth","New Hampshire","Rhode Island","Richmond","Stony Brook","Towson","Villanova","William & Mary",
+    "Illinois State","Indiana State","Missouri State","Murray State","North Dakota State","Northern Iowa","South Dakota","South Dakota State","Southern Illinois","Youngstown State",
+    "Austin Peay","Bellarmine","Charleston Southern","Eastern Kentucky","Gardner-Webb","Lindenwood","Morehead State","North Alabama","Presbyterian","Robert Morris","SE Missouri State","Tennessee State","Tennessee Tech","UT Martin",
+    "Chattanooga","East Tennessee State","Furman","Mercer","Samford","The Citadel","VMI","Western Carolina","Wofford",
+    "Houston Christian","Incarnate Word","Lamar","McNeese","Nicholls","Northwestern State","SE Louisiana","Stephen F. Austin","Tarleton State",
+    "Alabama A&M","Alabama State","Alcorn State","Arkansas-Pine Bluff","Bethune-Cookman","Florida A&M","Grambling","Jackson State","Mississippi Valley State","Prairie View A&M","Southern","Texas Southern",
+    "Delaware State","Howard","Morgan State","Norfolk State","North Carolina A&T","North Carolina Central","South Carolina State",
+    "Bucknell","Colgate","Fordham","Georgetown","Holy Cross","Lafayette","Lehigh",
+    "Butler","Campbell","Davidson","Dayton","Drake","Marist","San Diego","Stetson","Valparaiso",
+    "Bryant","Central Connecticut","Duquesne","LIU","Merrimack","Sacred Heart","Saint Francis","Stonehill",
+    "North Dakota","Southern Utah","UC Davis"
+  ],
+  "D2": [
+    "Bowie State","Elizabeth City State","Fayetteville State","Johnson C. Smith","Livingstone","Shaw","Virginia State","Virginia Union","Winston-Salem State",
+    "Davenport","Ferris State","Grand Valley State","Michigan Tech","Northwood","Saginaw Valley State","Tiffin","Wayne State (MI)",
+    "Azusa Pacific","Cal Poly Humboldt","Chico State","Simon Fraser","Western Oregon",
+    "Christian Brothers","Delta State","Shorter","West Alabama","West Florida","West Georgia",
+    "Emporia State","Fort Hays State","Missouri Southern","Missouri Western","Pittsburg State","Washburn",
+    "Alderson Broaddus","Concord","Fairmont State","Frostburg State","Glenville State","Notre Dame (OH)","Salem","West Liberty","West Virginia State","West Virginia Wesleyan","Wheeling",
+    "American International","Assumption","Bentley","New Haven","Southern Connecticut",
+    "Augustana (SD)","Bemidji State","Minnesota Duluth","Minnesota State","Minot State","Northern State","Sioux Falls","Southwest Minnesota State","Upper Iowa","Wayne State (NE)","Winona State",
+    "Bloomsburg","California (PA)","Clarion","East Stroudsburg","Edinboro","IUP","Kutztown","Lock Haven","Mansfield","Millersville","Shippensburg","Slippery Rock",
+    "Adams State","Black Hills State","Chadron State","Colorado Mesa","Colorado School of Mines","Fort Lewis","New Mexico Highlands","South Dakota Mines","Western Colorado",
+    "Carson-Newman","Catawba","Lenoir-Rhyne","Mars Hill","Newberry","Tusculum","Wingate",
+    "Albany State","Clark Atlanta","Fort Valley State","Kentucky State","Lane","Miles","Morehouse","Savannah State","Stillman","Tuskegee",
+    "Angelo State","Eastern New Mexico","Midwestern State","Sul Ross State","Texas A&M-Commerce","Texas A&M-Kingsville","West Texas A&M",
+    "Barton","Limestone","North Greenville","Young Harris"
+  ],
+  "D3": [
+    "Carthage","Elmhurst","Illinois Wesleyan","Millikin","North Central","North Park","Wheaton (IL)",
+    "Dickinson","Franklin & Marshall","Gettysburg","Johns Hopkins","McDaniel","Muhlenberg","Ursinus","Washington (MD)",
+    "Curry","Endicott","Maine Maritime","Salve Regina","Western New England",
+    "Alfred","Hartwick","Ithaca","Morrisville State","St. John Fisher","Utica",
+    "Catholic","Drew","Juniata","Moravian","Susquehanna",
+    "Hobart","RPI","Rochester","St. Lawrence","Union (NY)",
+    "Delaware Valley","King's","Lycoming","Misericordia","Wilkes",
+    "Albright","Lebanon Valley","Messiah","Widener",
+    "Adrian","Albion","Alma","Calvin","Hope","Kalamazoo","Olivet","Trine",
+    "Augsburg","Bethel (MN)","Carleton","Concordia (MN)","Gustavus Adolphus","Hamline","Macalester","St. John's (MN)","St. Olaf","St. Thomas",
+    "Carroll","Grinnell","Knox","Lake Forest","Lawrence","Monmouth (IL)","Ripon","St. Norbert",
+    "Amherst","Bates","Bowdoin","Colby","Hamilton","Middlebury","Trinity (CT)","Tufts","Wesleyan","Williams",
+    "Kean","Montclair State","Rowan","William Paterson",
+    "Allegheny","Denison","DePauw","Hiram","Kenyon","Oberlin","Ohio Wesleyan","Wabash","Wittenberg","Wooster",
+    "Baldwin Wallace","Capital","Heidelberg","Marietta","Mount Union","Muskingum","Ohio Northern","Otterbein",
+    "Averett","Bridgewater (VA)","Eastern Mennonite","Guilford","Hampden-Sydney","Randolph-Macon","Shenandoah","Washington & Lee",
+    "Bethany (WV)","Carnegie Mellon","Geneva","Grove City","Thiel","Washington & Jefferson","Waynesburg","Westminster (PA)",
+    "Cal Lutheran","Chapman","Claremont-Mudd-Scripps","La Verne","Occidental","Redlands","Whittier",
+    "Berry","Centre","Hendrix","Millsaps","Oglethorpe","Rhodes","Sewanee","Trinity (TX)",
+    "Case Western Reserve","Chicago","Emory","NYU","Rochester","Wash U",
+    "UW-Eau Claire","UW-La Crosse","UW-Oshkosh","UW-Platteville","UW-River Falls","UW-Stevens Point","UW-Stout","UW-Whitewater",
+    "Benedictine (IL)","Bethel (TN)","Brockport","Buffalo State","Cortland","Defiance","Dubuque","East Texas Baptist","Ferrum","Greenville","Hardin-Simmons","Huntingdon","John Carroll","Linfield","Luther","Mary Hardin-Baylor","McMurry","Mississippi College","Mount St. Joseph","Nebraska Wesleyan","North Central (MN)","Norwich","Pacific Lutheran","Puget Sound","Southwestern (TX)","Texas Lutheran","Thomas More","Wartburg","Whitworth","Wisconsin Lutheran"
+  ]
+}
+for _div, _schools in _CFBD.items():
+    for _s in _schools:
+        _OFFER_DIV[_s] = _div
+
+def _offer_div_counts(profile):
+    """Return (d1, d2, d3) offer counts for a player profile."""
+    counts = {"D1": 0, "D2": 0, "D3": 0}
+    if not profile:
+        return counts
+    for field in (profile.offer1, profile.offer2, profile.offer3, profile.offer4, profile.offer5):
+        if field:
+            div = _OFFER_DIV.get(field.strip())
+            if div:
+                counts[div] += 1
+    return counts
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -746,7 +830,9 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
     for p in player_users:
         prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
         if not year or (prof and prof.year == year):
-            player_data.append({"user": p, "profile": prof, "tier": p.subscription_tier or "free"})
+            counts = _offer_div_counts(prof)
+            player_data.append({"user": p, "profile": prof, "tier": p.subscription_tier or "free", "_d1": counts["D1"], "_d2": counts["D2"], "_d3": counts["D3"]})
+    player_data.sort(key=lambda x: (-x["_d1"], -x["_d2"], -x["_d3"]))
 
     unread_count = unread_sender_count(db, user_id) if user_id else 0
     can_click_profiles = bool(user is not None)
