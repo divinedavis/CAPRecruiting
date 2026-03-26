@@ -25,6 +25,13 @@
             <input type="hidden" name="role" value="player">
             <input type="hidden" name="tier" value="{{ selected_tier }}">
             <input type="hidden" name="billing" value="{{ selected_billing }}">
+            {% if bypass_token %}
+            <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:12px 16px; margin-bottom:20px;">
+                <span style="font-size:14px; font-weight:600; color:#166534;">
+                    🏈 Player &nbsp;·&nbsp; <strong>Premium</strong> — In-Person Registration
+                </span>
+            </div>
+            {% else %}
             <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:12px 16px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
                 <span style="font-size:14px; font-weight:600; color:#166534;">
                     🏈 Player &nbsp;·&nbsp;
@@ -33,6 +40,7 @@
                 </span>
                 <a href="/pricing" style="font-size:12px; color:#166534; text-decoration:underline;">Change</a>
             </div>
+            {% endif %}
             {% endif %}
 
             <!-- Player school picker -->

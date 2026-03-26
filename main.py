@@ -493,7 +493,7 @@ async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly"):
+async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly", bypass_token: str = None):
     teams = db.query(Team).order_by(Team.name).all()
     invite_valid = False
     invite_error = None
@@ -503,12 +503,16 @@ async def signup_get(request: Request, db: Session = Depends(get_db), invite: st
             invite_valid = True
         else:
             invite_error = "This invite link is invalid or has expired."
+    if bypass_token:
+        tier = "premium"
+        billing = "monthly"
     return templates.TemplateResponse("signup.html", {
         "request": request, "error": invite_error, "teams": teams,
         "selected_team_id": None, "invite_token": invite if invite_valid else None,
         "invite_valid": invite_valid,
         "selected_tier": tier,
         "selected_billing": billing,
+        "bypass_token": bypass_token,
     })
 
 @app.post("/signup", response_class=HTMLResponse)
