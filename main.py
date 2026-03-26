@@ -1616,12 +1616,14 @@ async def admin_invites_get(request: Request, db: Session = Depends(get_db)):
             if u:
                 used_by_users[inv.used_by] = u.username
     site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    bypass_link = request.query_params.get("bypass_link", "")
     return templates.TemplateResponse("admin_invites.html", {
         "request": request,
         "invites": invites,
         "used_by_users": used_by_users,
         "site_url": site_url,
         "now": datetime.utcnow(),
+        "bypass_link": bypass_link,
     })
 
 @app.post("/admin/invites/create", response_class=HTMLResponse)
@@ -1719,7 +1721,7 @@ async def admin_generate_open_bypass(request: Request, db: Session = Depends(get
     db.commit()
     site_url = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
     link = f"{site_url}/join/{token}"
-    return RedirectResponse(f"/admin/teams?bypass_link={link}", status_code=302)
+    return RedirectResponse(f"/admin/invites?bypass_link={link}", status_code=302)
 
 
 @app.get("/messages", response_class=HTMLResponse)

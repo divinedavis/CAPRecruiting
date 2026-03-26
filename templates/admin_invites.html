@@ -4,21 +4,44 @@
 <div class="container page-top">
     <div class="page-header">
         <div>
-            <h1>Coach Invite Links</h1>
-            <p class="page-sub">Generate single-use invite links for coaches to sign up</p>
+            <h1>Invite Links</h1>
+            <p class="page-sub">Generate single-use invite links for coaches and players</p>
         </div>
         <a href="/admin/teams" class="btn btn-outline">← Admin</a>
     </div>
 
-    <!-- Generate new invite -->
+    <!-- Player In-Person Bypass Links -->
     <div class="admin-form-card" style="max-width:520px; margin-bottom:32px;">
-        <h2>Generate New Invite</h2>
+        <h2>Generate Player Bypass Link</h2>
+        <p style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">
+            Send this link to a player who paid in person. They click it, sign up, and automatically get <strong>Essentials</strong> tier through March 26, 2027 — no payment screen.
+        </p>
+        <form method="post" action="/admin/bypass-links/generate">
+            <button type="submit" class="btn btn-primary">Generate Player Bypass Link</button>
+        </form>
+        {% if bypass_link %}
+        <div style="margin-top:16px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:14px 16px;">
+            <p style="margin:0 0 6px; font-size:13px; font-weight:700; color:#166534;">Link generated — copy and send to the player:</p>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <input type="text" readonly id="bypass-link-val" value="{{ bypass_link }}"
+                    style="flex:1; border:1px solid #d1fae5; border-radius:6px; padding:7px 10px; font-size:12px; font-family:monospace; background:#fff; color:#0a1628; outline:none; min-width:0;">
+                <button onclick="navigator.clipboard.writeText(document.getElementById('bypass-link-val').value);this.textContent='Copied!';"
+                    style="background:#0a1628;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Copy</button>
+            </div>
+            <p style="margin:8px 0 0; font-size:12px; color:#6b7280;">One-time use · expires in 7 days.</p>
+        </div>
+        {% endif %}
+    </div>
+
+        <!-- Generate new coach invite -->
+    <div class="admin-form-card" style="max-width:520px; margin-bottom:32px;">
+        <h2>Generate New Coach Invite</h2>
         <form method="post" action="/admin/invites/create">
             <div class="form-group">
                 <label>Note <span class="field-hint">Optional — e.g. coach's name or school</span></label>
                 <input type="text" name="note" placeholder="e.g. Coach Smith – Lincoln University" maxlength="100">
             </div>
-            <button type="submit" class="btn btn-primary">Generate Invite Link</button>
+            <button type="submit" class="btn btn-primary">Generate Coach Invite Link</button>
         </form>
     </div>
 
