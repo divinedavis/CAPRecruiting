@@ -592,6 +592,24 @@
                 </form>
             </div>
             {% endif %}
+
+            {% if profile_form_action is defined and "/admin/" in profile_form_action and user.role == "player" %}
+            <div style="margin-top:12px;background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:14px 16px;">
+              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#0a1628;">In-Person Payment Bypass</p>
+              <p style="margin:0 0 10px;font-size:12px;color:#6b7280;">
+                Generates a one-time link (expires in 7 days) that activates Essentials tier for this player — no payment required. Valid through March 26, 2027.
+              </p>
+              {% if request.query_params.get("bypass_link") %}
+              <div style="background:#fff;border:1.5px solid #86efac;border-radius:6px;padding:10px 12px;margin-bottom:10px;">
+                <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#166534;">Link generated — send this to the player:</p>
+                <code style="font-size:11px;word-break:break-all;color:#0a1628;">{{ request.query_params.get("bypass_link") }}</code>
+              </div>
+              {% endif %}
+              <form method="post" action="/admin/users/{{ user.id }}/generate-bypass">
+                <button type="submit" class="btn btn-sm" style="background:#0a1628;color:#fff;">Generate Bypass Link</button>
+              </form>
+            </div>
+            {% endif %}
             {% if request.session.get("is_admin") and profile_form_action is defined and "/admin/" in profile_form_action %}
             <form method="post" action="/admin/users/{{ user.id }}/delete" onsubmit="return confirm('Permanently delete {{ user.username }}? This cannot be undone.')" style="display:inline;">
                 <button type="submit" class="btn btn-lg" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;">Delete Account</button>

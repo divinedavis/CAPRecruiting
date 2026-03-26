@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Activate Your Membership — Collegiate Athletic Planning{% endblock %}
+
+{% block og_title %}You're Invited to Collegiate Athletic Planning{% endblock %}
+{% block og_description %}Activate your Essentials membership — your in-person registration is ready to go.{% endblock %}
+{% block og_image %}https://caprecruiting.com/static/og-default.png{% endblock %}
+{% block og_url %}https://caprecruiting.com/join/{{ token }}{% endblock %}
+{% block tw_title %}You're Invited to Collegiate Athletic Planning{% endblock %}
+{% block tw_description %}Activate your Essentials membership — your in-person registration is ready to go.{% endblock %}
+{% block tw_image %}https://caprecruiting.com/static/og-default.png{% endblock %}
+
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:32px 16px;">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(10,22,40,0.10);max-width:480px;width:100%;padding:48px 40px;text-align:center;">
+    <img src="/static/cap-logo.png" alt="CAP" style="height:60px;width:auto;margin-bottom:24px;">
+
+    {% if error == "invalid" %}
+      <h2 style="color:#0a1628;margin-bottom:12px;">Link Not Found</h2>
+      <p style="color:#6b7280;">This activation link is invalid. Please contact your recruiter for a new link.</p>
+
+    {% elif error == "used" %}
+      <h2 style="color:#0a1628;margin-bottom:12px;">Already Activated</h2>
+      <p style="color:#6b7280;">This link has already been used. Your account should be active — try logging in.</p>
+      <a href="/login" style="display:inline-block;margin-top:24px;background:#0a1628;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;">Log In</a>
+
+    {% elif error == "expired" %}
+      <h2 style="color:#0a1628;margin-bottom:12px;">Link Expired</h2>
+      <p style="color:#6b7280;">This activation link expired after 7 days. Please contact your recruiter to get a new one.</p>
+
+    {% elif error == "wrong_user" %}
+      <h2 style="color:#0a1628;margin-bottom:12px;">Wrong Account</h2>
+      <p style="color:#6b7280;">This link is tied to a different account. Please log out and log in with the correct account, then try the link again.</p>
+      <a href="/logout" style="display:inline-block;margin-top:24px;background:#0a1628;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;">Log Out</a>
+
+    {% elif already_activated %}
+      <h2 style="color:#0a1628;margin-bottom:12px;">Already Active</h2>
+      <p style="color:#6b7280;">Your Essentials membership is already active. You're all set!</p>
+      <a href="/dashboard" style="display:inline-block;margin-top:24px;background:#0a1628;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;">Go to Dashboard</a>
+
+    {% else %}
+      <h2 style="color:#0a1628;margin-bottom:8px;">Activate Your Membership</h2>
+      <p style="color:#6b7280;margin-bottom:28px;">
+        Welcome{% if user %}, <strong>{{ user.username }}</strong>{% endif %}! Your in-person registration is confirmed.
+        Click below to activate your <strong>Essentials</strong> membership — no payment needed.
+      </p>
+      <div style="background:#f0f7ff;border-radius:10px;padding:20px;margin-bottom:28px;text-align:left;">
+        <p style="margin:0 0 8px;font-weight:700;color:#0a1628;">What's included:</p>
+        <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.8;">
+          <li>Full profile visibility to coaches</li>
+          <li>Video uploads</li>
+          <li>Direct messaging with coaches</li>
+          <li>Transcript uploads</li>
+        </ul>
+      </div>
+      <form method="post" action="/join/{{ token }}">
+        <button type="submit" style="background:#0a1628;color:#fff;border:none;padding:14px 40px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;width:100%;">
+          Activate My Membership
+        </button>
+      </form>
+      <p style="margin-top:16px;font-size:13px;color:#9ca3af;">
+        Membership is valid through March 26, 2027.
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
