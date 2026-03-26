@@ -250,6 +250,12 @@ playerTeamGroup.style.display = 'none';
 coachTeamGroup.style.display = 'block';
 {% endif %}
 
+// Auto-show player school fields for bypass (in-person) signups
+{% if bypass_token %}
+playerTeamGroup.style.display = 'block';
+coachTeamGroup.style.display = 'none';
+{% endif %}
+
 // ── School cascading dropdowns ────────────────────────────────────────────────
 const schoolState = document.getElementById('school-state');
 const schoolCity  = document.getElementById('school-city');
