@@ -1460,11 +1460,10 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         cp = db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()
         coaches.append({"user": c, "profile": cp})
     unread_count = unread_sender_count(db, user_id)
-    bypass_link = request.query_params.get("bypass_link", "")
     return templates.TemplateResponse("admin_teams.html", {
         "request": request, "user": user,
         "teams": teams, "coaches": coaches, "unread_count": unread_count,
-        "success": False, "error": None, "bypass_link": bypass_link,
+        "success": False, "error": None,
     })
 
 @app.post("/admin/teams/create", response_class=HTMLResponse)
