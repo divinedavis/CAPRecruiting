@@ -362,6 +362,13 @@ def player_tier(target_user) -> str:
         return "premium"
     return target_user.subscription_tier or "free"
 
+
+def _safe_redirect(url: str, fallback: str = "/profile/edit") -> str:
+    """Only allow relative redirects to prevent open redirect attacks."""
+    if url and url.startswith("/") and not url.startswith("//"):
+        return url
+    return fallback
+
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
 
@@ -982,6 +989,7 @@ async def upload_video(
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
+    redirect_to = _safe_redirect(redirect_to, "/profile/edit")
     logged_in = db.query(User).filter(User.id == user_id).first()
 
     # Allow admin to upload video for another user
@@ -1081,8 +1089,8 @@ async def upload_profile_image(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/login", status_code=302)
 
     form = await request.form()
-    redirect_to = str(form.get("redirect_to", ""))
-    back = redirect_to or "/profile/edit"
+    redirect_to = _safe_redirect(str(form.get("redirect_to", "")), "/profile/edit")
+    back = redirect_to
 
     # Determine target user
     target_user_id = user_id
@@ -1181,6 +1189,7 @@ async def upload_transcript(
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
+    redirect_to = _safe_redirect(redirect_to, "/profile/edit")
     user = db.query(User).filter(User.id == user_id).first()
     if not user or (user.role != "player" and not user.is_admin):
         raise HTTPException(status_code=403, detail="Only players or admins can upload transcripts.")
@@ -1305,12 +1314,16 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
     else:
         from urllib.parse import quote
         viewer_url = "https://docs.google.com/viewer?url=" + quote(t.file_url, safe="") + "&embedded=true"
+    from html import escape as _escape
     title = t.title or t.filename or "Transcript"
+    safe_title = _escape(title)
+    safe_viewer_url = _escape(viewer_url)
     html = f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset='UTF-8'>
-  <title>{title}</title>
+  <meta http-equiv='Content-Security-Policy' content="default-src 'none'; style-src 'unsafe-inline'; frame-src https: blob:; connect-src 'self';">
+  <title>{safe_title}</title>
   <style>
     * {{ margin:0; padding:0; box-sizing:border-box; }}
     body {{ display:flex; flex-direction:column; height:100vh; font-family:sans-serif; background:#f5f5f5; }}
@@ -1322,10 +1335,10 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
 </head>
 <body>
   <div class='toolbar'>
-    <h2>{title}</h2>
+    <h2>{safe_title}</h2>
     <a href='/profile/transcripts/{transcript_id}/download'>Download</a>
   </div>
-  <iframe src='{viewer_url}'></iframe>
+  <iframe src='{safe_viewer_url}'></iframe>
 </body>
 </html>"""
     return HTMLResponse(content=html)
@@ -1963,6 +1976,16 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
         from fastapi.responses import JSONResponse
         return JSONResponse({"error": "File too large. Max 5MB."}, status_code=400)
 
+    # Validate actual image content via PIL before writing to disk
+    try:
+        import io as _io
+        from PIL import Image as _PIL_Image
+        _img = _PIL_Image.open(_io.BytesIO(contents))
+        _img.verify()
+    except Exception:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": "Invalid image file."}, status_code=400)
+
     # Allow admin to upload photo for another user via target_user_id form field
     logged_in_user = db.query(User).filter(User.id == user_id).first()
     if target_user_id.strip().isdigit() and logged_in_user and logged_in_user.is_admin:
@@ -2212,12 +2235,12 @@ async def manage_subscription(request: Request, db: Session = Depends(get_db)):
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
     try:
-        if STRIPE_WEBHOOK_SECRET:
-            event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-        else:
-            import json
-            event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
