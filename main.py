@@ -541,8 +541,9 @@ async def signup_post(
         return templates.TemplateResponse("signup.html", {
             "request": request, "error": msg,
             "teams": teams, "selected_team_id": team_id,
-            "selected_tier": tier,
-            "invite_token": invite_token, "invite_valid": False,
+            "selected_tier": tier, "selected_billing": billing,
+            "invite_token": invite_token, "invite_valid": bool(invite_token),
+            "bypass_token": bypass_token,
         })
 
     if role not in ("player", "coach"):
