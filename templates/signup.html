@@ -15,6 +15,7 @@
 
         <form method="post" action="/signup">
             {% if invite_token %}<input type="hidden" name="invite_token" value="{{ invite_token }}">{% endif %}
+            {% if bypass_token %}<input type="hidden" name="bypass_token" value="{{ bypass_token }}">{% endif %}
             {% if invite_valid %}
             <div style="background:#dbeafe; border:1.5px solid #93c5fd; border-radius:10px; padding:12px 16px; margin-bottom:20px; font-size:14px; color:#1d4ed8; font-weight:600;">
                 ✅ You have a valid coach invite. Fill in your details below to create your coach account.
