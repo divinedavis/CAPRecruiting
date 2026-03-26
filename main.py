@@ -14,7 +14,7 @@ import asyncio
 import uuid
 import bcrypt
 import stripe
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 
 app = FastAPI()
@@ -78,7 +78,7 @@ manager = ConnectionManager()
 _session_secret = os.environ.get("SESSION_SECRET", "")
 if not _session_secret or _session_secret == "change-me":
     raise RuntimeError("SESSION_SECRET environment variable must be set to a strong random value")
-app.add_middleware(SessionMiddleware, secret_key=_session_secret)
+app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=True, same_site="lax")
 
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -130,6 +130,7 @@ class User(Base):
     subscription_tier = Column(String, default="free")  # free, essentials, advanced, premium
     stripe_customer_id = Column(String, default="")
     stripe_subscription_id = Column(String, default="")
+    in_person_paid_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class PlayerProfile(Base):
@@ -296,6 +297,16 @@ class LegalContract(Base):
     signer_ip = Column(String, nullable=True)
     hidden = Column(Boolean, default=False)
 
+
+class InPersonPaymentToken(Base):
+    __tablename__ = "in_person_payment_tokens"
+    id         = Column(Integer, primary_key=True)
+    token      = Column(String, unique=True, nullable=False, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used_at    = Column(DateTime, nullable=True)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -459,6 +470,8 @@ async def signup_post(
             return err("This invite link is invalid or has expired.")
     if role == "player" and not school_name.strip():
         return err("Players must select their high school.")
+    if len(username) > 30:
+        return err("Username must be 30 characters or fewer.")
     if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
         return err("Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces).")
     if db.query(User).filter(User.username == username).first():
@@ -763,63 +776,63 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
 
     if user.role == "player":
         p = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
-        p.first_name = form.get("first_name", "")
-        p.last_name = form.get("last_name", "")
-        p.position = form.get("position", "")
-        p.year = form.get("year", "")
-        p.height = form.get("height", "")
-        p.weight = form.get("weight", "")
-        p.forty_yard = form.get("forty_yard", "")
-        p.bench_press = form.get("bench_press", "")
-        p.vertical = form.get("vertical", "")
-        p.squat = form.get("squat", "")
-        p.clean = form.get("clean", "")
+        p.first_name = form.get("first_name", "")[:100]
+        p.last_name = form.get("last_name", "")[:100]
+        p.position = form.get("position", "")[:100]
+        p.year = form.get("year", "")[:100]
+        p.height = form.get("height", "")[:100]
+        p.weight = form.get("weight", "")[:100]
+        p.forty_yard = form.get("forty_yard", "")[:100]
+        p.bench_press = form.get("bench_press", "")[:100]
+        p.vertical = form.get("vertical", "")[:100]
+        p.squat = form.get("squat", "")[:100]
+        p.clean = form.get("clean", "")[:100]
         _bj_ft = form.get("broad_jump_feet", "").strip()
         _bj_in = form.get("broad_jump_inches", "").strip()
         if _bj_ft or _bj_in:
             p.broad_jump = str(_bj_ft or 0) + "'" + str(_bj_in or 0) + '"'
         else:
             p.broad_jump = ""
-        p.pro_agility = form.get("pro_agility", "")
-        p.wingspan = form.get("wingspan", "")
-        p.gpa = form.get("gpa", "")
-        p.school = form.get("school", "")
-        p.bio = form.get("bio", "")
-        p.link1_label = form.get("link1_label", "")
-        p.link1_url = form.get("link1_url", "")
-        p.link2_label = form.get("link2_label", "")
-        p.link2_url = form.get("link2_url", "")
-        p.link3_label = form.get("link3_label", "")
-        p.link3_url = form.get("link3_url", "")
-        p.offer1 = form.get("offer1", "")
-        p.offer2 = form.get("offer2", "")
-        p.offer3 = form.get("offer3", "")
-        p.offer4 = form.get("offer4", "")
-        p.offer5 = form.get("offer5", "")
+        p.pro_agility = form.get("pro_agility", "")[:100]
+        p.wingspan = form.get("wingspan", "")[:100]
+        p.gpa = form.get("gpa", "")[:100]
+        p.school = form.get("school", "")[:100]
+        p.bio = form.get("bio", "")[:2000]
+        p.link1_label = form.get("link1_label", "")[:100]
+        p.link1_url = form.get("link1_url", "")[:500]
+        p.link2_label = form.get("link2_label", "")[:100]
+        p.link2_url = form.get("link2_url", "")[:500]
+        p.link3_label = form.get("link3_label", "")[:100]
+        p.link3_url = form.get("link3_url", "")[:500]
+        p.offer1 = form.get("offer1", "")[:100]
+        p.offer2 = form.get("offer2", "")[:100]
+        p.offer3 = form.get("offer3", "")[:100]
+        p.offer4 = form.get("offer4", "")[:100]
+        p.offer5 = form.get("offer5", "")[:100]
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
             setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   ""))
-        p.hudl_url = form.get("hudl_url", "")
-        p.x_url = form.get("x_url", "")
-        p.instagram_url = form.get("instagram_url", "")
-        p.phone = form.get("phone", "")
-        p.contact_email = form.get("contact_email", "")
-        p.intended_major = form.get("intended_major", "")
+        p.hudl_url = form.get("hudl_url", "")[:100]
+        p.x_url = form.get("x_url", "")[:100]
+        p.instagram_url = form.get("instagram_url", "")[:100]
+        p.phone = form.get("phone", "")[:100]
+        p.contact_email = form.get("contact_email", "")[:100]
+        p.intended_major = form.get("intended_major", "")[:100]
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
-        c.first_name = form.get("first_name", "")
-        c.last_name = form.get("last_name", "")
-        c.school = form.get("school", "")
-        c.title = form.get("title", "")
-        c.division = form.get("division", "")
-        c.conference = form.get("conference", "")
-        c.bio = form.get("bio", "")
-        c.link1_label = form.get("link1_label", "")
-        c.link1_url = form.get("link1_url", "")
-        c.link2_label = form.get("link2_label", "")
-        c.link2_url = form.get("link2_url", "")
-        c.phone = form.get("phone", "")
-        c.contact_email = form.get("contact_email", "")
+        c.first_name = form.get("first_name", "")[:100]
+        c.last_name = form.get("last_name", "")[:100]
+        c.school = form.get("school", "")[:100]
+        c.title = form.get("title", "")[:100]
+        c.division = form.get("division", "")[:100]
+        c.conference = form.get("conference", "")[:100]
+        c.bio = form.get("bio", "")[:2000]
+        c.link1_label = form.get("link1_label", "")[:100]
+        c.link1_url = form.get("link1_url", "")[:500]
+        c.link2_label = form.get("link2_label", "")[:100]
+        c.link2_url = form.get("link2_url", "")[:500]
+        c.phone = form.get("phone", "")[:100]
+        c.contact_email = form.get("contact_email", "")[:100]
     db.commit()
 
     if user.role == "player":
@@ -894,7 +907,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
                 if current_user:
                     date_str = getattr(profile, f"visit{i}_date", "") or ""
                     try:
-                        from datetime import datetime as _dt
+                        from datetime import datetime, timedelta as _dt
                         fmt_date = _dt.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y") if date_str else ""
                     except Exception:
                         fmt_date = date_str
@@ -1045,7 +1058,7 @@ async def pin_video(video_id: int, request: Request, db: Session = Depends(get_d
         raise HTTPException(status_code=404)
     user = db.query(User).filter(User.id == user_id).first()
     form = await request.form()
-    redirect_to = form.get("redirect_to", f"/profile/{user.username}")
+    redirect_to = _safe_redirect(form.get("redirect_to", f"/profile/{user.username}"), f"/profile/{user.username}")
     if video.is_pinned:
         video.is_pinned = False
     else:
@@ -1067,7 +1080,7 @@ async def delete_video(video_id: int, request: Request, db: Session = Depends(ge
     if video.user_id != user_id and not (logged_in and logged_in.is_admin):
         raise HTTPException(status_code=403)
     form = await request.form()
-    redirect_to = form.get("redirect_to", f"/profile/{logged_in.username}")
+    redirect_to = _safe_redirect(form.get("redirect_to", f"/profile/{logged_in.username}"), f"/profile/{logged_in.username}")
     # Delete file from Spaces
     try:
         key = video.url.replace(f"{SPACES_BASE_URL}/", "")
@@ -1168,7 +1181,7 @@ async def delete_profile_image(image_id: int, request: Request, db: Session = De
     if not img:
         raise HTTPException(status_code=404)
     form = await request.form()
-    redirect_to = form.get("redirect_to", "/profile/edit")
+    redirect_to = _safe_redirect(form.get("redirect_to", "/profile/edit"), "/profile/edit")
     try:
         key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
         s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
@@ -1230,7 +1243,7 @@ async def upload_transcript(
             io.BytesIO(contents),
             SPACES_BUCKET,
             key,
-            ExtraArgs={"ACL": "public-read", "ContentType": TRANSCRIPT_CONTENT_TYPES.get(ext, "application/octet-stream")}
+            ExtraArgs={"ContentType": TRANSCRIPT_CONTENT_TYPES.get(ext, "application/octet-stream")}
         )
     except Exception:
         return RedirectResponse(redirect_to + "?transcript_error=upload", status_code=302)
@@ -1254,7 +1267,7 @@ async def delete_transcript(transcript_id: int, request: Request, db: Session = 
     if not t:
         raise HTTPException(status_code=404)
     form = await request.form()
-    redirect_to = form.get("redirect_to", "/profile/edit")
+    redirect_to = _safe_redirect(form.get("redirect_to", "/profile/edit"), "/profile/edit")
     try:
         key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
         s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
@@ -1309,11 +1322,21 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
         if current_user.role != "coach" or not tier_gte(_pt2, "advanced"):
             raise HTTPException(status_code=403, detail="Player must be on Advanced plan or higher")
     ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
+    # Generate presigned URL (valid 1 hour) so private objects are viewable
+    _key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
+    try:
+        presigned_url = s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": SPACES_BUCKET, "Key": _key},
+            ExpiresIn=3600
+        )
+    except Exception:
+        presigned_url = t.file_url
     if ext == "pdf":
-        viewer_url = t.file_url
+        viewer_url = presigned_url
     else:
         from urllib.parse import quote
-        viewer_url = "https://docs.google.com/viewer?url=" + quote(t.file_url, safe="") + "&embedded=true"
+        viewer_url = "https://docs.google.com/viewer?url=" + quote(presigned_url, safe="") + "&embedded=true"
     from html import escape as _escape
     title = t.title or t.filename or "Transcript"
     safe_title = _escape(title)
@@ -1356,7 +1379,7 @@ async def submit_evaluation(username: str, request: Request, db: Session = Depen
     if not player or player.role != "player":
         raise HTTPException(status_code=404)
     form = await request.form()
-    content = (form.get("content") or "").strip()
+    content = (form.get("content") or "").strip()[:5000]
     if content:
         db.add(Evaluation(player_id=player.id, coach_id=coach.id, content=content))
         db.commit()
@@ -1495,54 +1518,54 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
     form = await request.form()
     if target.role == "player":
         p = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first()
-        p.first_name = form.get("first_name", "")
-        p.last_name = form.get("last_name", "")
-        p.position = form.get("position", "")
-        p.year = form.get("year", "")
-        p.height = form.get("height", "")
-        p.weight = form.get("weight", "")
-        p.forty_yard = form.get("forty_yard", "")
-        p.bench_press = form.get("bench_press", "")
-        p.vertical = form.get("vertical", "")
-        p.squat = form.get("squat", "")
-        p.clean = form.get("clean", "")
+        p.first_name = form.get("first_name", "")[:100]
+        p.last_name = form.get("last_name", "")[:100]
+        p.position = form.get("position", "")[:100]
+        p.year = form.get("year", "")[:100]
+        p.height = form.get("height", "")[:100]
+        p.weight = form.get("weight", "")[:100]
+        p.forty_yard = form.get("forty_yard", "")[:100]
+        p.bench_press = form.get("bench_press", "")[:100]
+        p.vertical = form.get("vertical", "")[:100]
+        p.squat = form.get("squat", "")[:100]
+        p.clean = form.get("clean", "")[:100]
         _bj_ft = form.get("broad_jump_feet", "").strip()
         _bj_in = form.get("broad_jump_inches", "").strip()
         if _bj_ft or _bj_in:
             p.broad_jump = str(_bj_ft or 0) + "'" + str(_bj_in or 0) + '"'
         else:
             p.broad_jump = ""
-        p.pro_agility = form.get("pro_agility", "")
-        p.wingspan = form.get("wingspan", "")
-        p.gpa = form.get("gpa", "")
-        p.school = form.get("school", "")
-        p.bio = form.get("bio", "")
-        p.hudl_url = form.get("hudl_url", "")
-        p.x_url = form.get("x_url", "")
-        p.instagram_url = form.get("instagram_url", "")
-        p.phone = form.get("phone", "")
-        p.contact_email = form.get("contact_email", "")
-        p.offer1 = form.get("offer1", "")
-        p.offer2 = form.get("offer2", "")
-        p.offer3 = form.get("offer3", "")
-        p.offer4 = form.get("offer4", "")
-        p.offer5 = form.get("offer5", "")
+        p.pro_agility = form.get("pro_agility", "")[:100]
+        p.wingspan = form.get("wingspan", "")[:100]
+        p.gpa = form.get("gpa", "")[:100]
+        p.school = form.get("school", "")[:100]
+        p.bio = form.get("bio", "")[:2000]
+        p.hudl_url = form.get("hudl_url", "")[:100]
+        p.x_url = form.get("x_url", "")[:100]
+        p.instagram_url = form.get("instagram_url", "")[:100]
+        p.phone = form.get("phone", "")[:100]
+        p.contact_email = form.get("contact_email", "")[:100]
+        p.offer1 = form.get("offer1", "")[:100]
+        p.offer2 = form.get("offer2", "")[:100]
+        p.offer3 = form.get("offer3", "")[:100]
+        p.offer4 = form.get("offer4", "")[:100]
+        p.offer5 = form.get("offer5", "")[:100]
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
             setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", ""))
-        p.ncaa_eligibility_num = form.get("ncaa_eligibility_num", "")
-        p.intended_major = form.get("intended_major", "")
+        p.ncaa_eligibility_num = form.get("ncaa_eligibility_num", "")[:100]
+        p.intended_major = form.get("intended_major", "")[:100]
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
-        c.first_name = form.get("first_name", "")
-        c.last_name = form.get("last_name", "")
-        c.school = form.get("school", "")
-        c.title = form.get("title", "")
-        c.division = form.get("division", "")
-        c.conference = form.get("conference", "")
-        c.bio = form.get("bio", "")
-        c.phone = form.get("phone", "")
-        c.contact_email = form.get("contact_email", "")
+        c.first_name = form.get("first_name", "")[:100]
+        c.last_name = form.get("last_name", "")[:100]
+        c.school = form.get("school", "")[:100]
+        c.title = form.get("title", "")[:100]
+        c.division = form.get("division", "")[:100]
+        c.conference = form.get("conference", "")[:100]
+        c.bio = form.get("bio", "")[:2000]
+        c.phone = form.get("phone", "")[:100]
+        c.contact_email = form.get("contact_email", "")[:100]
     db.commit()
     profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first() if target.role == "player" else db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
     teams = db.query(Team).order_by(Team.name).all()
@@ -1639,6 +1662,27 @@ async def admin_delete_user(target_id: int, request: Request, db: Session = Depe
     db.delete(target)
     db.commit()
     return RedirectResponse("/dashboard", status_code=302)
+
+
+@app.post("/admin/users/{target_id}/generate-bypass")
+async def admin_generate_bypass(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    target = db.query(User).filter(User.id == target_id).first()
+    if not target or target.role != "player":
+        raise HTTPException(status_code=404, detail="Player not found.")
+    import secrets as _sec
+    token = _sec.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(days=7)
+    db.add(InPersonPaymentToken(token=token, user_id=target_id, expires_at=expires_at))
+    db.commit()
+    site_url = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
+    link = f"{site_url}/join/{token}"
+    return RedirectResponse(f"/admin/users/{target_id}/edit-profile?bypass_link={link}", status_code=302)
 
 
 @app.get("/messages", response_class=HTMLResponse)
@@ -1868,10 +1912,10 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     if not contract or contract.status == "signed":
         raise HTTPException(status_code=404)
     form = await request.form()
-    full_name    = form.get("full_name", "").strip()
-    date_top     = form.get("date_top", "").strip()
-    print_name   = form.get("print_name", "").strip()
-    sign_date    = form.get("sign_date", "").strip()
+    full_name    = form.get("full_name", "").strip()[:200]
+    date_top     = form.get("date_top", "").strip()[:50]
+    print_name   = form.get("print_name", "").strip()[:200]
+    sign_date    = form.get("sign_date", "").strip()[:50]
     signature_data = form.get("signature_data", "").strip()
 
     if not signature_data or not full_name:
@@ -1880,7 +1924,22 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     # Strip data URI prefix
     if "base64," in signature_data:
         signature_data = signature_data.split("base64,", 1)[1]
+
+    # Limit signature image to 2MB decoded (base64 is ~4/3 of raw size)
+    MAX_SIG_B64 = 2 * 1024 * 1024 * 4 // 3
+    if len(signature_data) > MAX_SIG_B64:
+        return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
+
     sig_bytes = base64.b64decode(signature_data)
+
+    # Validate it's actually an image before passing to PDF renderer
+    try:
+        import io as _io
+        from PIL import Image as _PIL_Image
+        _img = _PIL_Image.open(_io.BytesIO(sig_bytes))
+        _img.verify()
+    except Exception:
+        return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
 
     doc = fitz.open(TEMPLATE_PDF)
 
@@ -2035,7 +2094,7 @@ async def pin_profile_image(image_id: int, request: Request, db: Session = Depen
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     form = await request.form()
-    redirect_to = form.get("redirect_to", "/profile/edit")
+    redirect_to = _safe_redirect(form.get("redirect_to", "/profile/edit"), "/profile/edit")
     logged_in = db.query(User).filter(User.id == user_id).first()
     img = db.query(ProfileImage).filter(ProfileImage.id == image_id).first()
     if not img:
@@ -2060,18 +2119,24 @@ async def conversation_post(username: str, request: Request, db: Session = Depen
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse("/login", status_code=302)
+    sender = db.query(User).filter(User.id == user_id).first()
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
         raise HTTPException(status_code=404)
+    # Players can only message coaches or admins, not other players
+    if sender and sender.role == "player" and peer.role == "player":
+        raise HTTPException(status_code=403, detail="Players cannot message other players.")
+    # Only coaches, admins, or players (replying to coaches) can send messages
+    if sender and sender.role not in ("coach", "player") and not sender.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to send messages.")
     form = await request.form()
-    text = form.get("content", "").strip()
+    text = form.get("content", "").strip()[:2000]
     if text:
         msg = Message(sender_id=user_id, receiver_id=peer.id, content=text)
         db.add(msg)
         db.commit()
         db.refresh(msg)
 
-        sender = db.query(User).filter(User.id == user_id).first()
         payload = {
             "type": "message",
             "id": msg.id,
@@ -2099,11 +2164,17 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     user_id = request.session.get("user_id")
     if not user_id:
         return JSONResponse({"error": "Not logged in"}, status_code=401)
+    sender = db.query(User).filter(User.id == user_id).first()
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
         return JSONResponse({"error": "User not found"}, status_code=404)
+    # Players can only message coaches or admins, not other players
+    if sender and sender.role == "player" and peer.role == "player":
+        return JSONResponse({"error": "Players cannot message other players."}, status_code=403)
+    if sender and sender.role not in ("coach", "player") and not sender.is_admin:
+        return JSONResponse({"error": "Not authorized to send messages."}, status_code=403)
     data = await request.json()
-    text = data.get("content", "").strip()
+    text = data.get("content", "").strip()[:2000]
     if not text:
         return JSONResponse({"error": "Empty message"}, status_code=400)
 
@@ -2112,7 +2183,6 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     db.commit()
     db.refresh(msg)
 
-    sender = db.query(User).filter(User.id == user_id).first()
     payload = {
         "type": "message",
         "id": msg.id,
@@ -2131,6 +2201,52 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     return JSONResponse({"ok": True, "message": payload})
 
 # ── Stripe Routes ──────────────────────────────────────────────────────────────
+
+
+@app.get("/join/{token}", response_class=HTMLResponse)
+async def join_bypass_get(token: str, request: Request, db: Session = Depends(get_db)):
+    rec = db.query(InPersonPaymentToken).filter(InPersonPaymentToken.token == token).first()
+    error = None
+    if not rec:
+        error = "invalid"
+    if rec and rec.used_at:
+        error = "used"
+    if rec and not rec.used_at and rec.expires_at < datetime.utcnow():
+        error = "expired"
+
+    if error:
+        return templates.TemplateResponse("join.html", {"request": request, "error": error, "token": token})
+
+    user_id = request.session.get("user_id")
+    if not user_id:
+        request.session["post_login_redirect"] = f"/join/{token}"
+        return RedirectResponse("/login", status_code=302)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.id != rec.user_id:
+        return templates.TemplateResponse("join.html", {"request": request, "error": "wrong_user", "token": token})
+
+    return templates.TemplateResponse("join.html", {
+        "request": request, "error": None, "token": token,
+        "user": user, "already_activated": user.in_person_paid_until is not None,
+    })
+
+@app.post("/join/{token}")
+async def join_bypass_post(token: str, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    rec = db.query(InPersonPaymentToken).filter(InPersonPaymentToken.token == token).first()
+    if not rec or rec.used_at or rec.expires_at < datetime.utcnow():
+        return RedirectResponse(f"/join/{token}", status_code=302)
+    if rec.user_id != user_id:
+        raise HTTPException(status_code=403, detail="This link is for a different account.")
+    user = db.query(User).filter(User.id == user_id).first()
+    user.subscription_tier = "essentials"
+    user.in_person_paid_until = datetime(2027, 3, 26)
+    rec.used_at = datetime.utcnow()
+    db.commit()
+    return RedirectResponse("/dashboard?activated=1", status_code=302)
 
 @app.get("/upgrade", response_class=HTMLResponse)
 async def upgrade_page(request: Request, db: Session = Depends(get_db)):
