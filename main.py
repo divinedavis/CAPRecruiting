@@ -2342,6 +2342,13 @@ async def join_bypass_get(token: str, request: Request, db: Session = Depends(ge
     if error:
         return templates.TemplateResponse("join.html", {"request": request, "error": error, "token": token})
 
+
+    # Open token (no user_id set) — for new signups, show landing page
+    if rec.user_id is None:
+        return templates.TemplateResponse("join.html", {
+            "request": request, "error": None, "token": token,
+            "open_token": True, "user": None, "already_activated": False,
+        })
     user_id = request.session.get("user_id")
     if not user_id:
         request.session["post_login_redirect"] = f"/join/{token}"
