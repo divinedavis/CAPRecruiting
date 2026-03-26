@@ -35,8 +35,8 @@ def send_renewal_email(to_email: str, username: str):
       <img src="{SITE_URL}/static/cap-logo.png" alt="CAP" style="height:50px;margin-bottom:24px;">
       <h2 style="color:#0a1628;">Time to Renew Your Membership</h2>
       <p>Hi {username},</p>
-      <p>Your Collegiate Athletic Planning Essentials membership, which was activated via in-person registration, has expired today.</p>
-      <p>To continue being visible to college coaches and accessing all Essentials features, please renew your membership.</p>
+      <p>Your Collegiate Athletic Planning Premium membership, which was activated via in-person registration, has expired today.</p>
+      <p>To continue being visible to college coaches and accessing all Premium features, please renew your membership.</p>
       <p style="margin:28px 0;">
         <a href="{SITE_URL}/upgrade" style="background:#0a1628;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Renew My Membership</a>
       </p>
@@ -57,14 +57,14 @@ def run():
     db = Session()
     try:
         now = datetime.utcnow()
-        # Find users whose in-person membership expires today or earlier, still on essentials
+        # Find users whose in-person membership expires today or earlier, still on premium
         from sqlalchemy import text
         expired_users = db.execute(text(
             "SELECT id, username, email, subscription_tier, in_person_paid_until "
             "FROM users "
             "WHERE in_person_paid_until IS NOT NULL "
             "AND in_person_paid_until <= :now "
-            "AND subscription_tier = 'essentials'"
+            "AND subscription_tier = 'premium'"
         ), {"now": now}).fetchall()
 
         if not expired_users:

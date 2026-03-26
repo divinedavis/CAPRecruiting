@@ -617,7 +617,7 @@ async def signup_post(
                 InPersonPaymentToken.user_id == None,
             ).first()
             if brec and brec.expires_at > datetime.utcnow():
-                user.subscription_tier = "essentials"
+                user.subscription_tier = "premium"
                 user.in_person_paid_until = datetime(2027, 3, 26)
                 brec.used_at = datetime.utcnow()
                 brec.user_id = user.id
@@ -2374,7 +2374,7 @@ async def join_bypass_post(token: str, request: Request, db: Session = Depends(g
     if rec.user_id != user_id:
         raise HTTPException(status_code=403, detail="This link is for a different account.")
     user = db.query(User).filter(User.id == user_id).first()
-    user.subscription_tier = "essentials"
+    user.subscription_tier = "premium"
     user.in_person_paid_until = datetime(2027, 3, 26)
     rec.used_at = datetime.utcnow()
     db.commit()

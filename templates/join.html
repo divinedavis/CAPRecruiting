@@ -2,11 +2,11 @@
 
 {% block title %}Activate Your Membership — Collegiate Athletic Planning{% endblock %}
 {% block og_title %}You're Invited to Collegiate Athletic Planning{% endblock %}
-{% block og_description %}Activate your Essentials membership — your in-person registration is ready to go.{% endblock %}
+{% block og_description %}Activate your Premium membership — your in-person registration is ready to go.{% endblock %}
 {% block og_image %}https://caprecruiting.com/static/og-default.png{% endblock %}
 {% block og_url %}https://caprecruiting.com/join/{{ token }}{% endblock %}
 {% block tw_title %}You're Invited to Collegiate Athletic Planning{% endblock %}
-{% block tw_description %}Activate your Essentials membership — your in-person registration is ready to go.{% endblock %}
+{% block tw_description %}Activate your Premium membership — your in-person registration is ready to go.{% endblock %}
 {% block tw_image %}https://caprecruiting.com/static/og-default.png{% endblock %}
 
 {% block content %}
@@ -36,7 +36,7 @@
       {# New signup flow #}
       <h2 style="color:#0a1628;margin-bottom:8px;">You're Invited!</h2>
       <p style="color:#6b7280;margin-bottom:28px;">
-        Create your Collegiate Athletic Planning account and get <strong>Essentials</strong> membership free — your in-person registration has already been confirmed.
+        Create your Collegiate Athletic Planning account and get <strong>Premium</strong> membership free — your in-person registration has already been confirmed.
       </p>
       <div style="background:#f0f7ff;border-radius:10px;padding:20px;margin-bottom:28px;text-align:left;">
         <p style="margin:0 0 8px;font-weight:700;color:#0a1628;">What's included:</p>
@@ -55,14 +55,14 @@
 
     {% elif already_activated %}
       <h2 style="color:#0a1628;margin-bottom:12px;">Already Active</h2>
-      <p style="color:#6b7280;">Your Essentials membership is already active. You're all set!</p>
+      <p style="color:#6b7280;">Your Premium membership is already active. You're all set!</p>
       <a href="/dashboard" style="display:inline-block;margin-top:24px;background:#0a1628;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;">Go to Dashboard</a>
 
     {% else %}
       {# Existing user flow #}
       <h2 style="color:#0a1628;margin-bottom:8px;">Activate Your Membership</h2>
       <p style="color:#6b7280;margin-bottom:28px;">
-        Welcome{% if user %}, <strong>{{ user.username }}</strong>{% endif %}! Click below to activate your <strong>Essentials</strong> membership — no payment needed.
+        Welcome{% if user %}, <strong>{{ user.username }}</strong>{% endif %}! Click below to activate your <strong>Premium</strong> membership — no payment needed.
       </p>
       <div style="background:#f0f7ff;border-radius:10px;padding:20px;margin-bottom:28px;text-align:left;">
         <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.8;">
