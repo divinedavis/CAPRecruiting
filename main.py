@@ -446,6 +446,7 @@ async def signup_post(
     coach_conference: str = Form(""),
     coach_college: str = Form(""),
     invite_token: Optional[str] = Form(None),
+    bypass_token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     username = username.strip()
@@ -522,6 +523,22 @@ async def signup_post(
     if role == "player":
         import asyncio
         asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
+
+        # Check for in-person payment bypass token (open, untied, not yet used)
+        if bypass_token:
+            brec = db.query(InPersonPaymentToken).filter(
+                InPersonPaymentToken.token == bypass_token,
+                InPersonPaymentToken.used_at == None,
+                InPersonPaymentToken.user_id == None,
+            ).first()
+            if brec and brec.expires_at > datetime.utcnow():
+                user.subscription_tier = "essentials"
+                user.in_person_paid_until = datetime(2027, 3, 26)
+                brec.used_at = datetime.utcnow()
+                brec.user_id = user.id
+                db.commit()
+                return RedirectResponse("/dashboard?activated=1", status_code=302)
+
         # Create Stripe customer and checkout session immediately
         _price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
         _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
@@ -1443,10 +1460,11 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         cp = db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()
         coaches.append({"user": c, "profile": cp})
     unread_count = unread_sender_count(db, user_id)
+    bypass_link = request.query_params.get("bypass_link", "")
     return templates.TemplateResponse("admin_teams.html", {
         "request": request, "user": user,
         "teams": teams, "coaches": coaches, "unread_count": unread_count,
-        "success": False, "error": None
+        "success": False, "error": None, "bypass_link": bypass_link,
     })
 
 @app.post("/admin/teams/create", response_class=HTMLResponse)
@@ -1683,6 +1701,25 @@ async def admin_generate_bypass(target_id: int, request: Request, db: Session = 
     site_url = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
     link = f"{site_url}/join/{token}"
     return RedirectResponse(f"/admin/users/{target_id}/edit-profile?bypass_link={link}", status_code=302)
+
+
+@app.post("/admin/bypass-links/generate")
+async def admin_generate_open_bypass(request: Request, db: Session = Depends(get_db)):
+    """Generate an open bypass link for a new (not yet signed up) player."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    import secrets as _sec
+    token = _sec.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(days=7)
+    db.add(InPersonPaymentToken(token=token, user_id=None, expires_at=expires_at))
+    db.commit()
+    site_url = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
+    link = f"{site_url}/join/{token}"
+    return RedirectResponse(f"/admin/teams?bypass_link={link}", status_code=302)
 
 
 @app.get("/messages", response_class=HTMLResponse)
