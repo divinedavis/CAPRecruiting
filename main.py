@@ -397,6 +397,143 @@ TRANSCRIPT_CONTENT_TYPES = {
 }
 
 
+# ── Football Questionnaire Data ────────────────────────────────────────────────
+QUESTIONNAIRE_DATA = {
+    "D1": {
+        "ACC": {
+            "California": "https://college.jumpforward.com/questionnaire.aspx?iid=350&sportid=18",
+            "Clemson": "https://questionnaires.armssoftware.com/4792442e8b01",
+            "Duke": "https://questionnaires.armssoftware.com/fea53f18262f",
+            "Georgia Tech": "https://ramblinwreck.com/student-athlete-questionnaire/",
+            "Louisville": "https://questionnaires.armssoftware.com/04c70af73d18",
+            "NC State": "https://questionnaires.armssoftware.com/fa5122606469",
+            "North Carolina": "https://goheels.com/form/6",
+            "Pitt": "https://questionnaires.armssoftware.com/b0c551579d60",
+            "SMU": "https://questionnaires.armssoftware.com/af6eb6d29764",
+            "Stanford": "https://questionnaires.armssoftware.com/a1565868bdbf",
+            "Syracuse": "https://cuse.com/form/3",
+            "Virginia": "https://questionnaires.armssoftware.com/5eb2b0c4eed7",
+            "Virginia Tech": "https://college.jumpforward.com/questionnaire.aspx?iid=472&sportid=18",
+            "Wake Forest": "https://questionnaires.armssoftware.com/b35995e9775c",
+        },
+        "Big Ten": {
+            "Maryland": "https://questionnaires.armssoftware.com/b37f2f0aac44",
+            "Nebraska": "https://questionnaires.armssoftware.com/d388bb15000c",
+            "Northwestern": "https://questionnaires.armssoftware.com/be4d150daff0",
+            "Penn State": "https://questionnaires.armssoftware.com/24b0eed6eb01",
+            "Rutgers": "https://questionnaires.armssoftware.com/581588caf234",
+            "UCLA": "https://questionnaires.armssoftware.com/74c822368ab9",
+            "Washington": "https://www.fieldlevel.com/washington/football/recruiting",
+            "Wisconsin": "https://questionnaires.armssoftware.com/73384a600a7f",
+        },
+        "Conference USA": {
+            "Jax State": "https://jaxstatesports.com/sb_output.aspx?form=3",
+            "Kennesaw State": "https://college.jumpforward.com/questionnaire.aspx?iid=394&sportid=54",
+            "LA Tech": "https://questionnaires.armssoftware.com/ae17badbf668",
+            "Liberty": "https://questionnaires.armssoftware.com/174fa9a5d8bc",
+            "MTSU": "https://questionnaires.armssoftware.com/3cbdaac68e8e",
+            "Missouri State": "https://questionnaires.armssoftware.com/00d6863851cf",
+            "NM State": "https://nmstate.collegewarroom.com/Questionnaire/Form/1",
+            "Sam Houston": "https://questionnaires.armssoftware.com/6a16f89fe9a4?path=football",
+            "UTEP": "https://utepminers.com/sb_output.aspx?form=1034",
+        },
+        "MAC": {
+            "Akron": "https://questionnaires.armssoftware.com/3242f548bc75",
+            "Ball State": "https://questionnaires.armssoftware.com/489a56db71f3",
+            "Bowling Green": "https://questionnaires.armssoftware.com/da9ecb9101b1",
+            "Buffalo": "https://questionnaires.armssoftware.com/c2ff35d2eb21",
+            "Central Michigan": "https://cmuchippewas.com/sports/2018/7/6/ot-questionnaires-html",
+            "Eastern Michigan": "https://questionnaires.armssoftware.com/0b95647b5489?path=football",
+            "Miami (OH)": "https://questionnaires.armssoftware.com/8ec82a98b444",
+            "Northern Illinois": "https://questionnaires.armssoftware.com/b09a8d2fd723",
+            "Ohio": "https://questionnaires.armssoftware.com/233a2d93ee59",
+            "Toledo": "https://questionnaires.armssoftware.com/97ef9cb72419",
+            "UMass": "https://questionnaires.armssoftware.com/f2df0deb984d",
+            "Western Michigan": "https://qwiku.qwikrecruiting.com/questionnaire/62de960634dde90030c1a7b2",
+        },
+        "SEC": {
+            "Arkansas Razorbacks": "https://questionnaires.armssoftware.com/567edf1eacb2",
+            "Auburn Tigers": "https://questionnaires.armssoftware.com/88084278386f",
+            "Kentucky Wildcats": "https://ukathletics.com/recruits/",
+            "Mississippi State Bulldogs": "https://tickets.formstack.com/forms/mississippi_state_football_questionnaire",
+            "Vanderbilt Commodores": "https://vanderbilt.collegewarroom.com/Questionnaire/Form/1",
+        },
+        "Sun Belt": {
+            "App State": "https://appstatesports.com/sb_output.aspx?form=37",
+            "Arkansas State": "https://college.jumpforward.com/questionnaire.aspx?iid=308&sportid=18&path=football",
+            "Coastal Carolina": "https://questionnaires.armssoftware.com/6814c0767b73",
+            "Georgia State": "https://georgiastatesports.com/sb_output.aspx?form=94",
+            "James Madison": "https://questionnaires.armssoftware.com/b649b94cfffd",
+            "Old Dominion": "https://questionnaires.armssoftware.com/68685a2e9eda",
+            "Southern Miss": "https://questionnaires.armssoftware.com/8714178713d4",
+            "Texas State": "https://txst.com/sb_output.aspx?form=26",
+            "Troy": "https://troytrojans.com/form/3",
+            "ULM": "https://ulmwarhawks.com/sb_output.aspx?form=7",
+        },
+    },
+    "D2": {
+        "Mountain East": {
+            "Charleston": "https://questionnaires.armssoftware.com/42478c4f940f",
+            "Fairmont State": "https://questionnaires.armssoftware.com/403e032f0bd0",
+            "Frostburg State": "https://questionnaires.armssoftware.com/210375186406",
+            "West Liberty": "https://hilltoppersports.com/sb_output.aspx?form=3",
+            "West Virginia State": "https://wvsuyellowjackets.com/sb_output.aspx?form=3",
+            "West Virginia Wesleyan": "https://college.jumpforward.com/questionnaire.aspx?iid=1713&sportid=54",
+            "Wheeling": "https://wucardinals.com/sb_output.aspx?form=3&tab=recruitme",
+        },
+        "NE10": {
+            "American International": "https://questionnaires.armssoftware.com/a3e03c079bb4",
+            "Assumption": "https://questionnaires.armssoftware.com/b100ccaa730a",
+            "Bentley": "https://questionnaires.armssoftware.com/de9c5d168823",
+            "Franklin Pierce": "https://questionnaires.armssoftware.com/7ceb526a27b9",
+            "Pace": "https://questionnaires.armssoftware.com/a347f4725a3f",
+            "Post": "https://posteagles.com/sb_output.aspx?form=8&path=sprtftb",
+            "Saint Anselm": "https://questionnaires.armssoftware.com/3bd072bd5f12",
+            "Southern Connecticut": "https://scsuowls.com/sb_output.aspx?form=3",
+        },
+        "PSAC": {
+            "Bloomsburg": "https://questionnaires.armssoftware.com/d135bff4cb3f",
+            "Cal PA": "https://questionnaires.armssoftware.com/aae478e664c7",
+            "Clarion": "https://questionnaires.armssoftware.com/b1bc7e4964fe",
+            "East Stroudsburg": "https://questionnaires.armssoftware.com/c096c4aa54b2",
+            "Edinboro": "https://questionnaires.armssoftware.com/e8af82bc02e1",
+            "Gannon": "https://questionnaires.armssoftware.com/a548a8143ff9",
+            "IUP": "https://iupathletics.com/sports/2013/9/12/GEN_0912135915.aspx",
+            "Kutztown": "https://questionnaires.armssoftware.com/b53971ecd6df",
+            "Lock Haven": "https://questionnaires.armssoftware.com/4b0148820178",
+            "Millersville": "https://questionnaires.armssoftware.com/2b06d027b120",
+            "Seton Hill": "https://questionnaires.armssoftware.com/eb07191a467b",
+            "Sheppard": "https://questionnaires.armssoftware.com/1df2f096dcf5",
+            "Shippensburg": "https://questionnaires.armssoftware.com/ac510ffd1962",
+            "Slippery Rock": "https://questionnaires.armssoftware.com/2ff1d7f558a8",
+            "West Chester": "https://questionnaires.armssoftware.com/023ce109bb90",
+        },
+    },
+    "D3": {
+        "Centennial": {
+            "Carnegie Mellon": "https://athletics.cmu.edu/sports/fball/recruitQ",
+            "Dickinson": "https://dickinsonathletics.com/sports/2022/8/2/football-recruit-questionnaire.aspx",
+            "Franklin & Marshall": "https://questionnaires.armssoftware.com/ce4f3c984618",
+            "Gettysburg": "https://gettysburgsports.com/sports/2015/10/12/FB_1012154923.aspx",
+            "Johns Hopkins": "https://questionnaires.armssoftware.com/f0c7092fb543",
+            "Mcdaniel": "https://mcdanielathletics.com/sports/2022/4/29/recruits-football",
+            "Muhlenberg": "https://questionnaires.armssoftware.com/ee1e2fc84d1b",
+            "Ursinus": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MTE2Nzc=-QVSswpzoAIc=&ptype=recruit",
+        },
+        "MAC": {
+            "Albright": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MTMzNjY=-BjIqwRbsEzs=&ptype=recruit",
+            "Alvernia": "https://auwolves.com/sb_output.aspx?frform=11&path=football",
+            "Delaware Valley": "https://athletics.delval.edu/sb_output.aspx?form=9",
+            "Eastern": "https://docs.google.com/forms/d/e/1FAIpQLSdYlSOw96JKrfEsjd8C0LA0bT1GaYBLCKo7iBYujwXfbvmQCw/viewform",
+            "FDU-Florham": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=ODE5Nw==-ThHxzxPokRs=&ptype=recruit",
+            "King's": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MjI3Njc=-i4vWXOVFeUA=&ptype=recruit",
+            "Lebanon Valley": "https://questionnaires.armssoftware.com/161261360190?path=football",
+            "Misericordia": "https://athletics.misericordia.edu/sb_output.aspx?frform=16",
+            "Stevenson": "https://questionnaires.armssoftware.com/9441858d75d8",
+            "Widener": "https://docs.google.com/forms/u/1/d/e/1FAIpQLSfU6rF5jlQfZkE1WjO6cmRoXUNEgfWSHPBCxk_sNC0FvXowNw/viewform",
+        },
+    },
+}
 # ── College offer division lookup (mirrors CFBD data in edit_profile.html) ────
 _OFFER_DIV = {}
 _CFBD = {
@@ -609,6 +746,7 @@ async def signup_post(
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
+    request.session["subscription_tier"] = user.subscription_tier or "free"
     if role == "player":
         import asyncio
         asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
@@ -626,6 +764,7 @@ async def signup_post(
                 brec.used_at = datetime.utcnow()
                 brec.user_id = user.id
                 db.commit()
+                request.session["subscription_tier"] = "premium"
                 return RedirectResponse("/dashboard?activated=1", status_code=302)
 
         # Create Stripe customer and checkout session immediately
@@ -789,6 +928,7 @@ async def login_post(
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
+    request.session["subscription_tier"] = user.subscription_tier or "free"
     return RedirectResponse("/dashboard", status_code=302)
 
 @app.get("/logout")
@@ -2460,6 +2600,7 @@ async def upgrade_success(request: Request, session_id: str = "", db: Session = 
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
     unread_count = unread_sender_count(db, user_id)
+    request.session["subscription_tier"] = user.subscription_tier or "free"
     return templates.TemplateResponse("upgrade_success.html", {
         "request": request,
         "user": user,
@@ -2549,6 +2690,27 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     return JSONResponse({"ok": True})
 
 # ── School lookup endpoints ────────────────────────────────────────────────────
+
+
+# ── Questionnaires (Premium Only) ─────────────────────────────────────────────
+
+@app.get("/questionnaires", response_class=HTMLResponse)
+async def questionnaires_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player":
+        return RedirectResponse("/dashboard", status_code=302)
+    if not tier_gte(user.subscription_tier or "free", "premium"):
+        return RedirectResponse("/upgrade", status_code=302)
+    request.session["subscription_tier"] = user.subscription_tier or "free"
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("questionnaires.html", {
+        "request": request,
+        "unread_count": unread_count,
+        "data": QUESTIONNAIRE_DATA,
+    })
 
 @app.get("/api/schools/states")
 def schools_states():
