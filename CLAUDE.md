@@ -54,7 +54,7 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 ├── main.py                 # Entire application
 ├── recruiting.db           # SQLite database
 ├── .env                    # Environment variables (secrets)
-├── templates/              # Jinja2 templates (24 files)
+├── templates/              # Jinja2 templates (25 files)
 │   ├── base.html           # Layout with nav bar
 │   ├── dashboard.html      # Player browsing
 │   ├── profile.html        # Player profile view
@@ -65,7 +65,7 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 │   ├── style.css           # All styles
 │   ├── cap-logo.png        # Logo
 │   ├── uploads/            # Profile photos (local)
-│   └── docs/               # Legal PDFs
+│   └── docs/               # Legal PDFs, cap_agreement.pdf template
 ├── signed_docs/            # Signed legal contracts
 ├── venv/                   # Python virtual environment
 ├── expire_in_person.py     # Cron: expire bypass memberships
@@ -82,19 +82,203 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 - **Cron (root):** git_autopush every 30min, expire_in_person daily at 9am UTC
 - **Git:** `git@github-bearcats:divinedavis/CAPRecruiting.git` (SSH alias in `/root/.ssh/config`)
 
-## Deployment
+## Route Map
 
-After making changes to files on the server:
-1. `systemctl restart bearcats` to apply changes
-2. Commit and push: `cd /home/recruiting/bearcats && git add -A && git commit -m "message" && git push origin main`
+### Public (no login required)
+
+| Route | Description |
+|-------|-------------|
+| `GET /` | Landing page (`home.html`) |
+| `GET /pricing` | Plan selection page (`pricing.html`) |
+| `GET /signup` | Signup form; accepts `tier`, `billing`, `invite`, `bypass_token` query params (`signup.html`) |
+| `POST /signup` | Creates user+profile, handles coach invites, bypass tokens, Stripe checkout redirect |
+| `GET /login` | Login form (`login.html`) |
+| `POST /login` | Authenticates user, sets session (`user_id`, `is_admin`, `role`, `subscription_tier`) |
+| `GET /logout` | Clears session, redirects to `/` |
+| `GET /dashboard` | Player directory with school/year/position filters (`dashboard.html`) |
+| `GET /profile/{username}` | View player/coach profile; tier-gates photos, offers, visits, videos, contact (`profile.html`) |
+| `GET /videos/{username}` | Full video list for a player (`videos.html`) |
+| `GET /forgot-password` | Password reset request form (`forgot_password.html`) |
+| `POST /forgot-password` | Sends password reset email |
+| `GET /reset-password/{token}` | Reset form with token validation (`reset_password.html`) |
+| `POST /reset-password/{token}` | Updates password hash |
+| `GET /sign/{token}` | Legal contract signing page (`sign.html` or `sign_done.html`) |
+| `POST /sign/{token}` | Processes signature, overlays on PDF template, saves signed PDF |
+
+### Authenticated (login required)
+
+| Route | Description |
+|-------|-------------|
+| `GET /profile/edit` | Edit own profile (`edit_profile.html`) |
+| `POST /profile/edit` | Save profile fields |
+| `POST /profile/upload-photo` | Upload main profile photo to local disk |
+| `POST /profile/images/upload` | Upload gallery image to DO Spaces (resizes to 1200px JPEG, max 20) |
+| `POST /profile/images/{id}/pin` | Toggle pin on gallery image (max 5 pinned) |
+| `POST /profile/images/{id}/delete` | Delete gallery image from S3 and DB |
+| `POST /profile/videos/upload` | Upload video to DO Spaces (validates magic bytes, max 4GB) |
+| `POST /profile/videos/{id}/pin` | Toggle pin on video (only one pinned at a time) |
+| `POST /profile/videos/{id}/delete` | Delete video from S3 and DB |
+| `POST /profile/transcripts/upload` | Upload transcript (PDF/DOC/DOCX) to S3 (max 4, max 10MB) |
+| `POST /profile/transcripts/{id}/delete` | Delete transcript from S3 and DB |
+| `GET /profile/transcripts/{id}/download` | Download transcript; tier-gated (advanced+) for coaches |
+| `GET /profile/transcripts/{id}/view` | Transcript viewer page |
+| `POST /profile/{username}/evaluate` | Coach/admin submits text evaluation for a player (max 5000 chars) |
+| `GET /questionnaires` | Premium-only football questionnaire links (`questionnaires.html`) |
+
+### Messaging (login required)
+
+| Route | Description |
+|-------|-------------|
+| `GET /messages` | Inbox with conversation list and unread counts (`messages.html`) |
+| `GET /messages/{username}` | Conversation thread; marks unread as read (`conversation.html`) |
+| `POST /messages/{username}` | Send message via form POST; pushes via WebSocket |
+| `POST /messages/{username}/send` | Send message via AJAX/JSON |
+| `POST /messages/{username}/delete-thread` | Soft-delete conversation for current user |
+| `POST /messages/delete-conversations` | Bulk soft-delete multiple threads |
+| `WebSocket /ws/{user_id}` | Real-time message delivery and unread badge updates |
+
+### Subscription / Upgrade
+
+| Route | Description |
+|-------|-------------|
+| `GET /upgrade` | Upgrade options page with current tier display (`upgrade.html`) |
+| `POST /upgrade/checkout` | Creates Stripe Checkout Session (or redirects to billing portal if already subscribed) |
+| `GET /upgrade/success` | Post-checkout success; refreshes session tier (`upgrade_success.html`) |
+| `POST /upgrade/manage` | Redirects to Stripe Customer Portal |
+| `POST /stripe/webhook` | Handles Stripe events (see Stripe Webhook Lifecycle below) |
+| `GET /join/{token}` | Bypass payment landing page (`join.html`) |
+| `POST /join/{token}` | Activates bypass: sets premium tier + in_person_paid_until |
+
+### Admin (admin-only)
+
+| Route | Description |
+|-------|-------------|
+| `POST /admin/users/{id}/set-stars` | Set player star rating (0-5) |
+| `POST /admin/users/{id}/set-tier` | Override subscription tier directly |
+| `GET /admin/teams` | Team list with player counts and coaches (`admin_teams.html`) |
+| `POST /admin/teams/create` | Create new team |
+| `GET /admin/users/{id}/edit-profile` | Edit any user's profile (reuses `edit_profile.html`) |
+| `POST /admin/users/{id}/edit-profile` | Save edits for any user |
+| `GET /admin/invites` | List all coach invite tokens (`admin_invites.html`) |
+| `POST /admin/invites/create` | Create coach invite (UUID token, 7-day expiry, optional note) |
+| `POST /admin/invites/{token}/revoke` | Expire invite immediately |
+| `POST /admin/users/{id}/delete` | Hard-delete user and all related data (see caveat below) |
+| `POST /admin/users/{id}/generate-bypass` | Generate bypass link for existing player (7-day expiry) |
+| `POST /admin/bypass-links/generate` | Generate open bypass link for new signups |
+
+### Legal (admin-only)
+
+| Route | Description |
+|-------|-------------|
+| `GET /legal` | List all non-hidden contracts (`legal.html`) |
+| `POST /legal/create` | Create contract with player_name and signing token |
+| `POST /legal/{id}/hide` | Soft-hide a contract |
+| `GET /legal/docs/{filename}` | Serve signed PDF (path traversal protected) |
+
+### API (JSON)
+
+| Route | Description |
+|-------|-------------|
+| `GET /api/schools/states` | Distinct states from schools table |
+| `GET /api/schools/cities?state=X` | Cities for a state |
+| `GET /api/schools/list?state=X&city=Y` | School names for state+city |
+
+## Template-to-Route Mapping
+
+| Template | Rendered by |
+|----------|-------------|
+| `home.html` | `GET /` |
+| `pricing.html` | `GET /pricing` |
+| `signup.html` | `GET /signup`, `POST /signup` (on error) |
+| `login.html` | `GET /login`, `POST /login` (on error) |
+| `forgot_password.html` | `GET /forgot-password` |
+| `reset_password.html` | `GET /reset-password/{token}` |
+| `dashboard.html` | `GET /dashboard` |
+| `edit_profile.html` | `GET /profile/edit`, `GET /admin/users/{id}/edit-profile` |
+| `profile.html` | `GET /profile/{username}` |
+| `videos.html` | `GET /videos/{username}` |
+| `messages.html` | `GET /messages` |
+| `conversation.html` | `GET /messages/{username}` |
+| `questionnaires.html` | `GET /questionnaires` |
+| `upgrade.html` | `GET /upgrade` |
+| `upgrade_success.html` | `GET /upgrade/success` |
+| `join.html` | `GET /join/{token}` |
+| `sign.html` | `GET /sign/{token}` (unsigned) |
+| `sign_done.html` | `GET /sign/{token}` (signed), `POST /sign/{token}` |
+| `legal.html` | `GET /legal` |
+| `admin_teams.html` | `GET /admin/teams` |
+| `admin_invites.html` | `GET /admin/invites` |
+
+## Admin Workflows
+
+### Bypass Links (In-Person Payment)
+Two types, both use `InPersonPaymentToken`:
+1. **User-specific** (`/admin/users/{id}/generate-bypass`): Token tied to existing player. Player visits `/join/{token}` and confirms to get premium + `in_person_paid_until = 2027-03-26`.
+2. **Open** (`/admin/bypass-links/generate`): Token with `user_id=None`. Redirects to `/signup?bypass_token={token}` for new signups. Signup flow sets premium automatically.
+
+Both expire in 7 days. The `expire_in_person.py` cron (daily 9am UTC) checks for expired `in_person_paid_until` dates, emails a renewal notice, and downgrades to free.
+
+### Star Ratings
+`POST /admin/users/{id}/set-stars` — sets `PlayerProfile.stars` (0-5, clamped). Displayed on player profiles.
+
+### Tier Overrides
+`POST /admin/users/{id}/set-tier` — directly sets `User.subscription_tier`. Does NOT update the user's session, so the user won't see the change until they log in again.
+
+### Coach Invites
+- Create: generates UUID token, 7-day expiry, optional note
+- Coaches register at `/signup?invite={token}`
+- Revoke: sets `expires_at` to now
+
+### User Deletion
+`POST /admin/users/{id}/delete` — hard-deletes user + PlayerProfile, CoachProfile, Messages, Videos, Transcripts, Evaluations.
+**Caveats:** Does NOT delete files from DO Spaces (orphaned), does NOT delete local profile photos from `/static/uploads/`, does NOT cancel Stripe subscriptions. Cannot self-delete.
+
+## Stripe Webhook Lifecycle
+
+`POST /stripe/webhook` handles 4 event types:
+
+| Event | Action |
+|-------|--------|
+| `checkout.session.completed` | Sets user tier + subscription ID from metadata |
+| `customer.subscription.updated` | If `active`: updates tier. If `canceled`/`unpaid`/`past_due`: downgrades to free |
+| `customer.subscription.deleted` | Downgrades to free, clears subscription ID |
+| `invoice.payment_failed` | Downgrades to free (looks up user by `stripe_customer_id`, not metadata) |
+
+Webhook does NOT update user sessions — tier change visible on next login.
+
+## Known Gotchas
+
+### Session Staleness
+`subscription_tier` in the session can go stale if changed by:
+- Admin tier override (`set-tier`)
+- Stripe webhook (subscription changes)
+- `expire_in_person.py` cron (downgrades expired bypass users)
+
+Session tier is only refreshed at: login, signup, upgrade success, `/questionnaires`, and `/join/{token}`. Any nav bar or template check using `session["subscription_tier"]` may show stale info until refresh.
+
+### Hardcoded Paths
+9 occurrences of `/home/recruiting/bearcats/` in main.py: DB path, static mount, templates dir, upload dir, signed docs dir, PDF template, and 3 direct `sqlite3.connect()` calls in the school API endpoints.
+
+### School API Bypasses SQLAlchemy
+The 3 `/api/schools/*` endpoints use raw `sqlite3.connect()` instead of SQLAlchemy. They open/close their own connections.
+
+### Player-to-Player Messaging
+Players cannot message other players — only coach-to-player and player-to-coach messaging is allowed.
 
 ## Important Patterns
 
 - **CSRF:** Custom middleware checks origin/referer on non-safe methods; `/stripe/webhook` is exempt
 - **Sessions:** Starlette SessionMiddleware stores `user_id`, `is_admin`, `role`, `subscription_tier`
 - **WebSocket:** Real-time unread message badge updates on all pages
-- **All paths are hardcoded** to `/home/recruiting/bearcats/` (DB, static, templates, uploads, signed_docs)
+- **File validation:** Videos and transcripts validated by magic bytes, not just extension
+- **Image processing:** Gallery images resized to 1200px width, converted to JPEG before S3 upload
 - **Email subjects/from** use "CAP Recruiting" branding (except a few legacy "Bearcats" references in password reset)
+
+## Deployment
+
+After making changes to files on the server:
+1. `systemctl restart bearcats` to apply changes
+2. Commit and push: `cd /home/recruiting/bearcats && git add -A && git commit -m "message" && git push origin main`
 
 ## Post-Change Testing (REQUIRED)
 
@@ -139,5 +323,5 @@ curl -s -o /dev/null -w '%{http_code}' -X POST https://caprecruiting.com/stripe/
 
 **Quick smoke test (one-liner):**
 ```bash
-for url in / /pricing /login /signup /dashboard /forgot-password /api/schools/states /profile/edit /messages /upgrade /questionnaires; do echo -n  ; curl -s -o /dev/null -w '%{http_code}\n' https://caprecruiting.com; done
+for url in / /pricing /login /signup /dashboard /forgot-password /api/schools/states /profile/edit /messages /upgrade /questionnaires; do echo -n "$url "; curl -s -o /dev/null -w '%{http_code}\n' "https://caprecruiting.com$url"; done
 ```
