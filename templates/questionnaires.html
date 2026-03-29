@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Football Questionnaires — CAP Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top" style="max-width:720px;">
+  <div style="text-align:center; margin-bottom:32px;">
+    <h1 style="font-size:32px; font-weight:800; color:#0a1628; margin-bottom:10px;">Football Questionnaires</h1>
+    <p style="color:#6b7280; font-size:15px; max-width:520px; margin:0 auto;">Select a division, conference, and team to open their recruiting questionnaire.</p>
+  </div>
+
+  <!-- Step 1: Division -->
+  <div id="step-division">
+    <div style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:12px;">Step 1: Select Division</div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;">
+      <button onclick="selectDivision('D1')" class="q-btn" id="btn-D1">Division I</button>
+      <button onclick="selectDivision('D2')" class="q-btn" id="btn-D2">Division II</button>
+      <button onclick="selectDivision('D3')" class="q-btn" id="btn-D3">Division III</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Conference -->
+  <div id="step-conference" style="display:none; margin-top:28px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <div style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280;">Step 2: Select Conference</div>
+      <button onclick="resetToDiv()" style="background:none; border:none; color:#f0b429; font-size:13px; font-weight:600; cursor:pointer;">&larr; Back</button>
+    </div>
+    <div id="conference-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;"></div>
+  </div>
+
+  <!-- Step 3: Teams -->
+  <div id="step-teams" style="display:none; margin-top:28px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <div style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280;">Step 3: Select Team</div>
+      <button onclick="resetToConf()" style="background:none; border:none; color:#f0b429; font-size:13px; font-weight:600; cursor:pointer;">&larr; Back</button>
+    </div>
+    <div id="team-list" style="display:grid; grid-template-columns:1fr; gap:8px;"></div>
+  </div>
+</div>
+
+<style>
+.q-btn {
+  background:#fff; border:2px solid #e5e7eb; border-radius:12px; padding:16px 12px;
+  font-size:15px; font-weight:700; color:#0a1628; cursor:pointer; transition:all .15s;
+}
+.q-btn:hover { border-color:#f0b429; background:#fffbeb; }
+.q-btn.active { border-color:#f0b429; background:#f0b429; color:#0a1628; }
+.q-team {
+  display:flex; justify-content:space-between; align-items:center;
+  background:#fff; border:2px solid #e5e7eb; border-radius:10px; padding:14px 18px;
+  font-size:14px; font-weight:600; color:#0a1628; cursor:pointer; transition:all .15s;
+  text-decoration:none;
+}
+.q-team:hover { border-color:#f0b429; background:#fffbeb; }
+.q-team span.arrow { color:#f0b429; font-size:18px; }
+</style>
+
+<script>
+const DATA = {{ data | tojson }};
+let currentDiv = null;
+let currentConf = null;
+
+function selectDivision(div) {
+  currentDiv = div;
+  document.querySelectorAll('#step-division .q-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + div).classList.add('active');
+  const confs = Object.keys(DATA[div] || {}).sort();
+  const el = document.getElementById('conference-list');
+  el.innerHTML = confs.map(c =>
+    `<button class="q-btn" onclick="selectConference('${c.replace(/'/g, "\\'")}')">${c}</button>`
+  ).join('');
+  document.getElementById('step-conference').style.display = '';
+  document.getElementById('step-teams').style.display = 'none';
+}
+
+function selectConference(conf) {
+  currentConf = conf;
+  const teams = DATA[currentDiv][conf];
+  const sorted = Object.keys(teams).sort();
+  const el = document.getElementById('team-list');
+  el.innerHTML = sorted.map(t => {
+    const link = teams[t];
+    return `<a href="${link}" target="_blank" rel="noopener" class="q-team">
+      <span>${t}</span><span class="arrow">&rarr;</span>
+    </a>`;
+  }).join('');
+  document.getElementById('step-teams').style.display = '';
+}
+
+function resetToDiv() {
+  currentDiv = null;
+  document.querySelectorAll('#step-division .q-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('step-conference').style.display = 'none';
+  document.getElementById('step-teams').style.display = 'none';
+}
+
+function resetToConf() {
+  document.getElementById('step-teams').style.display = 'none';
+}
+</script>
+{% endblock %}
