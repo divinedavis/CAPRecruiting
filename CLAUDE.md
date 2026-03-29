@@ -95,3 +95,49 @@ After making changes to files on the server:
 - **WebSocket:** Real-time unread message badge updates on all pages
 - **All paths are hardcoded** to `/home/recruiting/bearcats/` (DB, static, templates, uploads, signed_docs)
 - **Email subjects/from** use "CAP Recruiting" branding (except a few legacy "Bearcats" references in password reset)
+
+## Post-Change Testing (REQUIRED)
+
+After every change, restart the service and test ALL key endpoints to verify nothing is broken:
+
+```bash
+systemctl restart bearcats && sleep 2
+
+# Check service is running
+systemctl status bearcats | head -5
+
+# Public pages
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/pricing
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/login
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/signup
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/dashboard
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/forgot-password
+
+# API endpoints
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/api/schools/states
+curl -s -o /dev/null -w '%{http_code}' 'https://caprecruiting.com/api/schools/cities?state=PA'
+curl -s -o /dev/null -w '%{http_code}' 'https://caprecruiting.com/api/schools/list?state=PA&city=Pittsburgh'
+
+# Auth-required pages (should return 302 redirect to /login)
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/profile/edit
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/messages
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/upgrade
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/questionnaires
+curl -s -o /dev/null -w '%{http_code}' https://caprecruiting.com/legal
+
+# Stripe webhook endpoint (should return 400, not 500 — means route is reachable)
+curl -s -o /dev/null -w '%{http_code}' -X POST https://caprecruiting.com/stripe/webhook
+```
+
+**Expected results:**
+- Public pages: `200`
+- Auth-required pages: `302` (redirect to login) or `200` if testing logged in
+- API endpoints: `200` with JSON
+- Stripe webhook: `400` (bad request, no payload) — NOT `500`
+- If ANY endpoint returns `500`, investigate immediately before committing
+
+**Quick smoke test (one-liner):**
+```bash
+for url in / /pricing /login /signup /dashboard /forgot-password /api/schools/states /profile/edit /messages /upgrade /questionnaires; do echo -n  ; curl -s -o /dev/null -w '%{http_code}\n' https://caprecruiting.com; done
+```
