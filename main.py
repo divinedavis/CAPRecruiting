@@ -16,6 +16,8 @@ import bcrypt
 import stripe
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
+import logging
+_logger = logging.getLogger("bearcats")
 
 app = FastAPI()
 
@@ -128,6 +130,25 @@ class _SessionRefreshMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 app.add_middleware(_SessionRefreshMiddleware)
+
+class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject non-upload POST requests with bodies larger than 1MB."""
+    _UPLOAD_PATHS = {"/profile/upload-photo", "/profile/videos/upload",
+                     "/profile/images/upload", "/profile/transcripts/upload"}
+    _MAX_BODY = 1 * 1024 * 1024  # 1MB
+
+    async def dispatch(self, request, call_next):
+        if request.method == "POST":
+            is_upload = any(request.url.path.startswith(p) for p in self._UPLOAD_PATHS)
+            if not is_upload:
+                cl = request.headers.get("content-length")
+                if cl and int(cl) > self._MAX_BODY:
+                    return _StarletteResponse("Request body too large", status_code=413)
+        return await call_next(request)
+
+app.add_middleware(_BodySizeLimitMiddleware)
+
+
 
 from starlette.middleware.cors import CORSMiddleware
 app.add_middleware(
@@ -917,7 +938,7 @@ async def send_reset_email(to_email: str, reset_url: str):
     try:
         await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
     except Exception as e:
-        print(f"Email send error: {e}")
+        _logger.warning("Email send error: %s", type(e).__name__)
 
 async def send_player_signup_notification(player_username: str, player_email: str, school: str):
     try:
@@ -1589,16 +1610,17 @@ async def upload_transcript(
     contents = await transcript.read()
     if len(contents) > TRANSCRIPT_MAX_BYTES:
         return RedirectResponse(redirect_to + "?transcript_error=size", status_code=302)
-    # Magic byte check
+    # Magic byte check — reject if magic detects wrong type, allow if magic unavailable
     try:
         import magic as _magic
         _detected = _magic.from_buffer(contents[:512], mime=True)
         _allowed_mimes = {"application/pdf", "application/msword",
-                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                          "application/octet-stream"}
         if _detected not in _allowed_mimes:
             return RedirectResponse(redirect_to + "?transcript_error=type", status_code=302)
-    except Exception:
-        pass
+    except ImportError:
+        pass  # magic not installed — allow based on extension only
 
     import io
     key = f"transcripts/{target_user_id}/{uuid.uuid4().hex}.{ext}"
@@ -1692,7 +1714,7 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
         presigned_url = s3.generate_presigned_url(
             "get_object",
             Params={"Bucket": SPACES_BUCKET, "Key": _key},
-            ExpiresIn=3600
+            ExpiresIn=600  # 10 minutes
         )
     except Exception:
         presigned_url = t.file_url
@@ -2395,6 +2417,7 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     doc.save(filepath)
     doc.close()
 
+    _backup_signed_doc_to_s3(filepath, filename)
     contract.status = "signed"
     contract.signed_pdf_path = filename
     contract.signed_at = datetime.utcnow()
@@ -2438,6 +2461,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
     except WebSocketDisconnect:
         manager.disconnect(user_id, websocket)
 
+
+def _backup_signed_doc_to_s3(filepath: str, filename: str):
+    """Upload signed legal doc to S3 as backup."""
+    try:
+        s3.upload_fileobj(
+            open(filepath, "rb"),
+            SPACES_BUCKET,
+            f"signed-docs-backup/{filename}",
+            ExtraArgs={"ContentType": "application/pdf"}
+        )
+    except Exception:
+        pass
+
 UPLOAD_DIR = "/home/recruiting/bearcats/static/uploads"
 SIGNED_DOCS_DIR = "/home/recruiting/bearcats/signed_docs"
 TEMPLATE_PDF = "/home/recruiting/bearcats/static/docs/cap_agreement.pdf"
@@ -2478,11 +2514,26 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
     else:
         target_user_id = user_id
 
-    filename = f"{target_user_id}_{uuid.uuid4().hex[:8]}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
+    # Upload to S3 instead of local disk for security (non-enumerable URLs)
+    import io as _io2
+    from PIL import Image as _PIL2
+    img = _PIL2.open(_io2.BytesIO(contents)).convert("RGB")
+    img.thumbnail((1200, 1200), _PIL2.LANCZOS)
+    buf = _io2.BytesIO()
+    img.save(buf, format="JPEG", quality=82, optimize=True)
+    buf.seek(0)
 
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    s3_key = f"profile-photos/{target_user_id}/{uuid.uuid4().hex}.jpg"
+    try:
+        s3.upload_fileobj(
+            buf, SPACES_BUCKET, s3_key,
+            ExtraArgs={"ACL": "public-read", "ContentType": "image/jpeg"}
+        )
+    except Exception:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": "Upload failed. Please try again."}, status_code=500)
+
+    new_photo_url = f"{SPACES_BASE_URL}/{s3_key}"
 
     target_user = db.query(User).filter(User.id == target_user_id).first()
     if target_user and target_user.role == "player":
@@ -2490,23 +2541,37 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
         if p is None:
             p = PlayerProfile(user_id=target_user_id)
             db.add(p)
-        if p.photo and os.path.exists(os.path.join(UPLOAD_DIR, os.path.basename(p.photo))):
+        # Delete old photo from S3 if it was an S3 URL
+        if p.photo and SPACES_BASE_URL in p.photo:
+            try:
+                old_key = p.photo.replace(f"{SPACES_BASE_URL}/", "")
+                s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
+            except Exception:
+                pass
+        # Delete old local photo if exists
+        elif p.photo and os.path.exists(os.path.join(UPLOAD_DIR, os.path.basename(p.photo))):
             try:
                 os.remove(os.path.join(UPLOAD_DIR, os.path.basename(p.photo)))
-            except:
+            except Exception:
                 pass
-        p.photo = f"/static/uploads/{filename}"
+        p.photo = new_photo_url
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == target_user_id).first()
         if c is None:
             c = CoachProfile(user_id=target_user_id)
             db.add(c)
-        if c.photo and os.path.exists(os.path.join(UPLOAD_DIR, os.path.basename(c.photo))):
+        if c.photo and SPACES_BASE_URL in c.photo:
+            try:
+                old_key = c.photo.replace(f"{SPACES_BASE_URL}/", "")
+                s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
+            except Exception:
+                pass
+        elif c.photo and os.path.exists(os.path.join(UPLOAD_DIR, os.path.basename(c.photo))):
             try:
                 os.remove(os.path.join(UPLOAD_DIR, os.path.basename(c.photo)))
-            except:
+            except Exception:
                 pass
-        c.photo = f"/static/uploads/{filename}"
+        c.photo = new_photo_url
     db.commit()
 
     # Redirect admin back to the target user's admin edit page, others to their own edit page
@@ -2805,6 +2870,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 user.stripe_subscription_id = sub_id
             db.commit()
 
+    # Reject replayed events older than 5 minutes
+    import time as _time
+    _event_created = event.get("created", 0)
+    if _event_created and abs(_time.time() - _event_created) > 300:
+        raise HTTPException(status_code=400, detail="Stale webhook event")
+
     etype = event["type"]
 
     if etype in ("checkout.session.completed",):
@@ -2870,18 +2941,18 @@ async def questionnaires_page(request: Request, db: Session = Depends(get_db)):
     })
 
 @app.get("/api/schools/states")
-def schools_states(db: Session = Depends(get_db)):
+def schools_states(request: Request, db: Session = Depends(get_db)):
     from sqlalchemy import text as _text; rows = db.execute(_text("SELECT DISTINCT state FROM schools ORDER BY state")).fetchall()
     return JSONResponse([r[0] for r in rows])
 
 @app.get("/api/schools/cities")
-def schools_cities(state: str, db: Session = Depends(get_db)):
+def schools_cities(state: str, request: Request, db: Session = Depends(get_db)):
     from sqlalchemy import text
     rows = db.execute(text("SELECT DISTINCT city FROM schools WHERE state=:state ORDER BY city"), {"state": state.upper()}).fetchall()
     return JSONResponse([r[0] for r in rows])
 
 @app.get("/api/schools/list")
-def schools_list(state: str, city: str, db: Session = Depends(get_db)):
+def schools_list(state: str, city: str, request: Request, db: Session = Depends(get_db)):
     from sqlalchemy import text
     rows = db.execute(text("SELECT DISTINCT name FROM schools WHERE state=:state AND city=:city ORDER BY name"), {"state": state.upper(), "city": city}).fetchall()
     return JSONResponse([r[0] for r in rows])
