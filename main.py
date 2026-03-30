@@ -81,6 +81,23 @@ _session_secret = os.environ.get("SESSION_SECRET", "")
 if not _session_secret or _session_secret == "change-me":
     raise RuntimeError("SESSION_SECRET environment variable must be set to a strong random value")
 SESSION_MAX_AGE = 86400  # 24 hours
+
+# ── Message encryption at rest ─────────────────────────────────────────────────
+from cryptography.fernet import Fernet
+import hashlib, base64
+_msg_key = base64.urlsafe_b64encode(hashlib.sha256(_session_secret.encode()).digest())
+_fernet = Fernet(_msg_key)
+
+def encrypt_message(plaintext: str) -> str:
+    return _fernet.encrypt(plaintext.encode()).decode()
+
+def decrypt_message(ciphertext: str) -> str:
+    try:
+        return _fernet.decrypt(ciphertext.encode()).decode()
+    except Exception:
+        return ciphertext  # fallback for old unencrypted messages
+
+
 app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=True, same_site="lax", max_age=SESSION_MAX_AGE)
 
 
@@ -393,6 +410,7 @@ Base.metadata.create_all(bind=engine)
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 app.mount("/static", StaticFiles(directory="/home/recruiting/bearcats/static"), name="static")
+app.mount("/.well-known", StaticFiles(directory="/home/recruiting/bearcats/static/.well-known"), name="well-known")
 templates = Jinja2Templates(directory="/home/recruiting/bearcats/templates")
 
 def get_db():
@@ -442,8 +460,8 @@ def record_login_attempt(db: Session, ip: str, username: str, success: bool):
     """Record a login attempt for rate limiting."""
     db.add(LoginAttempt(ip_address=ip, username=username, success=success))
     db.commit()
-    # Clean up old attempts (older than 1 hour)
-    old_cutoff = datetime.utcnow() - timedelta(hours=1)
+    # Clean up old login attempts (older than 24 hours)
+    old_cutoff = datetime.utcnow() - timedelta(hours=24)
     db.query(LoginAttempt).filter(LoginAttempt.attempted_at < old_cutoff).delete()
     db.commit()
 
@@ -2237,6 +2255,7 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
     ).order_by(Message.timestamp.asc()).all()
 
     for m in msgs:
+        m._decrypted_content = decrypt_message(m.content)
         if m.receiver_id == user_id and not m.read:
             m.read = True
     db.commit()
@@ -2662,7 +2681,7 @@ async def conversation_post(username: str, request: Request, db: Session = Depen
     form = await request.form()
     text = form.get("content", "").strip()[:2000]
     if text:
-        msg = Message(sender_id=user_id, receiver_id=peer.id, content=text)
+        msg = Message(sender_id=user_id, receiver_id=peer.id, content=encrypt_message(text))
         db.add(msg)
         db.commit()
         db.refresh(msg)
@@ -2708,7 +2727,7 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     if not text:
         return JSONResponse({"error": "Empty message"}, status_code=400)
 
-    msg = Message(sender_id=user_id, receiver_id=peer.id, content=text)
+    msg = Message(sender_id=user_id, receiver_id=peer.id, content=encrypt_message(text))
     db.add(msg)
     db.commit()
     db.refresh(msg)
@@ -2771,6 +2790,153 @@ async def admin_migrate_local_photos(request: Request, db: Session = Depends(get
     _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
     log_admin_action(db, admin.id, "migrate_local_photos", detail=f"migrated={migrated}", ip=_ip)
     return JSONResponse({"migrated": migrated})
+
+
+
+@app.post("/admin/fix-s3-acl")
+async def admin_fix_s3_acl(request: Request, db: Session = Depends(get_db)):
+    """Strip public-read ACL from all existing S3 objects, making them private."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    fixed = 0
+    errors = 0
+    # Collect all S3 keys from DB
+    keys = []
+    for vid in db.query(Video).all():
+        if vid.url and SPACES_BASE_URL in vid.url:
+            keys.append(vid.url.replace(f"{SPACES_BASE_URL}/", ""))
+    for vid in db.query(Video).all():
+        if vid.embed_url and SPACES_BASE_URL in vid.embed_url and vid.embed_url != vid.url:
+            keys.append(vid.embed_url.replace(f"{SPACES_BASE_URL}/", ""))
+    for img in db.query(ProfileImage).all():
+        if img.file_url and SPACES_BASE_URL in img.file_url:
+            keys.append(img.file_url.replace(f"{SPACES_BASE_URL}/", ""))
+    for tr in db.query(Transcript).all():
+        if tr.file_url and SPACES_BASE_URL in tr.file_url:
+            keys.append(tr.file_url.replace(f"{SPACES_BASE_URL}/", ""))
+    # Also profile photos on S3
+    for p in db.query(PlayerProfile).all():
+        if p.photo and SPACES_BASE_URL in p.photo:
+            keys.append(p.photo.replace(f"{SPACES_BASE_URL}/", ""))
+    for c in db.query(CoachProfile).all():
+        if c.photo and SPACES_BASE_URL in c.photo:
+            keys.append(c.photo.replace(f"{SPACES_BASE_URL}/", ""))
+    for key in keys:
+        try:
+            s3.put_object_acl(Bucket=SPACES_BUCKET, Key=key, ACL="private")
+            fixed += 1
+        except Exception:
+            errors += 1
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "fix_s3_acl", detail=f"fixed={fixed} errors={errors}", ip=_ip)
+    return JSONResponse({"fixed": fixed, "errors": errors})
+
+
+
+@app.post("/account/delete")
+async def delete_own_account(request: Request, db: Session = Depends(get_db)):
+    """Allow users to delete their own account and all associated data."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    form = await request.form()
+    confirm = form.get("confirm_delete", "")
+    if confirm != "DELETE":
+        return RedirectResponse("/profile/edit?delete_error=1", status_code=302)
+    # Clean up S3 files
+    for vid in db.query(Video).filter(Video.user_id == user_id).all():
+        try:
+            key = vid.url.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+        except Exception:
+            pass
+    for img in db.query(ProfileImage).filter(ProfileImage.user_id == user_id).all():
+        try:
+            key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+        except Exception:
+            pass
+    for tr in db.query(Transcript).filter(Transcript.user_id == user_id).all():
+        try:
+            key = tr.file_url.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+        except Exception:
+            pass
+    # Delete local profile photo if exists
+    pp = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+    cp = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
+    for prof in (pp, cp):
+        if prof and hasattr(prof, "photo") and prof.photo:
+            if SPACES_BASE_URL in prof.photo:
+                try:
+                    old_key = prof.photo.replace(f"{SPACES_BASE_URL}/", "")
+                    s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
+                except Exception:
+                    pass
+            else:
+                local_path = os.path.join("/home/recruiting/bearcats/static/uploads", os.path.basename(prof.photo))
+                if os.path.exists(local_path):
+                    try:
+                        os.remove(local_path)
+                    except Exception:
+                        pass
+    # Delete DB records
+    db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).delete()
+    db.query(CoachProfile).filter(CoachProfile.user_id == user_id).delete()
+    db.query(Message).filter((Message.sender_id == user_id) | (Message.receiver_id == user_id)).delete()
+    db.query(Video).filter(Video.user_id == user_id).delete()
+    db.query(ProfileImage).filter(ProfileImage.user_id == user_id).delete()
+    db.query(Transcript).filter(Transcript.user_id == user_id).delete()
+    db.query(Evaluation).filter((Evaluation.coach_id == user_id) | (Evaluation.player_id == user_id)).delete()
+    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user_id).delete()
+    db.query(LoginAttempt).filter(LoginAttempt.username == user.username).delete()
+    db.delete(user)
+    db.commit()
+    request.session.clear()
+    return RedirectResponse("/?deleted=1", status_code=302)
+
+
+
+@app.post("/admin/cleanup-old-ips")
+async def admin_cleanup_old_ips(request: Request, db: Session = Depends(get_db)):
+    """Anonymize IP addresses in audit logs and login attempts older than 90 days."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    cutoff = datetime.utcnow() - timedelta(days=90)
+    # Anonymize old login attempts
+    old_logins = db.query(LoginAttempt).filter(LoginAttempt.attempted_at < cutoff).count()
+    db.query(LoginAttempt).filter(LoginAttempt.attempted_at < cutoff).delete()
+    # Anonymize old audit log IPs
+    old_audits = db.query(AdminAuditLog).filter(AdminAuditLog.created_at < cutoff).update({"ip_address": ""})
+    db.commit()
+    return JSONResponse({"deleted_login_attempts": old_logins, "anonymized_audit_ips": old_audits})
+
+
+
+@app.exception_handler(404)
+async def custom_404(request: Request, exc):
+    return HTMLResponse(
+        content="<html><head><title>Not Found</title></head><body style='font-family:sans-serif;text-align:center;padding:60px;'><h1>404</h1><p>Page not found.</p><a href='/'>Go Home</a></body></html>",
+        status_code=404
+    )
+
+@app.exception_handler(500)
+async def custom_500(request: Request, exc):
+    return HTMLResponse(
+        content="<html><head><title>Error</title></head><body style='font-family:sans-serif;text-align:center;padding:60px;'><h1>500</h1><p>Something went wrong.</p><a href='/'>Go Home</a></body></html>",
+        status_code=500
+    )
 
 # ── Stripe Routes ──────────────────────────────────────────────────────────────
 
