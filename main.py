@@ -120,9 +120,13 @@ class _SessionRefreshMiddleware(BaseHTTPMiddleware):
             try:
                 user = db.query(User).filter(User.id == user_id).first()
                 if user:
-                    request.session["is_admin"] = bool(user.is_admin)
-                    request.session["role"] = user.role
-                    request.session["subscription_tier"] = user.subscription_tier or "free"
+                    # Check session version — if mismatched, force logout
+                    if request.session.get("session_version", 0) != (user.session_version or 0):
+                        request.session.clear()
+                    else:
+                        request.session["is_admin"] = bool(user.is_admin)
+                        request.session["role"] = user.role
+                        request.session["subscription_tier"] = user.subscription_tier or "free"
                 else:
                     request.session.clear()
             finally:
@@ -187,6 +191,7 @@ class User(Base):
     stripe_subscription_id = Column(String, default="")
     in_person_paid_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    session_version = Column(Integer, default=0)
 
 class PlayerProfile(Base):
     __tablename__ = "player_profiles"
@@ -816,6 +821,8 @@ async def signup_post(
             return err("This invite link is invalid or has expired.")
     if role == "player" and not school_name.strip():
         return err("Players must select their high school.")
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return err("Please enter a valid email address.")
     if len(username) > 30:
         return err("Username must be 30 characters or fewer.")
     if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
@@ -824,8 +831,9 @@ async def signup_post(
         return err("Username already taken.")
     if db.query(User).filter(User.email == email).first():
         return err("Email already registered.")
-    if len(password) < 8:
-        return err("Password must be at least 8 characters.")
+    pw_err = validate_password_strength(password)
+    if pw_err:
+        return err(pw_err)
 
     # Resolve coach team: create new team if name provided, else use selected id
     coach_tid = None
@@ -868,6 +876,7 @@ async def signup_post(
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
     request.session["subscription_tier"] = user.subscription_tier or "free"
+    request.session["session_version"] = user.session_version or 0
     if role == "player":
         import asyncio
         asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
@@ -986,10 +995,11 @@ async def forgot_password_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     email = (form.get("email") or "").strip().lower()
     user = db.query(User).filter(User.email == email).first()
-    # Always show success to prevent email enumeration
+    # Always do the same work to prevent timing-based email enumeration
+    import secrets as _secrets
+    _dummy_token = _secrets.token_urlsafe(32)
+    _dummy_url = f"{SITE_URL}/reset-password/{_dummy_token}"
     if user:
-        import secrets as _secrets
-        from datetime import timedelta
         token_str = _secrets.token_urlsafe(32)
         expires = datetime.utcnow() + timedelta(hours=1)
         db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id, PasswordResetToken.used == 0).delete()
@@ -997,6 +1007,9 @@ async def forgot_password_post(request: Request, db: Session = Depends(get_db)):
         db.commit()
         reset_url = f"{SITE_URL}/reset-password/{token_str}"
         await send_reset_email(email, reset_url)
+    else:
+        # Burn roughly the same time as a real email send to prevent timing leaks
+        await asyncio.sleep(0.5)
     return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": True, "error": None})
 
 @app.get("/reset-password/{token}", response_class=HTMLResponse)
@@ -1022,8 +1035,9 @@ async def reset_password_post(token: str, request: Request, db: Session = Depend
     form = await request.form()
     password = form.get("password", "")
     confirm = form.get("confirm", "")
-    if len(password) < 8:
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Password must be at least 8 characters."})
+    pw_err = validate_password_strength(password)
+    if pw_err:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": pw_err})
     if password != confirm:
         return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Passwords do not match."})
     user = db.query(User).filter(User.id == rec.user_id).first()
@@ -1063,6 +1077,22 @@ async def login_post(
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
+
+
+@app.post("/account/logout-all")
+async def logout_all_sessions(request: Request, db: Session = Depends(get_db)):
+    """Invalidate all other sessions by bumping session_version."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    user.session_version = (user.session_version or 0) + 1
+    db.commit()
+    # Update current session to new version so we stay logged in
+    request.session["session_version"] = user.session_version
+    return RedirectResponse("/profile/edit?success=1", status_code=302)
 
 # Keep GET as fallback for direct URL visits
 @app.get("/logout")
@@ -1421,7 +1451,7 @@ async def upload_video(
                 file_data,
                 SPACES_BUCKET,
                 key,
-                ExtraArgs={"ACL": "public-read", "ContentType": content_type}
+                ExtraArgs={"ContentType": content_type}
             )
         )
     except Exception:
@@ -1544,7 +1574,7 @@ async def upload_profile_image(request: Request, db: Session = Depends(get_db)):
         try:
             s3.upload_fileobj(
                 upload_bytes, SPACES_BUCKET, key,
-                ExtraArgs={"ACL": "public-read", "ContentType": content_type}
+                ExtraArgs={"ContentType": content_type}
             )
             db.add(ProfileImage(user_id=target_user_id, file_url=f"{SPACES_BASE_URL}/{key}"))
         except Exception:
@@ -2455,9 +2485,18 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
 
     await manager.connect(user_id, websocket)
     try:
+        _ws_msg_count = 0
+        _ws_window_start = datetime.utcnow()
         while True:
-            # Keep connection alive; actual sending is done server-side via manager
             await websocket.receive_text()
+            _ws_msg_count += 1
+            _elapsed = (datetime.utcnow() - _ws_window_start).total_seconds()
+            if _elapsed < 1.0 and _ws_msg_count > 20:
+                await websocket.close(code=4029)
+                break
+            if _elapsed >= 1.0:
+                _ws_msg_count = 0
+                _ws_window_start = datetime.utcnow()
     except WebSocketDisconnect:
         manager.disconnect(user_id, websocket)
 
@@ -2527,7 +2566,7 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
     try:
         s3.upload_fileobj(
             buf, SPACES_BUCKET, s3_key,
-            ExtraArgs={"ACL": "public-read", "ContentType": "image/jpeg"}
+            ExtraArgs={"ContentType": "image/jpeg"}
         )
     except Exception:
         from fastapi.responses import JSONResponse
@@ -2690,6 +2729,48 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     await manager.send_to_user(peer.id, {"type": "unread", "count": unread})
 
     return JSONResponse({"ok": True, "message": payload})
+
+
+
+@app.post("/admin/migrate-local-photos")
+async def admin_migrate_local_photos(request: Request, db: Session = Depends(get_db)):
+    """One-time migration: move local /static/uploads/ photos to S3."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    import io as _mig_io
+    migrated = 0
+    for profile in db.query(PlayerProfile).all():
+        if profile.photo and profile.photo.startswith("/static/uploads/"):
+            local_path = "/home/recruiting/bearcats" + profile.photo
+            if os.path.exists(local_path):
+                s3_key = f"profile-photos/{profile.user_id}/{uuid.uuid4().hex}.jpg"
+                try:
+                    with open(local_path, "rb") as fh:
+                        s3.upload_fileobj(fh, SPACES_BUCKET, s3_key, ExtraArgs={"ContentType": "image/jpeg"})
+                    profile.photo = f"{SPACES_BASE_URL}/{s3_key}"
+                    migrated += 1
+                except Exception:
+                    pass
+    for profile in db.query(CoachProfile).all():
+        if profile.photo and profile.photo.startswith("/static/uploads/"):
+            local_path = "/home/recruiting/bearcats" + profile.photo
+            if os.path.exists(local_path):
+                s3_key = f"profile-photos/{profile.user_id}/{uuid.uuid4().hex}.jpg"
+                try:
+                    with open(local_path, "rb") as fh:
+                        s3.upload_fileobj(fh, SPACES_BUCKET, s3_key, ExtraArgs={"ContentType": "image/jpeg"})
+                    profile.photo = f"{SPACES_BASE_URL}/{s3_key}"
+                    migrated += 1
+                except Exception:
+                    pass
+    db.commit()
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "migrate_local_photos", detail=f"migrated={migrated}", ip=_ip)
+    return JSONResponse({"migrated": migrated})
 
 # ── Stripe Routes ──────────────────────────────────────────────────────────────
 
