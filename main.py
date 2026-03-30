@@ -2220,6 +2220,8 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
             Message.receiver_id == user_id,
             Message.read == False
         ).count()
+        if last_msg:
+            last_msg.content = decrypt_message(last_msg.content)
         conversations.append({"peer": peer, "last_msg": last_msg, "unread": unread})
 
     conversations.sort(key=lambda x: x["last_msg"].timestamp if x["last_msg"] else datetime.min, reverse=True)
@@ -2255,7 +2257,7 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
     ).order_by(Message.timestamp.asc()).all()
 
     for m in msgs:
-        m._decrypted_content = decrypt_message(m.content)
+        m.content = decrypt_message(m.content)
         if m.receiver_id == user_id and not m.read:
             m.read = True
     db.commit()
