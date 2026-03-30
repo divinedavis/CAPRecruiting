@@ -78,7 +78,8 @@ manager = ConnectionManager()
 _session_secret = os.environ.get("SESSION_SECRET", "")
 if not _session_secret or _session_secret == "change-me":
     raise RuntimeError("SESSION_SECRET environment variable must be set to a strong random value")
-app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=True, same_site="lax")
+SESSION_MAX_AGE = 86400  # 24 hours
+app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=True, same_site="lax", max_age=SESSION_MAX_AGE)
 
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -105,6 +106,28 @@ class _CSRFMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 app.add_middleware(_CSRFMiddleware)
+
+class _SessionRefreshMiddleware(BaseHTTPMiddleware):
+    """Re-verify is_admin and role from DB on every request so revoked
+    privileges take effect immediately without requiring logout."""
+
+    async def dispatch(self, request, call_next):
+        user_id = request.session.get("user_id") if "session" in request.scope else None
+        if user_id:
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == user_id).first()
+                if user:
+                    request.session["is_admin"] = bool(user.is_admin)
+                    request.session["role"] = user.role
+                    request.session["subscription_tier"] = user.subscription_tier or "free"
+                else:
+                    request.session.clear()
+            finally:
+                db.close()
+        return await call_next(request)
+
+app.add_middleware(_SessionRefreshMiddleware)
 
 SQLALCHEMY_DATABASE_URL = "sqlite:////home/recruiting/bearcats/recruiting.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -1310,8 +1333,11 @@ async def upload_video(
     ext = video.filename.rsplit(".", 1)[-1].lower() if "." in video.filename else ""
     if ext not in VIDEO_ALLOWED_EXTENSIONS:
         return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
-    # Magic byte check
+    # File size check - enforce VIDEO_MAX_BYTES at app level
     _video_header = await video.read(512)
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > VIDEO_MAX_BYTES:
+        return RedirectResponse(redirect_to + "?video_error=size", status_code=302)
     await video.seek(0)
     try:
         import magic as _magic
@@ -1631,8 +1657,8 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
     if ext == "pdf":
         viewer_url = presigned_url
     else:
-        from urllib.parse import quote
-        viewer_url = "https://docs.google.com/viewer?url=" + quote(presigned_url, safe="") + "&embedded=true"
+        # Non-PDF: redirect to download instead of leaking presigned URL to Google
+        return RedirectResponse(f"/profile/transcripts/{transcript_id}/download", status_code=302)
     from html import escape as _escape
     title = t.title or t.filename or "Transcript"
     safe_title = _escape(title)
@@ -1951,10 +1977,41 @@ async def admin_delete_user(target_id: int, request: Request, db: Session = Depe
         raise HTTPException(status_code=404)
     if target.id == admin.id:
         return RedirectResponse("/dashboard", status_code=302)
+    # Clean up S3 files before deleting DB records
+    for vid in db.query(Video).filter(Video.user_id == target_id).all():
+        try:
+            key = vid.url.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+        except Exception:
+            pass
+    for img in db.query(ProfileImage).filter(ProfileImage.user_id == target_id).all():
+        try:
+            key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+        except Exception:
+            pass
+    for tr in db.query(Transcript).filter(Transcript.user_id == target_id).all():
+        try:
+            key = tr.file_url.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
+        except Exception:
+            pass
+    # Delete local profile photo if exists
+    pp = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first()
+    cp = db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
+    for prof in (pp, cp):
+        if prof and hasattr(prof, "photo") and prof.photo:
+            local_path = os.path.join("/home/recruiting/bearcats/static/uploads", os.path.basename(prof.photo))
+            if os.path.exists(local_path):
+                try:
+                    os.remove(local_path)
+                except Exception:
+                    pass
     db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).delete()
     db.query(CoachProfile).filter(CoachProfile.user_id == target_id).delete()
     db.query(Message).filter((Message.sender_id == target_id) | (Message.receiver_id == target_id)).delete()
     db.query(Video).filter(Video.user_id == target_id).delete()
+    db.query(ProfileImage).filter(ProfileImage.user_id == target_id).delete()
     db.query(Transcript).filter(Transcript.user_id == target_id).delete()
     db.query(Evaluation).filter((Evaluation.coach_id == target_id) | (Evaluation.player_id == target_id)).delete()
     db.delete(target)
@@ -2307,7 +2364,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = D
         import json as _json
         from base64 import b64decode as _b64d
         _signer = _itsd.TimestampSigner(str(_session_secret))
-        _data = _signer.unsign(session_cookie, max_age=None)
+        _data = _signer.unsign(session_cookie, max_age=SESSION_MAX_AGE)
         _session_data = _json.loads(_b64d(_data))
         if _session_data.get("user_id") != user_id:
             await websocket.close(code=4003)
