@@ -307,6 +307,16 @@ class InPersonPaymentToken(Base):
     expires_at = Column(DateTime, nullable=False)
     used_at    = Column(DateTime, nullable=True)
 
+
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+    id = Column(Integer, primary_key=True)
+    ip_address = Column(String, nullable=False, index=True)
+    username = Column(String, default="")
+    attempted_at = Column(DateTime, default=datetime.utcnow)
+    success = Column(Boolean, default=False)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -327,6 +337,44 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
+
+
+
+def validate_password_strength(password: str) -> str:
+    """Return error message if password is weak, or empty string if OK."""
+    if len(password) < 8:
+        return "Password must be at least 8 characters."
+    if not re.search(r'[A-Z]', password):
+        return "Password must contain at least one uppercase letter."
+    if not re.search(r'[a-z]', password):
+        return "Password must contain at least one lowercase letter."
+    if not re.search(r'[0-9]', password):
+        return "Password must contain at least one number."
+    if not re.search(r'[^A-Za-z0-9]', password):
+        return "Password must contain at least one special character."
+    return ""
+
+MAX_LOGIN_ATTEMPTS = 10
+LOGIN_LOCKOUT_MINUTES = 15
+
+def check_login_lockout(db: Session, ip: str) -> bool:
+    """Return True if the IP is currently locked out."""
+    cutoff = datetime.utcnow() - timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+    recent_failures = db.query(LoginAttempt).filter(
+        LoginAttempt.ip_address == ip,
+        LoginAttempt.success == False,
+        LoginAttempt.attempted_at > cutoff
+    ).count()
+    return recent_failures >= MAX_LOGIN_ATTEMPTS
+
+def record_login_attempt(db: Session, ip: str, username: str, success: bool):
+    """Record a login attempt for rate limiting."""
+    db.add(LoginAttempt(ip_address=ip, username=username, success=success))
+    db.commit()
+    # Clean up old attempts (older than 1 hour)
+    old_cutoff = datetime.utcnow() - timedelta(hours=1)
+    db.query(LoginAttempt).filter(LoginAttempt.attempted_at < old_cutoff).delete()
+    db.commit()
 
 def unread_sender_count(db: Session, user_id: int) -> int:
     """Count unique senders who have unread messages for user_id."""
