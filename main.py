@@ -209,6 +209,7 @@ class User(Base):
     in_person_paid_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     session_version = Column(Integer, default=0)
+    public_id = Column(String, unique=True, index=True)
 
 class PlayerProfile(Base):
     __tablename__ = "player_profiles"
@@ -419,6 +420,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def _generate_public_id() -> str:
+    return uuid.uuid4().hex[:12]
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -759,6 +763,24 @@ def _offer_div_counts(profile):
                 counts[div] += 1
     return counts
 
+
+@app.on_event("startup")
+async def _startup_migrations():
+    """Run one-time data migrations on startup if needed."""
+    db = SessionLocal()
+    try:
+        # Backfill public_id for existing users that don't have one
+        from sqlalchemy import text
+        users_without_pid = db.query(User).filter(
+            (User.public_id == None) | (User.public_id == "")
+        ).all()
+        for u in users_without_pid:
+            u.public_id = _generate_public_id()
+        if users_without_pid:
+            db.commit()
+    finally:
+        db.close()
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -871,7 +893,7 @@ async def signup_post(
         elif coach_team_id and db.query(Team).filter(Team.id == coach_team_id).first():
             coach_tid = coach_team_id
 
-    user = User(username=username, email=email, password_hash=hash_password(password), role=role)
+    user = User(username=username, email=email, password_hash=hash_password(password), role=role, public_id=_generate_public_id())
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -1324,7 +1346,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
             cp = db.query(CoachProfile).filter(CoachProfile.user_id == coach_user.id).first()
             coach_name = f"{cp.first_name} {cp.last_name}".strip() if cp and (cp.first_name or cp.last_name) else coach_user.username
             fmt_date = ev.created_at.strftime("%B %d, %Y") if ev.created_at else ""
-            eval_list.append({"coach_name": coach_name, "date": fmt_date, "content": ev.content})
+            eval_list.append({"coach_name": coach_name, "date": fmt_date, "content": decrypt_message(ev.content)})
 
     # Build visit list — only expose school data to logged-in users
     has_visits = False
@@ -1815,7 +1837,7 @@ async def submit_evaluation(username: str, request: Request, db: Session = Depen
     form = await request.form()
     content = (form.get("content") or "").strip()[:5000]
     if content:
-        db.add(Evaluation(player_id=player.id, coach_id=coach.id, content=content))
+        db.add(Evaluation(player_id=player.id, coach_id=coach.id, content=encrypt_message(content)))
         db.commit()
     return RedirectResponse(f"/profile/{username}", status_code=302)
 
