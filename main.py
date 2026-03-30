@@ -85,7 +85,7 @@ app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=Tru
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as _StarletteResponse
 
-CSRF_EXEMPT_PATHS = {"/stripe/webhook"}
+CSRF_EXEMPT_PATHS = {"/stripe/webhook", "/logout"}
 
 class _CSRFMiddleware(BaseHTTPMiddleware):
     _SAFE = {"GET", "HEAD", "OPTIONS", "TRACE"}
@@ -128,6 +128,17 @@ class _SessionRefreshMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 app.add_middleware(_SessionRefreshMiddleware)
+
+from starlette.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://caprecruiting.com", "https://www.caprecruiting.com", "https://bearcatrecruiting.com"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
+
 
 SQLALCHEMY_DATABASE_URL = "sqlite:////home/recruiting/bearcats/recruiting.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -340,6 +351,17 @@ class LoginAttempt(Base):
     attempted_at = Column(DateTime, default=datetime.utcnow)
     success = Column(Boolean, default=False)
 
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_log"
+    id = Column(Integer, primary_key=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)
+    target_id = Column(Integer, nullable=True)
+    detail = Column(Text, default="")
+    ip_address = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -397,6 +419,11 @@ def record_login_attempt(db: Session, ip: str, username: str, success: bool):
     # Clean up old attempts (older than 1 hour)
     old_cutoff = datetime.utcnow() - timedelta(hours=1)
     db.query(LoginAttempt).filter(LoginAttempt.attempted_at < old_cutoff).delete()
+    db.commit()
+
+
+def log_admin_action(db: Session, admin_id: int, action: str, target_id: int = None, detail: str = "", ip: str = ""):
+    db.add(AdminAuditLog(admin_id=admin_id, action=action, target_id=target_id, detail=detail, ip_address=ip))
     db.commit()
 
 def unread_sender_count(db: Session, user_id: int) -> int:
@@ -814,6 +841,8 @@ async def signup_post(
             inv.used = True
             inv.used_by = user.id
             db.commit()
+    # Session rotation: clear old session and set fresh data to prevent fixation
+    request.session.clear()
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
@@ -993,17 +1022,30 @@ async def login_post(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    client_ip = request.headers.get("x-real-ip", request.client.host if request.client else "unknown")
+    if check_login_lockout(db, client_ip):
+        return templates.TemplateResponse("login.html", {"request": request, "error": f"Too many failed attempts. Please try again in {LOGIN_LOCKOUT_MINUTES} minutes."})
     user = db.query(User).filter((User.username == username) | (User.email == username)).first()
     if not user or not verify_password(password, user.password_hash):
+        record_login_attempt(db, client_ip, username, False)
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password."})
+    record_login_attempt(db, client_ip, username, True)
+    # Session rotation: clear old session and set fresh data to prevent fixation
+    request.session.clear()
     request.session["user_id"] = user.id
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
     request.session["subscription_tier"] = user.subscription_tier or "free"
     return RedirectResponse("/dashboard", status_code=302)
 
-@app.get("/logout")
+@app.post("/logout")
 async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/", status_code=302)
+
+# Keep GET as fallback for direct URL visits
+@app.get("/logout")
+async def logout_get(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
 
@@ -1129,8 +1171,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.offer4 = form.get("offer4", "")[:100]
         p.offer5 = form.get("offer5", "")[:100]
         for i in range(1, 6):
-            setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
-            setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   ""))
+            setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", "")[:200])
+            setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   "")[:50])
         p.hudl_url = form.get("hudl_url", "")[:100]
         p.x_url = form.get("x_url", "")[:100]
         p.instagram_url = form.get("instagram_url", "")[:100]
@@ -1720,8 +1762,11 @@ async def admin_set_stars(target_id: int, request: Request, db: Session = Depend
     stars = max(0, min(5, stars))
     profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first()
     if profile:
+        old_stars = profile.stars
         profile.stars = stars
         db.commit()
+        _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+        log_admin_action(db, admin.id, "set_stars", target_id, f"old={old_stars} new={stars}", _ip)
     target = db.query(User).filter(User.id == target_id).first()
     if target:
         return RedirectResponse(f"/profile/{target.username}", status_code=302)
@@ -1741,8 +1786,11 @@ async def admin_set_tier(target_id: int, request: Request, db: Session = Depends
         tier = "free"
     target = db.query(User).filter(User.id == target_id).first()
     if target:
+        old_tier = target.subscription_tier
         target.subscription_tier = tier
         db.commit()
+        _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+        log_admin_action(db, admin.id, "set_tier", target_id, f"old={old_tier} new={tier}", _ip)
     return RedirectResponse(f"/admin/users/{target_id}/edit-profile", status_code=302)
 
 @app.get("/admin/teams", response_class=HTMLResponse)
@@ -1873,8 +1921,8 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.offer4 = form.get("offer4", "")[:100]
         p.offer5 = form.get("offer5", "")[:100]
         for i in range(1, 6):
-            setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", ""))
-            setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", ""))
+            setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", "")[:200])
+            setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", "")[:50])
         p.ncaa_eligibility_num = form.get("ncaa_eligibility_num", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
     else:
@@ -1977,6 +2025,8 @@ async def admin_delete_user(target_id: int, request: Request, db: Session = Depe
         raise HTTPException(status_code=404)
     if target.id == admin.id:
         return RedirectResponse("/dashboard", status_code=302)
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "delete_user", target_id, f"username={target.username}, role={target.role}", _ip)
     # Clean up S3 files before deleting DB records
     for vid in db.query(Video).filter(Video.user_id == target_id).all():
         try:
@@ -2037,6 +2087,8 @@ async def admin_generate_bypass(target_id: int, request: Request, db: Session = 
     db.commit()
     site_url = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
     link = f"{site_url}/join/{token}"
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "generate_bypass", target_id, f"token={token[:8]}...", _ip)
     return RedirectResponse(f"/admin/users/{target_id}/edit-profile?bypass_link={link}", status_code=302)
 
 
@@ -2818,22 +2870,18 @@ async def questionnaires_page(request: Request, db: Session = Depends(get_db)):
     })
 
 @app.get("/api/schools/states")
-def schools_states():
-    conn = sqlite3.connect("/home/recruiting/bearcats/recruiting.db")
-    rows = conn.execute("SELECT DISTINCT state FROM schools ORDER BY state").fetchall()
-    conn.close()
+def schools_states(db: Session = Depends(get_db)):
+    from sqlalchemy import text as _text; rows = db.execute(_text("SELECT DISTINCT state FROM schools ORDER BY state")).fetchall()
     return JSONResponse([r[0] for r in rows])
 
 @app.get("/api/schools/cities")
-def schools_cities(state: str):
-    conn = sqlite3.connect("/home/recruiting/bearcats/recruiting.db")
-    rows = conn.execute("SELECT DISTINCT city FROM schools WHERE state=? ORDER BY city", (state.upper(),)).fetchall()
-    conn.close()
+def schools_cities(state: str, db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    rows = db.execute(text("SELECT DISTINCT city FROM schools WHERE state=:state ORDER BY city"), {"state": state.upper()}).fetchall()
     return JSONResponse([r[0] for r in rows])
 
 @app.get("/api/schools/list")
-def schools_list(state: str, city: str):
-    conn = sqlite3.connect("/home/recruiting/bearcats/recruiting.db")
-    rows = conn.execute("SELECT DISTINCT name FROM schools WHERE state=? AND city=? ORDER BY name", (state.upper(), city)).fetchall()
-    conn.close()
+def schools_list(state: str, city: str, db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    rows = db.execute(text("SELECT DISTINCT name FROM schools WHERE state=:state AND city=:city ORDER BY name"), {"state": state.upper(), "city": city}).fetchall()
     return JSONResponse([r[0] for r in rows])

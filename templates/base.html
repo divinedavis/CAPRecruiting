@@ -55,7 +55,7 @@
                 <a href="/upgrade" class="btn btn-primary" style="background:#f0b429;color:#0a1628;border-color:#f0b429;">Upgrade</a>
                 {% endif %}
                 {% endif %}
-                <a href="/logout" class="btn btn-ghost">Logout</a>
+                <form method="post" action="/logout" style="display:inline;margin:0;"><button type="submit" class="btn btn-ghost" style="border:none;cursor:pointer;">Logout</button></form>
             {% else %}
                 <a href="/dashboard">Browse Players</a>
                 <a href="/login">Login</a>

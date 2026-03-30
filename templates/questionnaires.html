@@ -58,6 +58,12 @@ const DATA = {{ data | tojson }};
 let currentDiv = null;
 let currentConf = null;
 
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(text));
+  return d.innerHTML;
+}
 function selectDivision(div) {
   currentDiv = div;
   document.querySelectorAll('#step-division .q-btn').forEach(b => b.classList.remove('active'));
@@ -65,7 +71,7 @@ function selectDivision(div) {
   const confs = Object.keys(DATA[div] || {}).sort();
   const el = document.getElementById('conference-list');
   el.innerHTML = confs.map(c =>
-    `<button class="q-btn" onclick="selectConference('${c.replace(/'/g, "\\'")}')">${c}</button>`
+    `<button class="q-btn" onclick="selectConference('${c.replace(/'/g, "\\'")}')">${escapeHtml(c)}</button>`
   ).join('');
   document.getElementById('step-conference').style.display = '';
   document.getElementById('step-teams').style.display = 'none';
@@ -79,7 +85,7 @@ function selectConference(conf) {
   el.innerHTML = sorted.map(t => {
     const link = teams[t];
     return `<a href="${link}" target="_blank" rel="noopener" class="q-team">
-      <span>${t}</span><span class="arrow">&rarr;</span>
+      <span>${escapeHtml(t)}</span><span class="arrow">&rarr;</span>
     </a>`;
   }).join('');
   document.getElementById('step-teams').style.display = '';
