@@ -112,7 +112,7 @@
                         <input type="text" name="bench_press" value="{{ profile.bench_press if profile else '' }}" placeholder="225">
                     </div>
                 </div>
-                <button type="button" id="athletic-more-btn" onclick="var el=document.getElementById('athletic-more');if(el.style.display==='none'){el.style.display='block';this.textContent='Less Athletic Info ▲';}else{el.style.display='none';this.textContent='More Athletic Info ▼';}" class="btn btn-outline" style="margin-bottom:16px;font-size:13px;">More Athletic Info ▼</button>
+                <button type="button" id="athletic-more-btn" onclick="var el=document.getElementById('athletic-more');if(el.style.display==='none'){el.style.display='block';this.textContent='Less Athletic Info ▲';}else{el.style.display='none';this.textContent='More Athletic Info ▼';}" style="display:inline-block;margin-bottom:16px;font-size:13px;font-weight:600;padding:8px 18px;border:1.5px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#0a1628;cursor:pointer;">More Athletic Info ▼</button>
                 <div id="athletic-more" style="display:none;">
                 <div class="form-row">
                     <div class="form-group">
