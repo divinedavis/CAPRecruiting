@@ -111,12 +111,14 @@
                         <label>Bench Press (lbs)</label>
                         <input type="text" name="bench_press" value="{{ profile.bench_press if profile else '' }}" placeholder="225">
                     </div>
+                </div>
+                <button type="button" id="athletic-more-btn" onclick="var el=document.getElementById('athletic-more');if(el.style.display==='none'){el.style.display='block';this.textContent='Less Athletic Info ▲';}else{el.style.display='none';this.textContent='More Athletic Info ▼';}" class="btn btn-outline" style="margin-bottom:16px;font-size:13px;">More Athletic Info ▼</button>
+                <div id="athletic-more" style="display:none;">
+                <div class="form-row">
                     <div class="form-group">
                         <label>Vertical (inches)</label>
                         <input type="text" name="vertical" value="{{ profile.vertical if profile else '' }}" placeholder="34">
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>Squat (lbs)</label>
                         <input type="text" name="squat" value="{{ profile.squat if profile else '' }}" placeholder="315">
@@ -235,6 +237,7 @@
                         <input type="number" name="ncaa_eligibility_num" value="{{ profile.ncaa_eligibility_num if profile else '' }}" placeholder="e.g. 1234567890">
                     </div>
                     {% endif %}
+                </div>
                 </div>
             </div>
 

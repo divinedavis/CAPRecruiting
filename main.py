@@ -1616,7 +1616,7 @@ async def upload_profile_image(request: Request, db: Session = Depends(get_db)):
         try:
             s3.upload_fileobj(
                 upload_bytes, SPACES_BUCKET, key,
-                ExtraArgs={"ContentType": content_type}
+                ExtraArgs={"ContentType": content_type, "ACL": "public-read"}
             )
             db.add(ProfileImage(user_id=target_user_id, file_url=f"{SPACES_BASE_URL}/{key}"))
         except Exception:
@@ -2611,7 +2611,7 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
     try:
         s3.upload_fileobj(
             buf, SPACES_BUCKET, s3_key,
-            ExtraArgs={"ContentType": "image/jpeg"}
+            ExtraArgs={"ContentType": "image/jpeg", "ACL": "public-read"}
         )
     except Exception:
         from fastapi.responses import JSONResponse
