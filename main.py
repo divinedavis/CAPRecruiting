@@ -2748,7 +2748,10 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
         return JSONResponse({"error": "Players cannot message other players."}, status_code=403)
     if sender and sender.role not in ("coach", "player") and not sender.is_admin:
         return JSONResponse({"error": "Not authorized to send messages."}, status_code=403)
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid request body"}, status_code=400)
     text = data.get("content", "").strip()[:2000]
     if not text:
         return JSONResponse({"error": "Empty message"}, status_code=400)
