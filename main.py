@@ -1599,6 +1599,8 @@ async def upload_profile_image(request: Request, db: Session = Depends(get_db)):
         # Resize to max 1200px on longest side, convert to JPEG for efficiency
         try:
             img = _Image.open(_io.BytesIO(contents))
+            from PIL import ImageOps as _ImageOps
+            img = _ImageOps.exif_transpose(img)
             img = img.convert("RGB")
             img.thumbnail((1200, 1200), _Image.LANCZOS)
             buf = _io.BytesIO()
@@ -2600,8 +2602,10 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
 
     # Upload to S3 instead of local disk for security (non-enumerable URLs)
     import io as _io2
-    from PIL import Image as _PIL2
-    img = _PIL2.open(_io2.BytesIO(contents)).convert("RGB")
+    from PIL import Image as _PIL2, ImageOps as _ImageOps2
+    img = _PIL2.open(_io2.BytesIO(contents))
+    img = _ImageOps2.exif_transpose(img)
+    img = img.convert("RGB")
     img.thumbnail((1200, 1200), _PIL2.LANCZOS)
     buf = _io2.BytesIO()
     img.save(buf, format="JPEG", quality=82, optimize=True)
