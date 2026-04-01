@@ -338,15 +338,36 @@
             <div class="form-section">
                 <h2>News Articles</h2>
                 <p class="section-hint">Add links to news articles or press coverage about you</p>
-                {% for n in [1, 2, 3, 4, 5] %}
-                {% set news_val = attribute(profile, "news_link" ~ n) if profile and attribute(profile, "news_link" ~ n) else "" %}
-                <div id="news-row-{{ n }}" style="margin-bottom:10px;{% if n > 1 and not news_val %} display:none;{% endif %}">
+                <div id="news-row-1" style="margin-bottom:10px;">
                     <div class="form-group">
-                        <label>Article {{ n }}</label>
-                        <input type="url" name="news_link{{ n }}" id="news_link{{ n }}" value="{{ news_val }}" placeholder="https://example.com/article" oninput="newsLinkChanged({{ n }})">
+                        <label>Article 1</label>
+                        <input type="url" name="news_link1" id="news_link1" value="{{ profile.news_link1 if profile and profile.news_link1 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(1)">
                     </div>
                 </div>
-                {% endfor %}
+                <div id="news-row-2" style="margin-bottom:10px; display:none;">
+                    <div class="form-group">
+                        <label>Article 2</label>
+                        <input type="url" name="news_link2" id="news_link2" value="{{ profile.news_link2 if profile and profile.news_link2 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(2)">
+                    </div>
+                </div>
+                <div id="news-row-3" style="margin-bottom:10px; display:none;">
+                    <div class="form-group">
+                        <label>Article 3</label>
+                        <input type="url" name="news_link3" id="news_link3" value="{{ profile.news_link3 if profile and profile.news_link3 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(3)">
+                    </div>
+                </div>
+                <div id="news-row-4" style="margin-bottom:10px; display:none;">
+                    <div class="form-group">
+                        <label>Article 4</label>
+                        <input type="url" name="news_link4" id="news_link4" value="{{ profile.news_link4 if profile and profile.news_link4 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(4)">
+                    </div>
+                </div>
+                <div id="news-row-5" style="margin-bottom:10px; display:none;">
+                    <div class="form-group">
+                        <label>Article 5</label>
+                        <input type="url" name="news_link5" id="news_link5" value="{{ profile.news_link5 if profile and profile.news_link5 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(5)">
+                    </div>
+                </div>
             </div>
 
             <div class="form-section">
@@ -809,6 +830,15 @@ function newsLinkChanged(n) {
   var nextRow = document.getElementById('news-row-' + (n + 1));
   if (val && nextRow) {
     nextRow.style.display = 'block';
+  }
+}
+// Show news rows that already have saved values
+for (var _ni = 1; _ni <= 5; _ni++) {
+  var _el = document.getElementById('news_link' + _ni);
+  if (_el && _el.value.trim()) {
+    document.getElementById('news-row-' + _ni).style.display = 'block';
+    var _next = document.getElementById('news-row-' + (_ni + 1));
+    if (_next) _next.style.display = 'block';
   }
 }
 
