@@ -1,8 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Edit Profile — Collegiate Athletic Planning<div class="save-profile-sticky">
-    <button type="submit" form="profile-form" class="btn btn-primary btn-lg">Save Profile</button>
-</div>
-{% endblock %}
+{% block title %}Edit Profile — Collegiate Athletic Planning{% endblock %}
 {% block content %}
 <div class="container page-top">
     <div class="edit-layout">
@@ -640,7 +637,7 @@
         {% endif %}
 
         <div class="form-actions">
-            <button type="submit" form="profile-form" class="btn btn-primary btn-lg save-desktop">Save Profile</button>
+            <button type="submit" form="profile-form" class="btn btn-primary btn-lg">Save Profile</button>
             <a href="/profile/{{ user.username }}" class="btn btn-outline btn-lg">View My Profile</a>
             {% if profile_form_action is defined and "/admin/" in profile_form_action %}
             <div style="display:inline-flex; align-items:center; gap:10px; margin-left:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 14px;">
@@ -1062,7 +1059,4 @@ if (editImgInput) {
     });
 }
 </script>
-<div class="save-profile-sticky">
-    <button type="submit" form="profile-form" class="btn btn-primary btn-lg">Save Profile</button>
-</div>
 {% endblock %}
