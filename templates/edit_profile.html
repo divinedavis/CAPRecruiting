@@ -336,6 +336,20 @@
             </div>
 
             <div class="form-section">
+                <h2>News Articles</h2>
+                <p class="section-hint">Add links to news articles or press coverage about you</p>
+                {% for n in [1, 2, 3, 4, 5] %}
+                {% set news_val = attribute(profile, "news_link" ~ n) if profile and attribute(profile, "news_link" ~ n) else "" %}
+                <div id="news-row-{{ n }}" style="margin-bottom:10px;{% if n > 1 and not news_val %} display:none;{% endif %}">
+                    <div class="form-group">
+                        <label>Article {{ n }}</label>
+                        <input type="url" name="news_link{{ n }}" id="news_link{{ n }}" value="{{ news_val }}" placeholder="https://example.com/article" oninput="newsLinkChanged({{ n }})">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-section">
                 <h2>External Links</h2>
                 <p class="section-hint">Add your Hudl profile and other links so coaches can find your highlights</p>
                 <div class="link-input-group">
@@ -787,6 +801,16 @@ const CFBD = {
   }
 };
 
+
+
+// ── News article link progressive reveal ────────────────────────────────────
+function newsLinkChanged(n) {
+  var val = document.getElementById('news_link' + n).value.trim();
+  var nextRow = document.getElementById('news-row-' + (n + 1));
+  if (val && nextRow) {
+    nextRow.style.display = 'block';
+  }
+}
 
 // ── High School cascading dropdowns (edit profile) ──────────────────────────
 var editSchoolState = document.getElementById('edit-school-state');

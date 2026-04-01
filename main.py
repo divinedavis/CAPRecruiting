@@ -269,6 +269,11 @@ class PlayerProfile(Base):
     mother_last_name = Column(String, default="")
     father_first_name = Column(String, default="")
     father_last_name = Column(String, default="")
+    news_link1 = Column(String, default="")
+    news_link2 = Column(String, default="")
+    news_link3 = Column(String, default="")
+    news_link4 = Column(String, default="")
+    news_link5 = Column(String, default="")
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -1260,6 +1265,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.mother_last_name = form.get("mother_last_name", "")[:100]
         p.father_first_name = form.get("father_first_name", "")[:100]
         p.father_last_name = form.get("father_last_name", "")[:100]
+        for _ni in range(1, 6):
+            setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
         p.link1_label = form.get("link1_label", "")[:100]
         p.link1_url = form.get("link1_url", "")[:500]
@@ -2021,6 +2028,8 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.mother_last_name = form.get("mother_last_name", "")[:100]
         p.father_first_name = form.get("father_first_name", "")[:100]
         p.father_last_name = form.get("father_last_name", "")[:100]
+        for _ni in range(1, 6):
+            setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
         p.hudl_url = form.get("hudl_url", "")[:100]
         p.x_url = form.get("x_url", "")[:100]
