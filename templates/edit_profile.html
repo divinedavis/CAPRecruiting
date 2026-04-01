@@ -91,6 +91,31 @@
                 </div>
             </div>
 
+
+            <div class="form-section">
+                <h2>Parent / Guardian Info</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Mother First Name</label>
+                        <input type="text" name="mother_first_name" value="{{ profile.mother_first_name if profile and profile.mother_first_name else '' }}" placeholder="First name">
+                    </div>
+                    <div class="form-group">
+                        <label>Mother Last Name</label>
+                        <input type="text" name="mother_last_name" value="{{ profile.mother_last_name if profile and profile.mother_last_name else '' }}" placeholder="Last name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Father First Name</label>
+                        <input type="text" name="father_first_name" value="{{ profile.father_first_name if profile and profile.father_first_name else '' }}" placeholder="First name">
+                    </div>
+                    <div class="form-group">
+                        <label>Father Last Name</label>
+                        <input type="text" name="father_last_name" value="{{ profile.father_last_name if profile and profile.father_last_name else '' }}" placeholder="Last name">
+                    </div>
+                </div>
+            </div>
+
             <div class="form-section">
                 <h2>Athletic Info</h2>
                 <div class="form-row">

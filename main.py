@@ -265,6 +265,10 @@ class PlayerProfile(Base):
     stars = Column(Integer, default=0)
     ncaa_eligibility_num = Column(String, default="")
     intended_major = Column(String, default="")
+    mother_first_name = Column(String, default="")
+    mother_last_name = Column(String, default="")
+    father_first_name = Column(String, default="")
+    father_last_name = Column(String, default="")
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -1252,6 +1256,10 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.school = form.get("school", "")[:100]
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
+        p.mother_first_name = form.get("mother_first_name", "")[:100]
+        p.mother_last_name = form.get("mother_last_name", "")[:100]
+        p.father_first_name = form.get("father_first_name", "")[:100]
+        p.father_last_name = form.get("father_last_name", "")[:100]
         p.bio = form.get("bio", "")[:2000]
         p.link1_label = form.get("link1_label", "")[:100]
         p.link1_url = form.get("link1_url", "")[:500]
@@ -2009,6 +2017,10 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.school = form.get("school", "")[:100]
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
+        p.mother_first_name = form.get("mother_first_name", "")[:100]
+        p.mother_last_name = form.get("mother_last_name", "")[:100]
+        p.father_first_name = form.get("father_first_name", "")[:100]
+        p.father_last_name = form.get("father_last_name", "")[:100]
         p.bio = form.get("bio", "")[:2000]
         p.hudl_url = form.get("hudl_url", "")[:100]
         p.x_url = form.get("x_url", "")[:100]
