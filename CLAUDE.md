@@ -276,9 +276,11 @@ Players cannot message other players — only coach-to-player and player-to-coac
 
 ## Deployment
 
-After making changes to files on the server:
+**REQUIRED after EVERY change:** You must always (1) restart the service, (2) test ALL endpoints, and (3) commit + push to GitHub. Never skip any of these steps.
+
 1. `systemctl restart bearcats` to apply changes
-2. Commit and push: `cd /home/recruiting/bearcats && git add -A && git commit -m "message" && git push origin main`
+2. Run the full endpoint test suite below — if ANY endpoint returns `500`, fix before proceeding
+3. Commit and push: `cd /home/recruiting/bearcats && git add -A && git commit -m "message" && git push origin main`
 
 ## Post-Change Testing (REQUIRED)
 
