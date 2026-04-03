@@ -234,6 +234,7 @@ class PlayerProfile(Base):
     school = Column(String, default="")
     city = Column(String, default="")
     state = Column(String, default="")
+    county = Column(String, default="")
     bio = Column(Text, default="")
     link1_label = Column(String, default="")
     link1_url = Column(String, default="")
@@ -752,6 +753,12 @@ QUESTIONNAIRE_DATA = {
         },
     },
 }
+@app.get("/api/schools/county")
+def schools_county(state: str, city: str, school: str, request: Request, db: Session = Depends(get_db)):
+    from sqlalchemy import text as _text
+    row = db.execute(_text("SELECT county FROM schools WHERE state=:state AND city=:city AND name=:school LIMIT 1"), {"state": state.upper(), "city": city, "school": school}).fetchone()
+    return row[0] if row and row[0] else ""
+
 # ── College offer division lookup (mirrors CFBD data in edit_profile.html) ────
 _OFFER_DIV = {}
 _CFBD = {
@@ -971,7 +978,7 @@ async def signup_post(
     db.refresh(user)
 
     if role == "player":
-        db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip()))
+        db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip(), county=form.get('school_county', '').strip()))
     else:
         db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
     db.commit()
@@ -1330,6 +1337,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.school = form.get("school", "")[:100]
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
+        p.county = form.get("school_county", "")[:100]
         p.mother_first_name = form.get("mother_first_name", "")[:100]
         p.mother_last_name = form.get("mother_last_name", "")[:100]
         p.father_first_name = form.get("father_first_name", "")[:100]
@@ -2094,6 +2102,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.school = form.get("school", "")[:100]
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
+        p.county = form.get("school_county", "")[:100]
         p.mother_first_name = form.get("mother_first_name", "")[:100]
         p.mother_last_name = form.get("mother_last_name", "")[:100]
         p.father_first_name = form.get("father_first_name", "")[:100]

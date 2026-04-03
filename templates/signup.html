@@ -63,6 +63,7 @@
                         <option value="">— Select your school —</option>
                     </select>
                     <span class="field-hint">Select the high school you attend</span>
+                    <input type="hidden" name="school_county" id="school-county" value="">
                     <span class="field-error" id="school-error"></span>
                 </div>
                 <input type="hidden" name="team_id" id="team-select" value="">
@@ -339,6 +340,20 @@ schoolCity.addEventListener('change', function() {
             });
             schoolName.disabled = false;
         });
+});
+schoolName.addEventListener('change', function() {
+    var state = schoolState.value;
+    var city = schoolCity.value;
+    var school = this.value;
+    var countyField = document.getElementById('school-county');
+    if (school && state && city) {
+        fetch('/api/schools/county?state=' + encodeURIComponent(state) + '&city=' + encodeURIComponent(city) + '&school=' + encodeURIComponent(school))
+            .then(function(r){return r.text()}).then(function(county) {
+                countyField.value = county.replace(/^"|"$/g, '');
+            });
+    } else {
+        countyField.value = '';
+    }
 });
 
 usernameInput.addEventListener('keypress', function(e) {
