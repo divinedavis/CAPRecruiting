@@ -29,15 +29,19 @@
             <option value="">All States</option>
         </select>
 
+        <span id="dash-city-wrap" style="display:none;">
         <span class="filter-label" style="margin-left:8px;">City:</span>
         <select id="dash-city" onchange="dashCityChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:160px;" disabled>
             <option value="">All Cities</option>
         </select>
+        </span>
 
+        <span id="dash-school-wrap" style="display:none;">
         <span class="filter-label" style="margin-left:8px;">School:</span>
         <select id="dash-school" onchange="dashSchoolChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:200px;" disabled>
             <option value="">All Schools</option>
         </select>
+        </span>
 
         {% if positions %}
         <span class="filter-label" style="margin-left:8px;">Position:</span>
@@ -215,7 +219,7 @@ fetch('/api/schools/states').then(function(r){return r.json()}).then(function(st
         if (s === savedState) opt.selected = true;
         dashStateSel.appendChild(opt);
     });
-    if (savedState) loadCities(savedState);
+    if (savedState) { document.getElementById('dash-city-wrap').style.display = ''; loadCities(savedState); }
 });
 
 function loadCities(state) {
@@ -233,7 +237,8 @@ function loadCities(state) {
                 dashCitySel.appendChild(opt);
             });
             dashCitySel.disabled = false;
-            if (savedCity) loadSchools(state, savedCity);
+            document.getElementById('dash-city-wrap').style.display = '';
+            if (savedCity) { document.getElementById('dash-school-wrap').style.display = ''; loadSchools(state, savedCity); }
         });
 }
 
@@ -250,6 +255,7 @@ function loadSchools(state, city) {
                 dashSchoolSel.appendChild(opt);
             });
             dashSchoolSel.disabled = false;
+            document.getElementById('dash-school-wrap').style.display = '';
         });
 }
 
