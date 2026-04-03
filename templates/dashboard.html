@@ -23,17 +23,22 @@
         {% endif %}
     </div>
 
-    {% if schools or positions %}
-    <div class="team-filter-bar" style="gap:12px;">
-        {% if schools %}
-        <span class="filter-label">School:</span>
-        <select onchange="applySchoolFilter(this.value)" style="padding:6px 14px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:220px;">
-            <option value="" {% if not active_school %}selected{% endif %}>All Schools</option>
-            {% for s in schools %}
-            <option value="{{ s }}" {% if active_school == s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
+    <div class="team-filter-bar" style="gap:12px; flex-wrap:wrap;">
+        <span class="filter-label">State:</span>
+        <select id="dash-state" onchange="dashStateChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:140px;">
+            <option value="">All States</option>
         </select>
-        {% endif %}
+
+        <span class="filter-label" style="margin-left:8px;">City:</span>
+        <select id="dash-city" onchange="dashCityChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:160px;" disabled>
+            <option value="">All Cities</option>
+        </select>
+
+        <span class="filter-label" style="margin-left:8px;">School:</span>
+        <select id="dash-school" onchange="dashSchoolChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:200px;" disabled>
+            <option value="">All Schools</option>
+        </select>
+
         {% if positions %}
         <span class="filter-label" style="margin-left:8px;">Position:</span>
         <select onchange="applyPositionFilter(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer;">
@@ -51,7 +56,6 @@
             {% endfor %}
         </select>
     </div>
-    {% endif %}
 
 
 <div id="upgrade-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
@@ -106,6 +110,9 @@
             </div>
             {% if p and p.school %}
             <div class="player-location" style="text-align:center;">🏫 {{ p.school }}</div>
+            {% endif %}
+            {% if p and (p.city or p.state) %}
+            <div style="text-align:center; font-size:12px; color:var(--gray-400); margin-top:2px;">📍 {% if p.city %}{{ p.city }}{% endif %}{% if p.city and p.state %}, {% endif %}{% if p.state %}{{ p.state }}{% endif %}</div>
             {% endif %}
             {% set offers = [p.offer1, p.offer2, p.offer3, p.offer4, p.offer5] | select | list if p else [] %}
             {% if offers %}
@@ -194,13 +201,82 @@
     {% endif %}
 </div>
 <script>
-function applySchoolFilter(school) {
+var savedState = "{{ active_state or '' }}";
+var savedCity = "{{ active_city or '' }}";
+var savedSchool = "{{ active_school or '' }}";
+var dashStateSel = document.getElementById('dash-state');
+var dashCitySel = document.getElementById('dash-city');
+var dashSchoolSel = document.getElementById('dash-school');
+
+fetch('/api/schools/states').then(function(r){return r.json()}).then(function(states) {
+    states.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        if (s === savedState) opt.selected = true;
+        dashStateSel.appendChild(opt);
+    });
+    if (savedState) loadCities(savedState);
+});
+
+function loadCities(state) {
+    dashCitySel.innerHTML = '<option value="">All Cities</option>';
+    dashSchoolSel.innerHTML = '<option value="">All Schools</option>';
+    dashCitySel.disabled = true;
+    dashSchoolSel.disabled = true;
+    if (!state) return;
+    fetch('/api/schools/cities?state=' + encodeURIComponent(state))
+        .then(function(r){return r.json()}).then(function(cities) {
+            cities.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                if (c === savedCity) opt.selected = true;
+                dashCitySel.appendChild(opt);
+            });
+            dashCitySel.disabled = false;
+            if (savedCity) loadSchools(state, savedCity);
+        });
+}
+
+function loadSchools(state, city) {
+    dashSchoolSel.innerHTML = '<option value="">All Schools</option>';
+    dashSchoolSel.disabled = true;
+    if (!city) return;
+    fetch('/api/schools/list?state=' + encodeURIComponent(state) + '&city=' + encodeURIComponent(city))
+        .then(function(r){return r.json()}).then(function(schools) {
+            schools.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s; opt.textContent = s;
+                if (s === savedSchool) opt.selected = true;
+                dashSchoolSel.appendChild(opt);
+            });
+            dashSchoolSel.disabled = false;
+        });
+}
+
+function dashStateChanged(state) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('city');
+    url.searchParams.delete('school');
+    if (state) url.searchParams.set('state', state);
+    else url.searchParams.delete('state');
+    window.location.href = url.toString();
+}
+
+function dashCityChanged(city) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('school');
+    if (city) url.searchParams.set('city', city);
+    else url.searchParams.delete('city');
+    window.location.href = url.toString();
+}
+
+function dashSchoolChanged(school) {
     var url = new URL(window.location.href);
     if (school) url.searchParams.set('school', school);
     else url.searchParams.delete('school');
-    url.searchParams.delete('year');
     window.location.href = url.toString();
 }
+
 function applyPositionFilter(pos) {
     var url = new URL(window.location.href);
     if (pos) url.searchParams.set('position', pos);

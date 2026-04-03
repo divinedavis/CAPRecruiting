@@ -1213,7 +1213,7 @@ async def logout_get(request: Request):
     return RedirectResponse("/", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, db: Session = Depends(get_db)):
+async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, state: Optional[str] = None, city: Optional[str] = None, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
 
@@ -1241,6 +1241,10 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
 
     # Filter players
     query = db.query(User).join(PlayerProfile, User.id == PlayerProfile.user_id).filter(User.role == "player")
+    if state:
+        query = query.filter(PlayerProfile.state == state)
+    if city:
+        query = query.filter(PlayerProfile.city == city)
     if school:
         query = query.filter(PlayerProfile.school == school)
     if position:
@@ -1270,6 +1274,8 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
         "active_position": position,
         "can_click_profiles": can_click_profiles,
         "can_message_from_dashboard": can_message_from_dashboard,
+        "active_state": state,
+        "active_city": city,
     })
 
 @app.get("/profile/edit", response_class=HTMLResponse)
