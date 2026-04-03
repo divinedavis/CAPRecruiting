@@ -1450,14 +1450,15 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
     unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
     pt = player_tier(target)  # gating is based on the PLAYER's paid tier
     is_admin_viewer = bool(current_user and current_user.is_admin)
-    can_view_photos   = is_owner or is_admin_viewer or tier_gte(pt, "advanced")
-    can_view_offers   = is_owner or is_admin_viewer or tier_gte(pt, "advanced")
-    can_view_visits   = is_owner or is_admin_viewer or tier_gte(pt, "advanced")
-    can_view_videos   = is_owner or is_admin_viewer or tier_gte(pt, "premium")
-    can_view_contact  = is_owner or is_admin_viewer or tier_gte(pt, "premium")
-    can_message       = bool(not is_owner and (is_admin_viewer or (current_user and current_user.role == "coach" and tier_gte(pt, "premium"))))
-    # Transcripts: only coaches can view; requires player to be advanced+
-    if not (is_owner or is_admin_viewer or (current_user and current_user.role == "coach" and tier_gte(pt, "advanced"))):
+    is_coach_viewer = bool(current_user and current_user.role == "coach")
+    can_view_photos   = is_owner or is_admin_viewer or is_coach_viewer or tier_gte(pt, "advanced")
+    can_view_offers   = is_owner or is_admin_viewer or is_coach_viewer or tier_gte(pt, "advanced")
+    can_view_visits   = is_owner or is_admin_viewer or is_coach_viewer or tier_gte(pt, "advanced")
+    can_view_videos   = is_owner or is_admin_viewer or is_coach_viewer or tier_gte(pt, "premium")
+    can_view_contact  = is_owner or is_admin_viewer or is_coach_viewer or tier_gte(pt, "premium")
+    can_message       = bool(not is_owner and (is_admin_viewer or is_coach_viewer))
+    # Transcripts: coaches and admins can always view
+    if not (is_owner or is_admin_viewer or is_coach_viewer):
         can_see_transcripts = False
         transcript_list = []
     if not can_view_photos:
