@@ -58,7 +58,7 @@
                         {% endif %}
                     </div>
                     {% if target.role == "player" and profile and profile.school %}
-                        <p class="profile-school">🏫 {{ profile.school }}</p>
+                        <p class="profile-school">🏫 {{ profile.school }}{% if profile.school == "William Penn SHS" %} (York High){% endif %}</p>
                     {% elif target.role == "coach" and profile and profile.school %}
                         <p class="profile-school">🏫 {{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
                     {% endif %}
