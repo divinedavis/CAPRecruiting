@@ -1,20 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Collegiate Athletic Planning
-<script>
-function toggleEval(btn) {
-    const p = btn.previousElementSibling;
-    const full = p.dataset.full;
-    const short = p.dataset.short;
-    if (btn.textContent === 'See more') {
-        p.textContent = full;
-        btn.textContent = 'See less';
-    } else {
-        p.textContent = short + '...';
-        btn.textContent = 'See more';
-    }
-}
-</script>
-{% endblock %}
+{% block title %}{% if profile and (profile.first_name or profile.last_name) %}{{ profile.first_name }} {{ profile.last_name }}{% else %}{{ target.username }}{% endif %} — Collegiate Athletic Planning{% endblock %}
 
 {% set display_name = (profile.first_name ~ ' ' ~ profile.last_name).strip() if profile and (profile.first_name or profile.last_name) else target.username %}
 {% set og_desc %}{% if target.role == 'player' %}{% if profile and profile.position %}{{ profile.position }}{% endif %}{% if profile and profile.year %} · Class of {{ profile.year }}{% endif %}{% if profile and profile.school %} · {{ profile.school }}{% endif %} — View full recruiting profile on Collegiate Athletic Planning.{% else %}{% if profile and profile.title %}{{ profile.title }}{% endif %}{% if profile and profile.school %} at {{ profile.school }}{% endif %} — View coach profile on Collegiate Athletic Planning.{% endif %}{% endset %}
@@ -656,6 +641,20 @@ if (imgInput) {
     imgInput.addEventListener('change', function() {
         if (this.files[0]) document.getElementById('image-upload-form').submit();
     });
+}
+</script>
+<script>
+function toggleEval(btn) {
+    const p = btn.previousElementSibling;
+    const full = p.dataset.full;
+    const short = p.dataset.short;
+    if (btn.textContent === 'See more') {
+        p.textContent = full;
+        btn.textContent = 'See less';
+    } else {
+        p.textContent = short + '...';
+        btn.textContent = 'See more';
+    }
 }
 </script>
 {% endblock %}
