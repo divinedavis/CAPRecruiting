@@ -23,42 +23,49 @@
         {% endif %}
     </div>
 
-    <div class="team-filter-bar" style="gap:12px; flex-wrap:wrap;">
-        <span class="filter-label">State:</span>
-        <select id="dash-state" onchange="dashStateChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:140px;">
-            <option value="">All States</option>
-        </select>
+    <div style="max-width:320px; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+        <div>
+            <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">State</label>
+            <select id="dash-state" onchange="dashStateChanged(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;">
+                <option value="">All States</option>
+            </select>
+        </div>
 
-        <span id="dash-city-wrap" style="display:none;">
-        <span class="filter-label" style="margin-left:8px;">City:</span>
-        <select id="dash-city" onchange="dashCityChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:160px;" disabled>
-            <option value="">All Cities</option>
-        </select>
-        </span>
+        <div id="dash-city-wrap" style="display:none;">
+            <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">City</label>
+            <select id="dash-city" onchange="dashCityChanged(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;" disabled>
+                <option value="">All Cities</option>
+            </select>
+        </div>
 
-        <span id="dash-school-wrap" style="display:none;">
-        <span class="filter-label" style="margin-left:8px;">School:</span>
-        <select id="dash-school" onchange="dashSchoolChanged(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; min-width:200px;" disabled>
-            <option value="">All Schools</option>
-        </select>
-        </span>
+        <div id="dash-school-wrap" style="display:none;">
+            <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">School</label>
+            <select id="dash-school" onchange="dashSchoolChanged(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;" disabled>
+                <option value="">All Schools</option>
+            </select>
+        </div>
 
         {% if positions %}
-        <span class="filter-label" style="margin-left:8px;">Position:</span>
-        <select onchange="applyPositionFilter(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer;">
-            <option value="" {% if not active_position %}selected{% endif %}>All Positions</option>
-            {% for pos in positions %}
-            <option value="{{ pos }}" {% if active_position == pos %}selected{% endif %}>{{ pos }}</option>
-            {% endfor %}
-        </select>
+        <div>
+            <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">Position</label>
+            <select onchange="applyPositionFilter(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;">
+                <option value="" {% if not active_position %}selected{% endif %}>All Positions</option>
+                {% for pos in positions %}
+                <option value="{{ pos }}" {% if active_position == pos %}selected{% endif %}>{{ pos }}</option>
+                {% endfor %}
+            </select>
+        </div>
         {% endif %}
-        <span class="filter-label" style="margin-left:8px;">Year:</span>
-        <select onchange="applyYearFilter(this.value)" style="padding:6px 12px; border:1.5px solid var(--gray-200); border-radius:20px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer;">
-            <option value="" {% if not active_year %}selected{% endif %}>All Years</option>
-            {% for yr in ["2025", "2026", "2027", "2028", "2029"] %}
-            <option value="{{ yr }}" {% if active_year == yr %}selected{% endif %}>Class of {{ yr }}</option>
-            {% endfor %}
-        </select>
+
+        <div>
+            <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">Year</label>
+            <select onchange="applyYearFilter(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;">
+                <option value="" {% if not active_year %}selected{% endif %}>All Years</option>
+                {% for yr in ["2025", "2026", "2027", "2028", "2029"] %}
+                <option value="{{ yr }}" {% if active_year == yr %}selected{% endif %}>Class of {{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 
 
