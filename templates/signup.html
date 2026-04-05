@@ -270,10 +270,10 @@ document.querySelectorAll('input[name="role"]').forEach(function(radio) {
     });
 });
 
-// Pre-select on error re-render
-const checkedRole = document.querySelector('input[name="role"]:checked');
-if (checkedRole) {
-    if (checkedRole.value === 'player') {
+// Show appropriate group based on hidden role input
+const roleInput = document.querySelector('input[name="role"]');
+if (roleInput) {
+    if (roleInput.value === 'player') {
         playerTeamGroup.style.display = 'block';
         teamSelect.required = false;
     } else {
