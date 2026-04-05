@@ -112,7 +112,7 @@
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" name="password" id="signup-password" placeholder="At least 6 characters" required autocomplete="new-password" oninput="checkPasswordMatch()">
+                <input type="password" name="password" id="signup-password" placeholder="At least 8 characters" required autocomplete="new-password" oninput="checkPasswordMatch()">
             </div>
             <div class="form-group">
                 <label>Confirm Password</label>
@@ -121,14 +121,43 @@
             </div>
             <button type="submit" class="btn btn-primary btn-full" id="signup-submit-btn">Create Account</button>
             <script>
+            function validatePasswordStrength(pw) {
+                if (pw.length < 8) return 'Password must be at least 8 characters.';
+                if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter.';
+                if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter.';
+                if (!/[0-9]/.test(pw)) return 'Password must contain at least one number.';
+                if (!/[^A-Za-z0-9]/.test(pw)) return 'Password must contain at least one special character.';
+                return '';
+            }
             function checkPasswordMatch() {
                 var pw = document.getElementById('signup-password').value;
                 var cpw = document.getElementById('signup-confirm-password').value;
                 var msg = document.getElementById('password-match-msg');
                 var btn = document.getElementById('signup-submit-btn');
-                if (!cpw) {
+
+                // Hide message if nothing has been typed in either field
+                if (!pw && !cpw) {
                     msg.style.display = 'none';
                     btn.disabled = false;
+                    return;
+                }
+
+                // Check password strength first (only if they've typed something)
+                if (pw) {
+                    var strengthErr = validatePasswordStrength(pw);
+                    if (strengthErr) {
+                        msg.style.display = 'block';
+                        msg.textContent = strengthErr;
+                        msg.style.color = '#dc2626';
+                        btn.disabled = true;
+                        return;
+                    }
+                }
+
+                // Then check match (only if confirm has content)
+                if (!cpw) {
+                    msg.style.display = 'none';
+                    btn.disabled = true;
                     return;
                 }
                 msg.style.display = 'block';
