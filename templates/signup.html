@@ -117,59 +117,53 @@
             <div class="form-group">
                 <label>Confirm Password</label>
                 <input type="password" id="signup-confirm-password" placeholder="Re-enter your password" required autocomplete="new-password" oninput="checkPasswordMatch()">
-                <span id="password-match-msg" style="font-size:12px; margin-top:4px; display:none;"></span>
+                <ul id="password-checklist" style="list-style:none; padding:0; margin:8px 0 0 0; font-size:12px; display:none;">
+                    <li id="pw-len" style="color:#dc2626; margin:2px 0;"><span class="pw-icon">✗</span> At least 8 characters</li>
+                    <li id="pw-upper" style="color:#dc2626; margin:2px 0;"><span class="pw-icon">✗</span> One uppercase letter</li>
+                    <li id="pw-lower" style="color:#dc2626; margin:2px 0;"><span class="pw-icon">✗</span> One lowercase letter</li>
+                    <li id="pw-num" style="color:#dc2626; margin:2px 0;"><span class="pw-icon">✗</span> One number</li>
+                    <li id="pw-special" style="color:#dc2626; margin:2px 0;"><span class="pw-icon">✗</span> One special character</li>
+                    <li id="pw-match" style="color:#dc2626; margin:2px 0;"><span class="pw-icon">✗</span> Passwords match</li>
+                </ul>
             </div>
             <button type="submit" class="btn btn-primary btn-full" id="signup-submit-btn">Create Account</button>
             <script>
-            function validatePasswordStrength(pw) {
-                if (pw.length < 8) return 'Password must be at least 8 characters.';
-                if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter.';
-                if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter.';
-                if (!/[0-9]/.test(pw)) return 'Password must contain at least one number.';
-                if (!/[^A-Za-z0-9]/.test(pw)) return 'Password must contain at least one special character.';
-                return '';
+            function setRule(id, pass) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.style.color = pass ? '#166534' : '#dc2626';
+                el.querySelector('.pw-icon').textContent = pass ? '✓' : '✗';
             }
             function checkPasswordMatch() {
                 var pw = document.getElementById('signup-password').value;
                 var cpw = document.getElementById('signup-confirm-password').value;
-                var msg = document.getElementById('password-match-msg');
+                var list = document.getElementById('password-checklist');
                 var btn = document.getElementById('signup-submit-btn');
 
-                // Hide message if nothing has been typed in either field
+                // Hide checklist if nothing has been typed in either field
                 if (!pw && !cpw) {
-                    msg.style.display = 'none';
+                    list.style.display = 'none';
                     btn.disabled = false;
                     return;
                 }
 
-                // Check password strength first (only if they've typed something)
-                if (pw) {
-                    var strengthErr = validatePasswordStrength(pw);
-                    if (strengthErr) {
-                        msg.style.display = 'block';
-                        msg.textContent = strengthErr;
-                        msg.style.color = '#dc2626';
-                        btn.disabled = true;
-                        return;
-                    }
-                }
+                list.style.display = 'block';
 
-                // Then check match (only if confirm has content)
-                if (!cpw) {
-                    msg.style.display = 'none';
-                    btn.disabled = true;
-                    return;
-                }
-                msg.style.display = 'block';
-                if (pw === cpw) {
-                    msg.textContent = 'Passwords match';
-                    msg.style.color = '#166534';
-                    btn.disabled = false;
-                } else {
-                    msg.textContent = 'Passwords do not match';
-                    msg.style.color = '#dc2626';
-                    btn.disabled = true;
-                }
+                var lenOk = pw.length >= 8;
+                var upperOk = /[A-Z]/.test(pw);
+                var lowerOk = /[a-z]/.test(pw);
+                var numOk = /[0-9]/.test(pw);
+                var specialOk = /[^A-Za-z0-9]/.test(pw);
+                var matchOk = pw !== '' && pw === cpw;
+
+                setRule('pw-len', lenOk);
+                setRule('pw-upper', upperOk);
+                setRule('pw-lower', lowerOk);
+                setRule('pw-num', numOk);
+                setRule('pw-special', specialOk);
+                setRule('pw-match', matchOk);
+
+                btn.disabled = !(lenOk && upperOk && lowerOk && numOk && specialOk && matchOk);
             }
             </script>
         </form>
