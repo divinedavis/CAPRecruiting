@@ -1196,6 +1196,7 @@ async def reset_password_post(token: str, request: Request, db: Session = Depend
         return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Passwords do not match."})
     user = db.query(User).filter(User.id == rec.user_id).first()
     user.password_hash = hash_password(password)
+    user.session_version = (user.session_version or 0) + 1
     rec.used = 1
     db.commit()
     return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": True, "error": None})
