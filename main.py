@@ -104,7 +104,7 @@ app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=Tru
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as _StarletteResponse
 
-CSRF_EXEMPT_PATHS = {"/stripe/webhook", "/logout"}
+CSRF_EXEMPT_PATHS = {"/stripe/webhook"}
 
 class _CSRFMiddleware(BaseHTTPMiddleware):
     _SAFE = {"GET", "HEAD", "OPTIONS", "TRACE"}
@@ -488,6 +488,22 @@ def record_login_attempt(db: Session, ip: str, username: str, success: bool):
     db.query(LoginAttempt).filter(LoginAttempt.attempted_at < old_cutoff).delete()
     db.commit()
 
+
+
+# --- Rate limiting for signup, forgot-password, messaging ---
+_rate_limit_store: Dict[str, list] = {}
+
+def _check_rate_limit(key: str, max_requests: int, window_seconds: int) -> bool:
+    """Return True if rate limit exceeded."""
+    now = datetime.utcnow()
+    cutoff = now - timedelta(seconds=window_seconds)
+    if key not in _rate_limit_store:
+        _rate_limit_store[key] = []
+    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > cutoff]
+    if len(_rate_limit_store[key]) >= max_requests:
+        return True
+    _rate_limit_store[key].append(now)
+    return False
 
 def log_admin_action(db: Session, admin_id: int, action: str, target_id: int = None, detail: str = "", ip: str = ""):
     db.add(AdminAuditLog(admin_id=admin_id, action=action, target_id=target_id, detail=detail, ip_address=ip))
@@ -926,6 +942,9 @@ async def signup_post(
     bypass_token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
+    client_ip = request.client.host if request.client else "unknown"
+    if _check_rate_limit(f"signup:{client_ip}", 5, 3600):
+        return templates.TemplateResponse("signup.html", {"request": request, "error": "Too many signup attempts. Please try again later."})
     username = username.strip()
     new_team_name = new_team_name.strip()
     teams = db.query(Team).order_by(Team.name).all()
@@ -1097,15 +1116,19 @@ async def send_player_signup_notification(player_username: str, player_email: st
             msg["Subject"] = f"New Player Signup: {player_username}"
             msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
             msg["To"] = admin_email
+            from html import escape as _esc
+            _safe_user = _esc(player_username)
+            _safe_email = _esc(player_email)
+            _safe_school = _esc(school) if school else "—"
             html = f"""
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
                 <h2 style="color:#0a1628;">New Player Signed Up</h2>
                 <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Username</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{player_username}</td></tr>
-                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Email</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{player_email}</td></tr>
-                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">School</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{school or "—"}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Username</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_safe_user}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Email</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_safe_email}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">School</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_safe_school}</td></tr>
                 </table>
-                <a href="{site_url}/profile/{player_username}" style="background:#0a1628;color:#f0b429;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">View Profile</a>
+                <a href="{site_url}/profile/{_safe_user}" style="background:#0a1628;color:#f0b429;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">View Profile</a>
             </div>
             """
             msg.attach(MIMEText(html, "html"))
@@ -1120,6 +1143,9 @@ async def forgot_password_get(request: Request):
 
 @app.post("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_post(request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    if _check_rate_limit(f"forgot:{client_ip}", 3, 3600):
+        return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": True, "error": None})
     form = await request.form()
     email = (form.get("email") or "").strip().lower()
     user = db.query(User).filter(User.email == email).first()
@@ -1199,6 +1225,7 @@ async def login_post(
     request.session["is_admin"] = bool(user.is_admin)
     request.session["role"] = user.role
     request.session["subscription_tier"] = user.subscription_tier or "free"
+    request.session["session_version"] = user.session_version or 0
     return RedirectResponse("/dashboard", status_code=302)
 
 @app.post("/logout")
@@ -1222,10 +1249,9 @@ async def logout_all_sessions(request: Request, db: Session = Depends(get_db)):
     request.session["session_version"] = user.session_version
     return RedirectResponse("/profile/edit?success=1", status_code=302)
 
-# Keep GET as fallback for direct URL visits
+# GET /logout redirects to homepage (use POST to actually log out)
 @app.get("/logout")
 async def logout_get(request: Request):
-    request.session.clear()
     return RedirectResponse("/", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -2885,6 +2911,8 @@ async def conversation_send_ajax(username: str, request: Request, db: Session = 
     user_id = request.session.get("user_id")
     if not user_id:
         return JSONResponse({"error": "Not logged in"}, status_code=401)
+    if _check_rate_limit(f"msg:{user_id}", 30, 60):
+        return JSONResponse({"error": "Slow down — too many messages."}, status_code=429)
     sender = db.query(User).filter(User.id == user_id).first()
     peer = db.query(User).filter(User.username == username).first()
     if not peer:
