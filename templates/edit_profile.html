@@ -132,22 +132,46 @@
                     <div class="form-group">
                         <label>Height (e.g. 6'2")</label>
                         <input type="text" name="height" value="{{ profile.height if profile else '' }}" placeholder="6'2&quot;">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_height" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=height'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'height' in verified_stats else '' }}>
+                          <label for="verify_height">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Weight (lbs)</label>
                         <input type="text" name="weight" value="{{ profile.weight if profile else '' }}" placeholder="185">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_weight" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=weight'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'weight' in verified_stats else '' }}>
+                          <label for="verify_weight">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
                         <label>40-Yard Dash (sec)</label>
                         <input type="text" name="forty_yard" value="{{ profile.forty_yard if profile else '' }}" placeholder="4.65">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_forty_yard" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=forty_yard'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'forty_yard' in verified_stats else '' }}>
+                          <label for="verify_forty_yard">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Bench Press (lbs)</label>
                         <input type="text" name="bench_press" value="{{ profile.bench_press if profile else '' }}" placeholder="225">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_bench_press" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=bench_press'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'bench_press' in verified_stats else '' }}>
+                          <label for="verify_bench_press">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <button type="button" id="athletic-more-btn" onclick="var el=document.getElementById('athletic-more');if(el.style.display==='none'){el.style.display='block';this.textContent='Less Athletic Info ▲';}else{el.style.display='none';this.textContent='More Athletic Info ▼';}" style="display:inline-block;margin-bottom:16px;font-size:13px;font-weight:600;padding:8px 18px;border:1.5px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#0a1628;cursor:pointer;">More Athletic Info ▼</button>
@@ -156,14 +180,32 @@
                     <div class="form-group">
                         <label>Vertical (inches)</label>
                         <input type="text" name="vertical" value="{{ profile.vertical if profile else '' }}" placeholder="34">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_vertical" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=vertical'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'vertical' in verified_stats else '' }}>
+                          <label for="verify_vertical">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
                         <label>Squat (lbs)</label>
                         <input type="text" name="squat" value="{{ profile.squat if profile else '' }}" placeholder="315">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_squat" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=squat'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'squat' in verified_stats else '' }}>
+                          <label for="verify_squat">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
                         <label>Clean (lbs)</label>
                         <input type="text" name="clean" value="{{ profile.clean if profile else '' }}" placeholder="225">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_clean" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=clean'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'clean' in verified_stats else '' }}>
+                          <label for="verify_clean">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="form-row">
@@ -185,20 +227,44 @@
                             <input type="number" name="broad_jump_feet" min="0" max="15" value="{{ _bj_ft }}" placeholder="10" style="width:80px"> <small>ft</small>
                             <input type="number" name="broad_jump_inches" min="0" max="11" value="{{ _bj_in }}" placeholder="2" style="width:80px"> <small>in</small>
                         </div>
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_broad_jump" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=broad_jump'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'broad_jump' in verified_stats else '' }}>
+                          <label for="verify_broad_jump">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
                         <label>Pro Agility (sec)</label>
                         <input type="text" name="pro_agility" value="{{ profile.pro_agility if profile else '' }}" placeholder="4.25">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_pro_agility" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=pro_agility'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'pro_agility' in verified_stats else '' }}>
+                          <label for="verify_pro_agility">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Wingspan (inches)</label>
                         <input type="text" name="wingspan" value="{{ profile.wingspan if profile else '' }}" placeholder="78">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_wingspan" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=wingspan'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'wingspan' in verified_stats else '' }}>
+                          <label for="verify_wingspan">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
                         <label>GPA</label>
                         <input type="text" name="gpa" value="{{ profile.gpa if profile else '' }}" placeholder="3.8">
+                        {% if profile_form_action is defined and "/admin/" in profile_form_action %}
+                        <div class="verify-checkbox-row">
+                          <input type="checkbox" id="verify_gpa" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=gpa'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'gpa' in verified_stats else '' }}>
+                          <label for="verify_gpa">Verified</label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="form-row">
@@ -686,26 +752,6 @@
               </form>
             </div>
             {% endif %}
-            {% if profile_form_action is defined and "/admin/" in profile_form_action and user.role == "player" %}
-            <div style="margin-top:12px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:14px 16px;">
-              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#0a1628;">Verify Stats</p>
-              <p style="margin:0 0 10px;font-size:12px;color:#6b7280;">
-                Toggle verification on individual stats. Verified stats show a green checkmark on the player's profile.
-              </p>
-              <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                {% set verifiable = [("height","Height"),("weight","Weight"),("forty_yard","40-Yard"),("bench_press","Bench"),("vertical","Vertical"),("squat","Squat"),("clean","Clean"),("broad_jump","Broad Jump"),("pro_agility","Pro Agility"),("wingspan","Wingspan"),("gpa","GPA")] %}
-                {% for field, label in verifiable %}
-                <form method="post" action="/admin/users/{{ user.id }}/verify-stat" style="display:inline;">
-                  <input type="hidden" name="stat_field" value="{{ field }}">
-                  <button type="submit" class="verify-toggle-btn {{ 'verified' if verified_stats is defined and field in verified_stats else ''}}" title="{{ 'Unverify' if verified_stats is defined and field in verified_stats else 'Verify'}} {{ label }}">
-                    {{ label }} {{ '&#10003;' if verified_stats is defined and field in verified_stats else ''}}
-                  </button>
-                </form>
-                {% endfor %}
-              </div>
-            </div>
-            {% endif %}
-
             {% if request.session.get("is_admin") and profile_form_action is defined and "/admin/" in profile_form_action %}
             <form method="post" action="/admin/users/{{ user.id }}/delete" onsubmit="return confirm('Permanently delete {{ user.username }}? This cannot be undone.')" style="display:inline;">
                 <button type="submit" class="btn btn-lg" style="background:#fee2e2;color:#ef4444;border:1.5px solid #fca5a5;">Delete Account</button>

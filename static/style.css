@@ -1041,7 +1041,7 @@ textarea { resize: vertical; }
 /* Verified stat badge */
 .verified-badge {
     display: inline-block;
-    background: #22c55e;
+    background: #2563eb;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -1052,21 +1052,56 @@ textarea { resize: vertical; }
     text-align: center;
     margin-bottom: 2px;
     vertical-align: middle;
+    cursor: help;
+    position: relative;
 }
-.stat-card { position: relative; }
-.verify-toggle-btn {
-    display: inline-block;
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--gray-300);
-    background: var(--gray-50);
-    color: var(--gray-400);
-    cursor: pointer;
-    margin-top: 6px;
-}
-.verify-toggle-btn.verified {
-    background: #22c55e;
+.verified-badge:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
     color: #fff;
-    border-color: #22c55e;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.verified-badge:hover::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #1e293b;
+    z-index: 10;
+}
+.stat-card { position: relative; overflow: visible; }
+.verify-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--gray-400);
+}
+.verify-checkbox-row input[type="checkbox"] {
+    accent-color: #2563eb;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+.verify-checkbox-row label {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    margin: 0;
 }
