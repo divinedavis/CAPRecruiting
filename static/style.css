@@ -1037,3 +1037,36 @@ textarea { resize: vertical; }
     .profile-actions .btn { font-size: 13px; padding: 8px 10px; }
     .teams-table th:nth-child(1), .teams-table td:nth-child(1) { display: none; } /* hide # column */
 }
+
+/* Verified stat badge */
+.verified-badge {
+    display: inline-block;
+    background: #22c55e;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    border-radius: 50%;
+    text-align: center;
+    margin-bottom: 2px;
+    vertical-align: middle;
+}
+.stat-card { position: relative; }
+.verify-toggle-btn {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-400);
+    cursor: pointer;
+    margin-top: 6px;
+}
+.verify-toggle-btn.verified {
+    background: #22c55e;
+    color: #fff;
+    border-color: #22c55e;
+}

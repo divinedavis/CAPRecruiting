@@ -416,6 +416,15 @@ class AdminAuditLog(Base):
     ip_address = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class VerifiedStat(Base):
+    __tablename__ = "verified_stats"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stat_field = Column(String, nullable=False)
+    verified_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    verified_at = Column(DateTime, default=datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1509,6 +1518,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "can_view_videos": can_view_videos,
         "can_view_contact": can_view_contact,
         "can_message": can_message,
+        "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target.id).all()} if target.role == "player" else set(),
     })
 
 @app.get("/videos/{username}", response_class=HTMLResponse)
@@ -2063,6 +2073,7 @@ async def admin_edit_profile_get(target_id: int, request: Request, db: Session =
         "image_list": image_list,
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
+        "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id).all()} if target.role == "player" else set(),
     })
 
 @app.post("/admin/users/{target_id}/edit-profile", response_class=HTMLResponse)
@@ -2150,7 +2161,34 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         "image_list": image_list,
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
+        "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id).all()} if target.role == "player" else set(),
     })
+
+
+@app.post("/admin/users/{target_id}/verify-stat", response_class=HTMLResponse)
+async def admin_verify_stat(target_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    form = await request.form()
+    stat_field = form.get("stat_field", "")
+    allowed_fields = {"height", "weight", "forty_yard", "bench_press", "vertical", "squat", "clean", "broad_jump", "pro_agility", "wingspan", "gpa"}
+    if stat_field not in allowed_fields:
+        raise HTTPException(status_code=400, detail="Invalid stat field.")
+    existing = db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id, VerifiedStat.stat_field == stat_field).first()
+    if existing:
+        db.delete(existing)
+        action_detail = f"unverified {stat_field}"
+    else:
+        db.add(VerifiedStat(player_id=target_id, stat_field=stat_field, verified_by=admin.id))
+        action_detail = f"verified {stat_field}"
+    db.commit()
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "verify_stat", target_id, action_detail, _ip)
+    return RedirectResponse(f"/admin/users/{target_id}/edit-profile", status_code=302)
 
 @app.get("/admin/invites", response_class=HTMLResponse)
 async def admin_invites_get(request: Request, db: Session = Depends(get_db)):
