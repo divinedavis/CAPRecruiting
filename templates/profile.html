@@ -153,67 +153,69 @@
             </div>
 
             {% if profile.forty_yard or profile.pro_agility or profile.vertical or profile.broad_jump %}
-            <div class=profile-section>
+            <div class="profile-section">
                 <h2>Field Stats</h2>
-                <div class=stats-grid>
+                <div class="stats-grid">
                     {% if profile.forty_yard %}
-                    <div class=stat-card>
-                        <span class=stat-label>40-Yard Dash</span>
+                    <div class="stat-card">
+                        <span class="stat-label">40-Yard Dash</span>
                         {% if "forty_yard" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.forty_yard }} <small>sec</small></span>
+                        <span class="stat-value">{{ profile.forty_yard }} <small>sec</small></span>
                     </div>
                     {% endif %}
                     {% if profile.pro_agility %}
-                    <div class=stat-card>
-                        <span class=stat-label>Pro Agility</span>
+                    <div class="stat-card">
+                        <span class="stat-label">Pro Agility</span>
                         {% if "pro_agility" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.pro_agility }} <small>sec</small></span>
+                        <span class="stat-value">{{ profile.pro_agility }} <small>sec</small></span>
                     </div>
                     {% endif %}
                     {% if profile.vertical %}
-                    <div class=stat-card>
-                        <span class=stat-label>Vertical</span>
+                    <div class="stat-card">
+                        <span class="stat-label">Vertical</span>
                         {% if "vertical" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.vertical }} <small>in</small></span>
+                        <span class="stat-value">{{ profile.vertical }} <small>in</small></span>
                     </div>
                     {% endif %}
                     {% if profile.broad_jump %}
-                    <div class=stat-card>
-                        <span class=stat-label>Broad Jump</span>
+                    <div class="stat-card">
+                        <span class="stat-label">Broad Jump</span>
                         {% if "broad_jump" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.broad_jump }}</span>
+                        <span class="stat-value">{{ profile.broad_jump }}</span>
                     </div>
                     {% endif %}
+                </div>
             </div>
-            {% endif %}
             {% endif %}
 
             {% if profile.bench_press or profile.squat or profile.clean %}
-            <div class=profile-section>
+            <div class="profile-section">
                 <h2>Lifting Stats</h2>
-                <div class=stats-grid>
+                <div class="stats-grid">
                     {% if profile.bench_press %}
-                    <div class=stat-card>
-                        <span class=stat-label>Bench Press</span>
+                    <div class="stat-card">
+                        <span class="stat-label">Bench Press</span>
                         {% if "bench_press" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.bench_press }} <small>lbs</small></span>
+                        <span class="stat-value">{{ profile.bench_press }} <small>lbs</small></span>
                     </div>
                     {% endif %}
                     {% if profile.squat %}
-                    <div class=stat-card>
-                        <span class=stat-label>Squat</span>
+                    <div class="stat-card">
+                        <span class="stat-label">Squat</span>
                         {% if "squat" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.squat }} <small>lbs</small></span>
+                        <span class="stat-value">{{ profile.squat }} <small>lbs</small></span>
                     </div>
                     {% endif %}
                     {% if profile.clean %}
-                    <div class=stat-card>
-                        <span class=stat-label>Clean</span>
+                    <div class="stat-card">
+                        <span class="stat-label">Clean</span>
                         {% if "clean" in verified_stats %}<span class="verified-badge" data-tooltip="Verified by CAP Recruiting">&#10003;</span>{% endif %}
-                        <span class=stat-value>{{ profile.clean }} <small>lbs</small></span>
+                        <span class="stat-value">{{ profile.clean }} <small>lbs</small></span>
                     </div>
                     {% endif %}
+                </div>
             </div>
+            {% endif %}
             {% endif %}
 
             <!-- Scholarship Offers -->
