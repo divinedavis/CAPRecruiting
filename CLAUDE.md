@@ -327,3 +327,13 @@ curl -s -o /dev/null -w '%{http_code}' -X POST https://caprecruiting.com/stripe/
 ```bash
 for url in / /pricing /login /signup /dashboard /forgot-password /api/schools/states /profile/edit /messages /upgrade /questionnaires; do echo -n "$url "; curl -s -o /dev/null -w '%{http_code}\n' "https://caprecruiting.com$url"; done
 ```
+
+## Pre-Push Security Check
+
+Before every git commit/push, scan staged files for secrets:
+```bash
+git diff --cached | grep -iE "(sk_live|sk_test|pk_live|pk_test|gho_|ghp_|AKIA|secret_key|password|smtp_pass|whsec_|SPACES_SECRET|session_secret)"
+```
+If ANY match is found, **do NOT commit**. Remove the secret from the file, add it to `.env` instead, and make sure `.env` is in `.gitignore`.
+
+Never commit files containing API keys, tokens, passwords, or credentials. All secrets must live in `.env` and be loaded at runtime.
