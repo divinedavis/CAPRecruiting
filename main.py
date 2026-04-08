@@ -34,6 +34,8 @@ SMTP_PORT     = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER     = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SITE_URL      = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
+GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 SPACES_BASE_URL = SPACES_CDN_URL if SPACES_CDN_URL else f"https://{SPACES_BUCKET}.{SPACES_REGION}.digitaloceanspaces.com"
 
 s3 = boto3.client(
@@ -1254,6 +1256,123 @@ async def logout_all_sessions(request: Request, db: Session = Depends(get_db)):
 @app.get("/logout")
 async def logout_get(request: Request):
     return RedirectResponse("/", status_code=302)
+
+# ── Google OAuth 2.0 ──────────────────────────────────────────────────────────
+import urllib.parse as _urlparse
+import secrets as _secrets
+import httpx
+
+@app.get("/auth/google")
+async def google_auth_redirect(request: Request):
+    """Redirect user to Google's consent screen."""
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google OAuth not configured")
+    state = _secrets.token_urlsafe(32)
+    request.session["oauth_state"] = state
+    params = _urlparse.urlencode({
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": f"{SITE_URL}/auth/google/callback",
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    })
+    return RedirectResponse(f"https://accounts.google.com/o/oauth2/v2/auth?{params}")
+
+@app.get("/auth/google/callback")
+async def google_auth_callback(request: Request, code: str = "", state: str = "", error: str = "", db: Session = Depends(get_db)):
+    """Handle Google's redirect back with auth code."""
+    if error:
+        return RedirectResponse("/login?error=google_denied", status_code=302)
+    saved_state = request.session.pop("oauth_state", "")
+    if not state or state != saved_state:
+        return RedirectResponse("/login?error=google_failed", status_code=302)
+    # Exchange code for tokens
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post("https://oauth2.googleapis.com/token", data={
+                "code": code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": f"{SITE_URL}/auth/google/callback",
+                "grant_type": "authorization_code",
+            })
+            if token_resp.status_code != 200:
+                return RedirectResponse("/login?error=google_failed", status_code=302)
+            tokens = token_resp.json()
+            # Get user info
+            userinfo_resp = await client.get("https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {tokens['access_token']}"})
+            if userinfo_resp.status_code != 200:
+                return RedirectResponse("/login?error=google_failed", status_code=302)
+            guser = userinfo_resp.json()
+    except Exception:
+        return RedirectResponse("/login?error=google_failed", status_code=302)
+
+    google_email = guser.get("email", "").strip().lower()
+    if not google_email:
+        return RedirectResponse("/login?error=google_failed", status_code=302)
+
+    # Check if user already exists with this email
+    user = db.query(User).filter(User.email == google_email).first()
+    if user:
+        # Existing user — log them in
+        request.session.clear()
+        request.session["user_id"] = user.id
+        request.session["is_admin"] = bool(user.is_admin)
+        request.session["role"] = user.role
+        request.session["subscription_tier"] = user.subscription_tier or "free"
+        request.session["session_version"] = user.session_version or 0
+        return RedirectResponse("/dashboard", status_code=302)
+
+    # New user — create account as player/free
+    google_name = guser.get("name", "")
+    first_name = guser.get("given_name", "")
+    last_name = guser.get("family_name", "")
+    # Generate unique username from email prefix
+    base_username = google_email.split("@")[0]
+    base_username = re.sub(r'[^a-zA-Z0-9_]', '', base_username)[:20]
+    username = base_username
+    suffix = 1
+    while db.query(User).filter(User.username == username).first():
+        username = f"{base_username}{suffix}"
+        suffix += 1
+
+    # Create user with a random password (they'll use Google to log in)
+    random_pw = _secrets.token_urlsafe(32)
+    new_user = User(
+        username=username,
+        email=google_email,
+        password_hash=hash_password(random_pw),
+        role="player",
+        subscription_tier="free",
+        public_id=uuid.uuid4().hex[:12],
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    # Create empty player profile with Google name
+    profile = PlayerProfile(user_id=new_user.id, first_name=first_name, last_name=last_name)
+    db.add(profile)
+    db.commit()
+
+    # Log them in
+    request.session.clear()
+    request.session["user_id"] = new_user.id
+    request.session["is_admin"] = False
+    request.session["role"] = "player"
+    request.session["subscription_tier"] = "free"
+    request.session["session_version"] = 0
+
+    # Send admin notification
+    try:
+        await send_player_signup_notification(username, google_email, "")
+    except Exception:
+        pass
+
+    return RedirectResponse("/profile/edit", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, state: Optional[str] = None, city: Optional[str] = None, db: Session = Depends(get_db)):
