@@ -1263,12 +1263,17 @@ import secrets as _secrets
 import httpx
 
 @app.get("/auth/google")
-async def google_auth_redirect(request: Request):
+async def google_auth_redirect(request: Request, invite: str = "", db: Session = Depends(get_db)):
     """Redirect user to Google's consent screen."""
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
     state = _secrets.token_urlsafe(32)
     request.session["oauth_state"] = state
+    # Preserve coach invite token through the OAuth flow
+    if invite:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite, CoachInvite.used == False).first()
+        if inv and inv.expires_at > datetime.utcnow():
+            request.session["oauth_invite"] = invite
     params = _urlparse.urlencode({
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": f"{SITE_URL}/auth/google/callback",
@@ -1287,7 +1292,8 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
         return RedirectResponse("/login?error=google_denied", status_code=302)
     saved_state = request.session.pop("oauth_state", "")
     if not state or state != saved_state:
-        return RedirectResponse("/login?error=google_failed", status_code=302)
+        _logger.error(f"Google OAuth state mismatch: got={state!r} saved={saved_state!r} session_keys={list(request.session.keys())}")
+        return RedirectResponse("/login?error=google_state", status_code=302)
     # Exchange code for tokens
     try:
         async with httpx.AsyncClient() as client:
@@ -1299,16 +1305,19 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
                 "grant_type": "authorization_code",
             })
             if token_resp.status_code != 200:
-                return RedirectResponse("/login?error=google_failed", status_code=302)
+                _logger.error(f"Google token exchange failed: {token_resp.status_code} {token_resp.text[:500]}")
+                return RedirectResponse("/login?error=google_token", status_code=302)
             tokens = token_resp.json()
             # Get user info
             userinfo_resp = await client.get("https://www.googleapis.com/oauth2/v2/userinfo",
                 headers={"Authorization": f"Bearer {tokens['access_token']}"})
             if userinfo_resp.status_code != 200:
-                return RedirectResponse("/login?error=google_failed", status_code=302)
+                _logger.error(f"Google userinfo failed: {userinfo_resp.status_code}")
+                return RedirectResponse("/login?error=google_userinfo", status_code=302)
             guser = userinfo_resp.json()
-    except Exception:
-        return RedirectResponse("/login?error=google_failed", status_code=302)
+    except Exception as exc:
+        _logger.error(f"Google OAuth exception: {exc}")
+        return RedirectResponse("/login?error=google_exception", status_code=302)
 
     google_email = guser.get("email", "").strip().lower()
     if not google_email:
@@ -1326,7 +1335,14 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
         request.session["session_version"] = user.session_version or 0
         return RedirectResponse("/dashboard", status_code=302)
 
-    # New user — create account as player/free
+    # New user — check for coach invite token
+    invite_token = request.session.pop("oauth_invite", "")
+    is_coach = False
+    if invite_token:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token, CoachInvite.used == False).first()
+        if inv and inv.expires_at > datetime.utcnow():
+            is_coach = True
+
     google_name = guser.get("name", "")
     first_name = guser.get("given_name", "")
     last_name = guser.get("family_name", "")
@@ -1341,11 +1357,12 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
 
     # Create user with a random password (they'll use Google to log in)
     random_pw = _secrets.token_urlsafe(32)
+    role = "coach" if is_coach else "player"
     new_user = User(
         username=username,
         email=google_email,
         password_hash=hash_password(random_pw),
-        role="player",
+        role=role,
         subscription_tier="free",
         public_id=uuid.uuid4().hex[:12],
     )
@@ -1353,16 +1370,21 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
     db.commit()
     db.refresh(new_user)
 
-    # Create empty player profile with Google name
-    profile = PlayerProfile(user_id=new_user.id, first_name=first_name, last_name=last_name)
-    db.add(profile)
+    # Create profile based on role
+    if is_coach:
+        db.add(CoachProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
+        # Mark invite as used
+        inv.used = True
+        inv.used_by = new_user.id
+    else:
+        db.add(PlayerProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
     db.commit()
 
     # Log them in
     request.session.clear()
     request.session["user_id"] = new_user.id
     request.session["is_admin"] = False
-    request.session["role"] = "player"
+    request.session["role"] = role
     request.session["subscription_tier"] = "free"
     request.session["session_version"] = 0
 

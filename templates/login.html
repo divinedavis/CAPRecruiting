@@ -12,6 +12,10 @@
         {% if error %}
         <div class="alert alert-error">
             {% if error == "google_denied" %}Google sign-in was cancelled.
+            {% elif error == "google_state" %}Google sign-in failed (session expired). Please try again.
+            {% elif error == "google_token" %}Google sign-in failed (token exchange). Please try again.
+            {% elif error == "google_userinfo" %}Google sign-in failed (user info). Please try again.
+            {% elif error == "google_exception" %}Google sign-in failed (connection error). Please try again.
             {% elif error == "google_failed" %}Google sign-in failed. Please try again.
             {% else %}{{ error }}{% endif %}
         </div>
