@@ -1614,9 +1614,38 @@ async def upload_video(
     except Exception:
         pass
 
-    key = f"videos/{upload_user_id}/{uuid.uuid4().hex}.{ext}"
+    video_id_hex = uuid.uuid4().hex
+    key = f"videos/{upload_user_id}/{video_id_hex}.{ext}"
     content_type = video.content_type or f"video/{ext}"
     file_data = video.file
+
+    # Transcode non-mp4 formats (mov, avi, mkv, webm) to mp4 for browser compatibility
+    _transcode_cleanup = []
+    needs_transcode = ext in ("mov", "avi", "mkv", "webm")
+    if needs_transcode:
+        import tempfile, subprocess, shutil
+        tmp_in = tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False)
+        tmp_out = tmp_in.name.rsplit(".", 1)[0] + ".mp4"
+        _transcode_cleanup = [tmp_in.name, tmp_out]
+        try:
+            shutil.copyfileobj(file_data, tmp_in)
+            tmp_in.close()
+            proc = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    ["ffmpeg", "-i", tmp_in.name, "-c:v", "libx264", "-preset", "fast",
+                     "-crf", "23", "-c:a", "aac", "-movflags", "+faststart", "-y", tmp_out],
+                    capture_output=True, timeout=300
+                )
+            )
+            if proc.returncode != 0:
+                return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
+            key = f"videos/{upload_user_id}/{video_id_hex}.mp4"
+            content_type = "video/mp4"
+            file_data = open(tmp_out, "rb")
+        except Exception:
+            return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
+
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
@@ -1630,6 +1659,13 @@ async def upload_video(
         )
     except Exception:
         return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
+    finally:
+        import os as _os
+        for _f in _transcode_cleanup:
+            try:
+                _os.unlink(_f)
+            except Exception:
+                pass
 
     video_url = f"{SPACES_BASE_URL}/{key}"
     db.add(Video(user_id=upload_user_id, title=title.strip(), url=video_url, embed_url=video_url, thumbnail_url=""))
