@@ -61,7 +61,7 @@
             <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">Year</label>
             <select onchange="applyYearFilter(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;">
                 <option value="" {% if not active_year %}selected{% endif %}>All Years</option>
-                {% for yr in ["2025", "2026", "2027", "2028", "2029"] %}
+                {% for yr in ["2025", "2026", "2027", "2028", "2029", "2030"] %}
                 <option value="{{ yr }}" {% if active_year == yr %}selected{% endif %}>Class of {{ yr }}</option>
                 {% endfor %}
             </select>
