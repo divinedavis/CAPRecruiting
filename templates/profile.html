@@ -58,7 +58,7 @@
                         {% endif %}
                     </div>
                     {% if target.role == "player" and profile and profile.school %}
-                        <p class="profile-school">{{ profile.school }}{% if profile.school == "William Penn SHS" %} (York High){% endif %}</p>
+                        <p class="profile-school">{{ profile.school }}{% if profile.school == "William Penn SHS" %} (York High){% endif %}{% if profile.city or profile.state %}<br><span style="font-size:13px; color:#6b7280;">{{ profile.city }}{% if profile.city and profile.state %}, {% endif %}{{ profile.state }}{% if profile.county %} · {{ profile.county }} County{% endif %}</span>{% endif %}</p>
                     {% elif target.role == "coach" and profile and profile.school %}
                         <p class="profile-school">{{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
                     {% endif %}
@@ -301,7 +301,7 @@
             <div class="profile-section">
                 <h2>Videos</h2>
                 <div class="contact-locked">
-                    <span style="font-size:24px;">&#x1F512;</span>
+                    
                     {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view videos</p>
                     {% else %}
