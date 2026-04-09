@@ -418,6 +418,8 @@ class PlayerQuestionnaire(Base):
     twitter = Column(String, default="")
     instagram = Column(String, default="")
     hudl_link = Column(String, default="")
+    facebook = Column(String, default="")
+    best_time_to_call = Column(String, default="")
     # Academic
     school_name = Column(String, default="")
     school_city = Column(String, default="")
@@ -460,27 +462,43 @@ class PlayerQuestionnaire(Base):
     parent1_relationship = Column(String, default="")
     parent1_email = Column(String, default="")
     parent1_cell_phone = Column(String, default="")
+    parent1_business_phone = Column(String, default="")
     parent1_occupation = Column(String, default="")
     parent1_college = Column(String, default="")
+    parent1_address = Column(String, default="")
     # Parent/Guardian 2
     parent2_first_name = Column(String, default="")
     parent2_last_name = Column(String, default="")
     parent2_relationship = Column(String, default="")
     parent2_email = Column(String, default="")
     parent2_cell_phone = Column(String, default="")
+    parent2_business_phone = Column(String, default="")
     parent2_occupation = Column(String, default="")
     parent2_college = Column(String, default="")
+    parent2_address = Column(String, default="")
     # Family
     siblings = Column(Text, default="")
+    # Influential people
+    influential_person1 = Column(String, default="")
+    influential_person2 = Column(String, default="")
+    # Club/Travel Team
+    club_team_name = Column(String, default="")
+    club_coach_name = Column(String, default="")
+    club_coach_email = Column(String, default="")
+    club_coach_phone = Column(String, default="")
     # Coaching
     head_coach_name = Column(String, default="")
     head_coach_phone = Column(String, default="")
     head_coach_email = Column(String, default="")
+    school_fax = Column(String, default="")
     # Recruitment
     top_schools = Column(Text, default="")
     offers = Column(Text, default="")
     film_link = Column(String, default="")
     connection_to_school = Column(Text, default="")
+    campus_visits = Column(Text, default="")
+    planned_visits = Column(Text, default="")
+    decision_timeline = Column(String, default="")
 
 class LoginAttempt(Base):
     __tablename__ = "login_attempts"
@@ -3813,12 +3831,14 @@ async def download_questionnaire_pdf(request: Request, db: Session = Depends(get
         ("Email", q.email),
         ("Cell Phone", q.cell_phone),
         ("Home Phone", q.home_phone),
+        ("Best Time to Call", q.best_time_to_call),
         ("Street Address", q.address_street),
         ("City", q.address_city),
         ("State", q.address_state),
         ("Zip", q.address_zip),
         ("Twitter / X", q.twitter),
         ("Instagram", q.instagram),
+        ("Facebook", q.facebook),
     ])
 
     add_section("Academic Information", [
@@ -3827,6 +3847,7 @@ async def download_questionnaire_pdf(request: Request, db: Session = Depends(get
         ("School State", q.school_state),
         ("School Zip", q.school_zip),
         ("School Phone", q.school_phone),
+        ("School Fax", q.school_fax),
         ("Counselor Name", q.counselor_name),
         ("Counselor Email", q.counselor_email),
         ("Counselor Phone", q.counselor_phone),
@@ -3867,8 +3888,10 @@ async def download_questionnaire_pdf(request: Request, db: Session = Depends(get
         ("Relationship", q.parent1_relationship),
         ("Email", q.parent1_email),
         ("Cell Phone", q.parent1_cell_phone),
+        ("Business Phone", q.parent1_business_phone),
         ("Occupation", q.parent1_occupation),
         ("College", q.parent1_college),
+        ("Address (if different)", q.parent1_address),
     ])
 
     add_section("Parent / Guardian 2", [
@@ -3877,24 +3900,39 @@ async def download_questionnaire_pdf(request: Request, db: Session = Depends(get
         ("Relationship", q.parent2_relationship),
         ("Email", q.parent2_email),
         ("Cell Phone", q.parent2_cell_phone),
+        ("Business Phone", q.parent2_business_phone),
         ("Occupation", q.parent2_occupation),
         ("College", q.parent2_college),
+        ("Address (if different)", q.parent2_address),
     ])
 
-    add_section("Family", [
+    add_section("Family & Influences", [
         ("Siblings", q.siblings),
+        ("Influential Person 1", q.influential_person1),
+        ("Influential Person 2", q.influential_person2),
     ])
 
-    add_section("Coaching Staff", [
+    add_section("Club / Travel Team", [
+        ("Club / Team Name", q.club_team_name),
+        ("Club Coach Name", q.club_coach_name),
+        ("Club Coach Email", q.club_coach_email),
+        ("Club Coach Phone", q.club_coach_phone),
+    ])
+
+    add_section("High School Coaching Staff", [
         ("Head Coach Name", q.head_coach_name),
         ("Head Coach Phone", q.head_coach_phone),
         ("Head Coach Email", q.head_coach_email),
+        ("School Fax", q.school_fax),
     ])
 
     add_section("Recruitment", [
         ("Top Schools", q.top_schools),
         ("Offers", q.offers),
         ("Connection to School", q.connection_to_school),
+        ("Campus Visits (completed)", q.campus_visits),
+        ("Planned Visits", q.planned_visits),
+        ("Decision Timeline", q.decision_timeline),
     ])
 
     if q.athletic_achievements:

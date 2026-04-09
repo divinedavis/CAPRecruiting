@@ -35,7 +35,9 @@
       <div class="q-field"><label>Zip Code</label><input type="text" data-field="address_zip" value="{{ q.address_zip }}"></div>
       <div class="q-field"><label>Twitter / X</label><input type="text" data-field="twitter" value="{{ q.twitter }}" placeholder="@handle"></div>
       <div class="q-field"><label>Instagram</label><input type="text" data-field="instagram" value="{{ q.instagram }}" placeholder="@handle"></div>
+      <div class="q-field"><label>Facebook</label><input type="text" data-field="facebook" value="{{ q.facebook }}" placeholder="Profile URL"></div>
       <div class="q-field"><label>HUDL Link</label><input type="url" data-field="hudl_link" value="{{ q.hudl_link }}" placeholder="https://"></div>
+      <div class="q-field"><label>Best Time to Call</label><input type="text" data-field="best_time_to_call" value="{{ q.best_time_to_call }}" placeholder="e.g. Weekdays after 4pm"></div>
     </div>
   </div>
 
@@ -48,6 +50,7 @@
       <div class="q-field"><label>School State</label><input type="text" data-field="school_state" value="{{ q.school_state }}"></div>
       <div class="q-field"><label>School Zip</label><input type="text" data-field="school_zip" value="{{ q.school_zip }}"></div>
       <div class="q-field"><label>School Phone</label><input type="tel" data-field="school_phone" value="{{ q.school_phone }}"></div>
+      <div class="q-field"><label>School Fax</label><input type="tel" data-field="school_fax" value="{{ q.school_fax }}"></div>
       <div class="q-field"><label>Counselor Name</label><input type="text" data-field="counselor_name" value="{{ q.counselor_name }}"></div>
       <div class="q-field"><label>Counselor Email</label><input type="email" data-field="counselor_email" value="{{ q.counselor_email }}"></div>
       <div class="q-field"><label>Counselor Phone</label><input type="tel" data-field="counselor_phone" value="{{ q.counselor_phone }}"></div>
@@ -97,8 +100,10 @@
       <div class="q-field"><label>Relationship</label><input type="text" data-field="parent1_relationship" value="{{ q.parent1_relationship }}" placeholder="Mother, Father, Guardian"></div>
       <div class="q-field"><label>Email</label><input type="email" data-field="parent1_email" value="{{ q.parent1_email }}"></div>
       <div class="q-field"><label>Cell Phone</label><input type="tel" data-field="parent1_cell_phone" value="{{ q.parent1_cell_phone }}"></div>
+      <div class="q-field"><label>Business Phone</label><input type="tel" data-field="parent1_business_phone" value="{{ q.parent1_business_phone }}"></div>
       <div class="q-field"><label>Occupation</label><input type="text" data-field="parent1_occupation" value="{{ q.parent1_occupation }}"></div>
       <div class="q-field"><label>College Attended</label><input type="text" data-field="parent1_college" value="{{ q.parent1_college }}"></div>
+      <div class="q-field full"><label>Address (if different from player)</label><input type="text" data-field="parent1_address" value="{{ q.parent1_address }}"></div>
     </div>
   </div>
 
@@ -111,8 +116,10 @@
       <div class="q-field"><label>Relationship</label><input type="text" data-field="parent2_relationship" value="{{ q.parent2_relationship }}" placeholder="Mother, Father, Guardian"></div>
       <div class="q-field"><label>Email</label><input type="email" data-field="parent2_email" value="{{ q.parent2_email }}"></div>
       <div class="q-field"><label>Cell Phone</label><input type="tel" data-field="parent2_cell_phone" value="{{ q.parent2_cell_phone }}"></div>
+      <div class="q-field"><label>Business Phone</label><input type="tel" data-field="parent2_business_phone" value="{{ q.parent2_business_phone }}"></div>
       <div class="q-field"><label>Occupation</label><input type="text" data-field="parent2_occupation" value="{{ q.parent2_occupation }}"></div>
       <div class="q-field"><label>College Attended</label><input type="text" data-field="parent2_college" value="{{ q.parent2_college }}"></div>
+      <div class="q-field full"><label>Address (if different from player)</label><input type="text" data-field="parent2_address" value="{{ q.parent2_address }}"></div>
     </div>
   </div>
 
@@ -121,6 +128,19 @@
     <h2 class="q-section-title">Family</h2>
     <div class="q-grid">
       <div class="q-field full"><label>Siblings (names & ages)</label><textarea data-field="siblings" rows="2" placeholder="John (16), Sarah (14)">{{ q.siblings }}</textarea></div>
+      <div class="q-field"><label>Most Influential Person 1</label><input type="text" data-field="influential_person1" value="{{ q.influential_person1 }}" placeholder="Name & relationship"></div>
+      <div class="q-field"><label>Most Influential Person 2</label><input type="text" data-field="influential_person2" value="{{ q.influential_person2 }}" placeholder="Name & relationship"></div>
+    </div>
+  </div>
+
+  <!-- Club / Travel Team -->
+  <div class="q-section">
+    <h2 class="q-section-title">Club / Travel Team</h2>
+    <div class="q-grid">
+      <div class="q-field full"><label>Club / Team Name</label><input type="text" data-field="club_team_name" value="{{ q.club_team_name }}"></div>
+      <div class="q-field"><label>Club Coach Name</label><input type="text" data-field="club_coach_name" value="{{ q.club_coach_name }}"></div>
+      <div class="q-field"><label>Club Coach Email</label><input type="email" data-field="club_coach_email" value="{{ q.club_coach_email }}"></div>
+      <div class="q-field"><label>Club Coach Phone</label><input type="tel" data-field="club_coach_phone" value="{{ q.club_coach_phone }}"></div>
     </div>
   </div>
 
@@ -140,6 +160,9 @@
     <div class="q-grid">
       <div class="q-field full"><label>Top Schools (list your top choices)</label><textarea data-field="top_schools" rows="2" placeholder="School 1, School 2, School 3">{{ q.top_schools }}</textarea></div>
       <div class="q-field full"><label>Current Offers</label><textarea data-field="offers" rows="2" placeholder="List any offers you've received">{{ q.offers }}</textarea></div>
+      <div class="q-field full"><label>Campus Visits (completed)</label><textarea data-field="campus_visits" rows="2" placeholder="School Name - Date, School Name - Date">{{ q.campus_visits }}</textarea></div>
+      <div class="q-field full"><label>Planned Visits</label><textarea data-field="planned_visits" rows="2" placeholder="School Name - Date, School Name - Date">{{ q.planned_visits }}</textarea></div>
+      <div class="q-field"><label>Decision Timeline</label><input type="text" data-field="decision_timeline" value="{{ q.decision_timeline }}" placeholder="e.g. Early signing period, Spring 2027"></div>
       <div class="q-field full"><label>Connection to School</label><textarea data-field="connection_to_school" rows="2" placeholder="Family members, alumni connections, campus visits, etc.">{{ q.connection_to_school }}</textarea></div>
     </div>
   </div>
