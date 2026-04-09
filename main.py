@@ -270,8 +270,12 @@ class PlayerProfile(Base):
     intended_major = Column(String, default="")
     mother_first_name = Column(String, default="")
     mother_last_name = Column(String, default="")
+    mother_email = Column(String, default="")
+    mother_phone = Column(String, default="")
     father_first_name = Column(String, default="")
     father_last_name = Column(String, default="")
+    father_email = Column(String, default="")
+    father_phone = Column(String, default="")
     news_link1 = Column(String, default="")
     news_link2 = Column(String, default="")
     news_link3 = Column(String, default="")
@@ -1618,8 +1622,12 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.county = form.get("school_county", "")[:100]
         p.mother_first_name = form.get("mother_first_name", "")[:100]
         p.mother_last_name = form.get("mother_last_name", "")[:100]
+        p.mother_email = form.get("mother_email", "")[:200]
+        p.mother_phone = form.get("mother_phone", "")[:50]
         p.father_first_name = form.get("father_first_name", "")[:100]
         p.father_last_name = form.get("father_last_name", "")[:100]
+        p.father_email = form.get("father_email", "")[:200]
+        p.father_phone = form.get("father_phone", "")[:50]
         for _ni in range(1, 6):
             setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
@@ -1671,10 +1679,14 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
             q.grad_year = p.year or ""
             q.parent1_first_name = p.mother_first_name or ""
             q.parent1_last_name = p.mother_last_name or ""
+            q.parent1_email = p.mother_email or ""
+            q.parent1_cell_phone = p.mother_phone or ""
             if p.mother_first_name and not q.parent1_relationship:
                 q.parent1_relationship = "Mother"
             q.parent2_first_name = p.father_first_name or ""
             q.parent2_last_name = p.father_last_name or ""
+            q.parent2_email = p.father_email or ""
+            q.parent2_cell_phone = p.father_phone or ""
             if p.father_first_name and not q.parent2_relationship:
                 q.parent2_relationship = "Father"
             offers = [getattr(p, f"offer{i}", "") for i in range(1, 6) if getattr(p, f"offer{i}", "")]
@@ -2458,8 +2470,12 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.county = form.get("school_county", "")[:100]
         p.mother_first_name = form.get("mother_first_name", "")[:100]
         p.mother_last_name = form.get("mother_last_name", "")[:100]
+        p.mother_email = form.get("mother_email", "")[:200]
+        p.mother_phone = form.get("mother_phone", "")[:50]
         p.father_first_name = form.get("father_first_name", "")[:100]
         p.father_last_name = form.get("father_last_name", "")[:100]
+        p.father_email = form.get("father_email", "")[:200]
+        p.father_phone = form.get("father_phone", "")[:50]
         for _ni in range(1, 6):
             setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
@@ -3746,9 +3762,13 @@ async def my_questionnaire_page(request: Request, db: Session = Depends(get_db))
             q.grad_year = profile.year or ""
             q.parent1_first_name = profile.mother_first_name or ""
             q.parent1_last_name = profile.mother_last_name or ""
+            q.parent1_email = profile.mother_email or ""
+            q.parent1_cell_phone = profile.mother_phone or ""
             q.parent1_relationship = "Mother" if profile.mother_first_name else ""
             q.parent2_first_name = profile.father_first_name or ""
             q.parent2_last_name = profile.father_last_name or ""
+            q.parent2_email = profile.father_email or ""
+            q.parent2_cell_phone = profile.father_phone or ""
             q.parent2_relationship = "Father" if profile.father_first_name else ""
             # Populate offers
             offers = []

@@ -107,12 +107,32 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label>Mother Email</label>
+                        <input type="email" name="mother_email" value="{{ profile.mother_email if profile and profile.mother_email else '' }}" placeholder="Email address">
+                    </div>
+                    <div class="form-group">
+                        <label>Mother Phone</label>
+                        <input type="tel" name="mother_phone" value="{{ profile.mother_phone if profile and profile.mother_phone else '' }}" placeholder="Phone number">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Father First Name</label>
                         <input type="text" name="father_first_name" value="{{ profile.father_first_name if profile and profile.father_first_name else '' }}" placeholder="First name">
                     </div>
                     <div class="form-group">
                         <label>Father Last Name</label>
                         <input type="text" name="father_last_name" value="{{ profile.father_last_name if profile and profile.father_last_name else '' }}" placeholder="Last name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Father Email</label>
+                        <input type="email" name="father_email" value="{{ profile.father_email if profile and profile.father_email else '' }}" placeholder="Email address">
+                    </div>
+                    <div class="form-group">
+                        <label>Father Phone</label>
+                        <input type="tel" name="father_phone" value="{{ profile.father_phone if profile and profile.father_phone else '' }}" placeholder="Phone number">
                     </div>
                 </div>
             </div>
