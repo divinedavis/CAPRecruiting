@@ -400,10 +400,11 @@
             </div>
             {% endif %}
 
-            <!-- Coach Evaluations — coaches only, never visible to the player -->
-            {% if can_evaluate %}
+            <!-- Coach Evaluations — visible to all logged-in users, writable by coaches -->
+            {% if can_view_evals %}
             <div class="profile-section">
-                <h2>Coach Evaluations <span style="font-size:13px; font-weight:400; color:var(--gray-400); margin-left:8px;">Visible to coaches only</span></h2>
+                <h2>Coach Evaluations</h2>
+                {% if can_evaluate %}
                 <form method="post" action="/profile/{{ target.username }}/evaluate" style="margin-bottom:20px;">
                     <div style="position:relative;">
                         <textarea name="content" id="eval-textarea" rows="3" maxlength="140"
@@ -422,6 +423,7 @@
                     document.getElementById('eval-count').textContent = el.value.length;
                 }
                 </script>
+                {% endif %}
                 {% if eval_list %}
                 <div style="display:flex; flex-direction:column; gap:12px;">
                     {% for ev in eval_list %}
@@ -443,7 +445,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p style="color:var(--gray-400); font-size:14px;">No evaluations yet. Be the first to evaluate this player.</p>
+                <p style="color:var(--gray-400); font-size:14px;">No evaluations yet.</p>
                 {% endif %}
             </div>
             {% endif %}
@@ -575,7 +577,7 @@
             {% endif %}
 
             <!-- Parent / Guardian Info — coaches and admins only -->
-            {% if can_view_contact and target.role == "player" and profile and (profile.mother_first_name or profile.father_first_name) %}
+            {% if can_view_parents and target.role == "player" and profile and (profile.mother_first_name or profile.father_first_name) %}
             <div class="profile-section">
                 <h2>Parent / Guardian Info</h2>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">

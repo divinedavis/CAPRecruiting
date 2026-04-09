@@ -1764,11 +1764,14 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         can_see_transcripts = True
         transcript_list = db.query(Transcript).filter(Transcript.user_id == target.id).order_by(Transcript.created_at.desc()).all()
 
-    # Evaluations — only coaches/admins can see/write; players never see their own evals
+    # Evaluations — all logged-in users can see; only coaches/admins can write
     eval_list = []
     can_evaluate = False
-    if target.role == "player" and current_user and (current_user.role == "coach" or current_user.is_admin):
-        can_evaluate = True
+    can_view_evals = False
+    if target.role == "player" and current_user:
+        can_view_evals = True
+        if current_user.role == "coach" or current_user.is_admin:
+            can_evaluate = True
         raw_evals = (
             db.query(Evaluation, User)
             .join(User, Evaluation.coach_id == User.id)
@@ -1838,6 +1841,8 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "has_visits": has_visits,
         "eval_list": eval_list,
         "can_evaluate": can_evaluate,
+        "can_view_evals": can_view_evals,
+        "can_view_parents": bool(current_user and (current_user.role == "coach" or current_user.is_admin)),
         "image_list": image_list,
         "transcript_list": transcript_list,
         "can_see_transcripts": can_see_transcripts,
