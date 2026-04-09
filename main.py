@@ -276,6 +276,10 @@ class PlayerProfile(Base):
     father_last_name = Column(String, default="")
     father_email = Column(String, default="")
     father_phone = Column(String, default="")
+    home_address_street = Column(String, default="")
+    home_address_city = Column(String, default="")
+    home_address_state = Column(String, default="")
+    home_address_zip = Column(String, default="")
     news_link1 = Column(String, default="")
     news_link2 = Column(String, default="")
     news_link3 = Column(String, default="")
@@ -1628,6 +1632,10 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.father_last_name = form.get("father_last_name", "")[:100]
         p.father_email = form.get("father_email", "")[:200]
         p.father_phone = form.get("father_phone", "")[:50]
+        p.home_address_street = form.get("home_address_street", "")[:200]
+        p.home_address_city = form.get("home_address_city", "")[:100]
+        p.home_address_state = form.get("home_address_state", "")[:10]
+        p.home_address_zip = form.get("home_address_zip", "")[:20]
         for _ni in range(1, 6):
             setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
@@ -1656,6 +1664,10 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         if q:
             q.email = user.email or ""
             q.cell_phone = p.phone or ""
+            q.address_street = p.home_address_street or ""
+            q.address_city = p.home_address_city or ""
+            q.address_state = p.home_address_state or ""
+            q.address_zip = p.home_address_zip or ""
             q.school_name = p.school or ""
             q.school_city = p.city or ""
             q.school_state = p.state or ""
@@ -2476,6 +2488,10 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.father_last_name = form.get("father_last_name", "")[:100]
         p.father_email = form.get("father_email", "")[:200]
         p.father_phone = form.get("father_phone", "")[:50]
+        p.home_address_street = form.get("home_address_street", "")[:200]
+        p.home_address_city = form.get("home_address_city", "")[:100]
+        p.home_address_state = form.get("home_address_state", "")[:10]
+        p.home_address_zip = form.get("home_address_zip", "")[:20]
         for _ni in range(1, 6):
             setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
@@ -3740,6 +3756,10 @@ async def my_questionnaire_page(request: Request, db: Session = Depends(get_db))
         if profile:
             q.email = user.email or ""
             q.cell_phone = profile.phone or ""
+            q.address_street = profile.home_address_street or ""
+            q.address_city = profile.home_address_city or ""
+            q.address_state = profile.home_address_state or ""
+            q.address_zip = profile.home_address_zip or ""
             q.school_name = profile.school or ""
             q.school_city = profile.city or ""
             q.school_state = profile.state or ""
