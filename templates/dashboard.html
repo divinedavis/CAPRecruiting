@@ -31,11 +31,13 @@
             </select>
         </div>
 
-        <div id="dash-city-wrap" style="display:none;">
+        <div id="dash-city-wrap" style="display:none; position:relative;">
             <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">City</label>
-            <select id="dash-city" onchange="dashCityChanged(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;" disabled>
-                <option value="">All Cities</option>
-            </select>
+            <input type="text" id="dash-city-search" placeholder="All Cities — type to search" autocomplete="off"
+                style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; width:100%; box-sizing:border-box;"
+                disabled>
+            <div id="dash-city-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto; background:#fff; border:1.5px solid var(--gray-200); border-top:none; border-radius:0 0 8px 8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+            <input type="hidden" id="dash-city" value="">
         </div>
 
         <div id="dash-school-wrap" style="display:none;">
@@ -220,7 +222,10 @@ var savedCity = "{{ active_city or '' }}";
 var savedSchool = "{{ active_school or '' }}";
 var dashStateSel = document.getElementById('dash-state');
 var dashCitySel = document.getElementById('dash-city');
+var dashCitySearch = document.getElementById('dash-city-search');
+var dashCityDropdown = document.getElementById('dash-city-dropdown');
 var dashSchoolSel = document.getElementById('dash-school');
+var _allCities = [];
 
 fetch('/api/schools/states').then(function(r){return r.json()}).then(function(states) {
     states.forEach(function(s) {
@@ -233,24 +238,62 @@ fetch('/api/schools/states').then(function(r){return r.json()}).then(function(st
 });
 
 function loadCities(state) {
-    dashCitySel.innerHTML = '<option value="">All Cities</option>';
+    _allCities = [];
+    dashCitySearch.value = savedCity || '';
+    dashCitySel.value = '';
+    dashCitySearch.disabled = true;
     dashSchoolSel.innerHTML = '<option value="">All Schools</option>';
-    dashCitySel.disabled = true;
     dashSchoolSel.disabled = true;
     if (!state) return;
     fetch('/api/schools/cities?state=' + encodeURIComponent(state))
         .then(function(r){return r.json()}).then(function(cities) {
-            cities.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
-                if (c === savedCity) opt.selected = true;
-                dashCitySel.appendChild(opt);
-            });
-            dashCitySel.disabled = false;
+            _allCities = cities;
+            dashCitySearch.disabled = false;
             document.getElementById('dash-city-wrap').style.display = '';
-            if (savedCity) { document.getElementById('dash-school-wrap').style.display = ''; loadSchools(state, savedCity); }
+            if (savedCity) {
+                dashCitySearch.value = savedCity;
+                dashCitySel.value = savedCity;
+                document.getElementById('dash-school-wrap').style.display = '';
+                loadSchools(state, savedCity);
+            }
         });
 }
+
+function renderCityDropdown(filter) {
+    dashCityDropdown.innerHTML = '';
+    var term = (filter || '').toLowerCase();
+    var matches = _allCities.filter(function(c) { return !term || c.toLowerCase().indexOf(term) !== -1; });
+    if (!term) {
+        var allItem = document.createElement('div');
+        allItem.textContent = 'All Cities';
+        allItem.style.cssText = 'padding:8px 14px; cursor:pointer; font-size:13px; font-weight:600; color:var(--navy);';
+        allItem.onmousedown = function(e) { e.preventDefault(); selectCity(''); };
+        allItem.onmouseover = function() { this.style.background = '#f3f4f6'; };
+        allItem.onmouseout = function() { this.style.background = ''; };
+        dashCityDropdown.appendChild(allItem);
+    }
+    matches.slice(0, 50).forEach(function(c) {
+        var item = document.createElement('div');
+        item.textContent = c;
+        item.style.cssText = 'padding:8px 14px; cursor:pointer; font-size:13px; font-weight:600; color:var(--navy);';
+        item.onmousedown = function(e) { e.preventDefault(); selectCity(c); };
+        item.onmouseover = function() { this.style.background = '#f3f4f6'; };
+        item.onmouseout = function() { this.style.background = ''; };
+        dashCityDropdown.appendChild(item);
+    });
+    dashCityDropdown.style.display = matches.length || !term ? '' : 'none';
+}
+
+function selectCity(city) {
+    dashCitySearch.value = city;
+    dashCitySel.value = city;
+    dashCityDropdown.style.display = 'none';
+    dashCityChanged(city);
+}
+
+dashCitySearch.addEventListener('focus', function() { renderCityDropdown(this.value); });
+dashCitySearch.addEventListener('input', function() { renderCityDropdown(this.value); });
+dashCitySearch.addEventListener('blur', function() { setTimeout(function() { dashCityDropdown.style.display = 'none'; }, 150); });
 
 function loadSchools(state, city) {
     dashSchoolSel.innerHTML = '<option value="">All Schools</option>';
