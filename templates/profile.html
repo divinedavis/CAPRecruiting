@@ -573,6 +573,39 @@
                     {% endif %}
             </div>
             {% endif %}
+
+            <!-- Parent / Guardian Info — coaches and admins only -->
+            {% if can_view_contact and target.role == "player" and profile and (profile.mother_first_name or profile.father_first_name) %}
+            <div class="profile-section">
+                <h2>Parent / Guardian Info</h2>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    {% if profile.mother_first_name or profile.mother_last_name %}
+                    <div>
+                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; margin-bottom:6px;">Parent / Guardian 1</div>
+                        <div style="font-weight:600; color:#0a1628;">{{ profile.mother_first_name }} {{ profile.mother_last_name }}</div>
+                        {% if profile.mother_email %}
+                        <div style="margin-top:4px;"><a href="mailto:{{ profile.mother_email }}" style="color:#3b82f6; font-size:13px;">{{ profile.mother_email }}</a></div>
+                        {% endif %}
+                        {% if profile.mother_phone %}
+                        <div style="margin-top:2px;"><a href="tel:{{ profile.mother_phone }}" style="color:#3b82f6; font-size:13px;">{{ profile.mother_phone }}</a></div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if profile.father_first_name or profile.father_last_name %}
+                    <div>
+                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; margin-bottom:6px;">Parent / Guardian 2</div>
+                        <div style="font-weight:600; color:#0a1628;">{{ profile.father_first_name }} {{ profile.father_last_name }}</div>
+                        {% if profile.father_email %}
+                        <div style="margin-top:4px;"><a href="mailto:{{ profile.father_email }}" style="color:#3b82f6; font-size:13px;">{{ profile.father_email }}</a></div>
+                        {% endif %}
+                        {% if profile.father_phone %}
+                        <div style="margin-top:2px;"><a href="tel:{{ profile.father_phone }}" style="color:#3b82f6; font-size:13px;">{{ profile.father_phone }}</a></div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
