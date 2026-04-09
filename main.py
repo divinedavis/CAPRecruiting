@@ -1643,6 +1643,43 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.phone = form.get("phone", "")[:100]
         p.contact_email = form.get("contact_email", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
+        # Sync profile changes to questionnaire if it exists
+        q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
+        if q:
+            q.email = user.email or ""
+            q.cell_phone = p.phone or ""
+            q.school_name = p.school or ""
+            q.school_city = p.city or ""
+            q.school_state = p.state or ""
+            q.gpa = p.gpa or ""
+            q.intended_major = p.intended_major or ""
+            q.height = p.height or ""
+            q.weight = p.weight or ""
+            q.position_offense = p.position or ""
+            q.forty_yard = p.forty_yard or ""
+            q.bench_press = p.bench_press or ""
+            q.squat = p.squat or ""
+            q.powerclean = p.clean or ""
+            q.vertical = p.vertical or ""
+            q.broad_jump = p.broad_jump or ""
+            q.wingspan = p.wingspan or ""
+            q.shuttle = p.pro_agility or ""
+            q.hudl_link = p.hudl_url or ""
+            q.film_link = p.hudl_url or ""
+            q.twitter = p.x_url or ""
+            q.instagram = p.instagram_url or ""
+            q.grad_year = p.year or ""
+            q.parent1_first_name = p.mother_first_name or ""
+            q.parent1_last_name = p.mother_last_name or ""
+            if p.mother_first_name and not q.parent1_relationship:
+                q.parent1_relationship = "Mother"
+            q.parent2_first_name = p.father_first_name or ""
+            q.parent2_last_name = p.father_last_name or ""
+            if p.father_first_name and not q.parent2_relationship:
+                q.parent2_relationship = "Father"
+            offers = [getattr(p, f"offer{i}", "") for i in range(1, 6) if getattr(p, f"offer{i}", "")]
+            q.offers = ", ".join(offers)
+            q.updated_at = datetime.utcnow()
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
         c.first_name = form.get("first_name", "")[:100]
