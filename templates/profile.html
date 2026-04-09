@@ -19,7 +19,7 @@
 
     <!-- Share bar -->
     <div class="share-bar">
-        <span class="share-label">🔗 Share this profile:</span>
+        <span class="share-label">Share this profile:</span>
         <div class="share-input-group">
             <input type="text" id="share-url" value="{{ request.url }}" readonly class="share-input">
             <button onclick="copyProfile()" class="btn btn-outline btn-sm" id="copy-btn">Copy Link</button>
@@ -49,7 +49,7 @@
                     <div style="font-size:22px; letter-spacing:3px; color:#f59e0b; margin-top:2px; margin-bottom:4px;">{% for i in range(profile.stars) %}★{% endfor %}{% for i in range(5 - profile.stars) %}☆{% endfor %}</div>
                     {% endif %}
                     <div class="profile-badges">
-                        <span class="role-tag {{ target.role }}">{{ "🏈 Player" if target.role == "player" else "📋 Coach" }}</span>
+                        <span class="role-tag {{ target.role }}">{{ "Player" if target.role == "player" else "Coach" }}</span>
                         {% if target.role == "player" and profile and profile.position %}
                             <span class="position-tag">{{ profile.position }}</span>
                         {% endif %}
@@ -58,9 +58,9 @@
                         {% endif %}
                     </div>
                     {% if target.role == "player" and profile and profile.school %}
-                        <p class="profile-school">🏫 {{ profile.school }}{% if profile.school == "William Penn SHS" %} (York High){% endif %}</p>
+                        <p class="profile-school">{{ profile.school }}{% if profile.school == "William Penn SHS" %} (York High){% endif %}</p>
                     {% elif target.role == "coach" and profile and profile.school %}
-                        <p class="profile-school">🏫 {{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
+                        <p class="profile-school">{{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
                     {% endif %}
                     {% if profile and (profile.x_url or profile.instagram_url or profile.hudl_url) %}
                     <div style="display:flex; gap:10px; margin-top:8px; align-items:center;">
@@ -85,11 +85,11 @@
 
                 {% if is_owner %}
                 <div class="profile-actions">
-                    <a href="/profile/edit" class="btn btn-outline">&#x270F;&#xFE0F; Edit Profile</a>
+                    <a href="/profile/edit" class="btn btn-outline">Edit Profile</a>
                 </div>
                 {% elif current_user and current_user.is_admin %}
                 <div class="profile-actions">
-                    <a href="/messages/{{ target.username }}" class="btn btn-primary">&#x1F4AC; Message</a>
+                    <a href="/messages/{{ target.username }}" class="btn btn-primary">Message</a>
                     <a href="/admin/users/{{ target.id }}/edit-profile" class="btn btn-primary">Edit Profile</a>
                     <form method="post" action="/admin/users/{{ target.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this profile? This cannot be undone.')">
                         <button type="submit" class="btn btn-danger">Delete Profile</button>
@@ -97,11 +97,11 @@
                 </div>
                 {% elif can_message %}
                 <div class="profile-actions">
-                    <a href="/messages/{{ target.username }}" class="btn btn-primary">&#x1F4AC; Message</a>
+                    <a href="/messages/{{ target.username }}" class="btn btn-primary">Message</a>
                 </div>
                 {% elif current_user %}
                 <div class="profile-actions">
-                    <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628;" title="Premium plan required for messaging">&#x1F512; Upgrade to Message</a>
+                    <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628;" title="Premium plan required for messaging">Upgrade to Message</a>
                 </div>
                 {% else %}
                 <div class="profile-actions">
@@ -260,19 +260,19 @@
                 <div class="links-list">
                     {% if profile.link1_url %}
                     <a href="{{ profile.link1_url }}" target="_blank" rel="noopener" class="ext-link">
-                        🔗 {{ profile.link1_label if profile.link1_label else profile.link1_url }}
+                        {{ profile.link1_label if profile.link1_label else profile.link1_url }}
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
                     {% if profile.link2_url %}
                     <a href="{{ profile.link2_url }}" target="_blank" rel="noopener" class="ext-link">
-                        🔗 {{ profile.link2_label if profile.link2_label else profile.link2_url }}
+                        {{ profile.link2_label if profile.link2_label else profile.link2_url }}
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
                     {% if target.role == "player" and profile.link3_url %}
                     <a href="{{ profile.link3_url }}" target="_blank" rel="noopener" class="ext-link">
-                        🔗 {{ profile.link3_label if profile.link3_label else profile.link3_url }}
+                        {{ profile.link3_label if profile.link3_label else profile.link3_url }}
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
@@ -288,7 +288,7 @@
                     {% set link = profile['news_link' ~ i] if profile['news_link' ~ i] is defined else '' %}
                     {% if link %}
                     <a href="{{ link }}" target="_blank" rel="noopener" class="ext-link">
-                        📰 {{ link | replace('https://', '') | replace('http://', '') | truncate(60) }}
+                        {{ link | replace('https://', '') | replace('http://', '') | truncate(60) }}
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
@@ -391,7 +391,7 @@
             <div class="profile-section">
                 <h2>Campus Visits</h2>
                 <div class="contact-locked">
-                    <span style="font-size:24px;">🔒</span>
+                    <span style="font-size:24px;"></span>
                     {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view campus visits</p>
                     {% else %}
@@ -403,7 +403,7 @@
             <!-- Coach Evaluations — coaches only, never visible to the player -->
             {% if can_evaluate %}
             <div class="profile-section">
-                <h2>📋 Coach Evaluations <span style="font-size:13px; font-weight:400; color:var(--gray-400); margin-left:8px;">Visible to coaches only</span></h2>
+                <h2>Coach Evaluations <span style="font-size:13px; font-weight:400; color:var(--gray-400); margin-left:8px;">Visible to coaches only</span></h2>
                 <form method="post" action="/profile/{{ target.username }}/evaluate" style="margin-bottom:20px;">
                     <div style="position:relative;">
                         <textarea name="content" id="eval-textarea" rows="3" maxlength="140"
@@ -427,7 +427,7 @@
                     {% for ev in eval_list %}
                     <div style="padding:14px 16px; background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:var(--radius-sm);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-size:13px; font-weight:700; color:var(--navy);">📋 {{ ev.coach_name }}</span>
+                            <span style="font-size:13px; font-weight:700; color:var(--navy);">{{ ev.coach_name }}</span>
                             <span style="font-size:12px; color:var(--gray-400);">{{ ev.date }}</span>
                         </div>
                         {% set full = ev.content %}
@@ -544,19 +544,19 @@
                 <div class="contact-list">
                     {% if profile.phone %}
                     <div class="contact-row">
-                        <span class="contact-icon">📞</span>
+                        <span class="contact-icon"></span>
                         <a href="tel:{{ profile.phone }}" class="contact-value">{{ profile.phone }}</a>
                     </div>
                     {% endif %}
                     {% if profile.contact_email %}
                     <div class="contact-row">
-                        <span class="contact-icon">✉️</span>
+                        <span class="contact-icon"></span>
                         <a href="mailto:{{ profile.contact_email }}" class="contact-value">{{ profile.contact_email }}</a>
                     </div>
                     {% endif %}
                     {% if profile.home_address_street or profile.home_address_city %}
                     <div class="contact-row">
-                        <span class="contact-icon">🏠</span>
+                        <span class="contact-icon"></span>
                         <span class="contact-value">{{ profile.home_address_street }}{% if profile.home_address_city %}, {{ profile.home_address_city }}{% endif %}{% if profile.home_address_state %}, {{ profile.home_address_state }}{% endif %} {{ profile.home_address_zip }}</span>
                     </div>
                     {% endif %}
@@ -565,7 +565,7 @@
             <div class="profile-section">
                 <h2>Contact</h2>
                 <div class="contact-locked">
-                    <span style="font-size:24px;">🔒</span>
+                    <span style="font-size:24px;"></span>
                     {% if not current_user %}
                     <p><a href="/login">Sign in</a> to view contact information</p>
                     {% else %}
