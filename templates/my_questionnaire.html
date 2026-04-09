@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}My Recruiting Questionnaire — CAP Recruiting{% endblock %}
+{% block content %}
+<div class="container page-top" style="max-width:800px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:28px;">
+    <div>
+      <h1 style="font-size:28px; font-weight:800; color:#0a1628; margin-bottom:4px;">My Recruiting Questionnaire</h1>
+      <p style="color:#6b7280; font-size:14px;">Fill out once. Use for every school. Auto-saves as you type.</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span id="save-status" style="color:#6b7280; font-size:12px;"></span>
+      <a href="/my-questionnaire/pdf" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; padding:10px 20px; font-size:14px; font-weight:700; border-radius:8px; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+      </a>
+      <a href="/questionnaires" style="color:#6b7280; font-size:13px; text-decoration:none; font-weight:600;">&larr; Back</a>
+    </div>
+  </div>
+
+  <!-- Personal Information -->
+  <div class="q-section">
+    <h2 class="q-section-title">Personal Information</h2>
+    <div class="q-grid">
+      <div class="q-field"><label>First Name</label><input type="text" value="{{ profile.first_name if profile else '' }}" disabled class="q-disabled" title="Edit on your profile page"></div>
+      <div class="q-field"><label>Last Name</label><input type="text" value="{{ profile.last_name if profile else '' }}" disabled class="q-disabled" title="Edit on your profile page"></div>
+      <div class="q-field"><label>Preferred Name</label><input type="text" data-field="preferred_name" value="{{ q.preferred_name }}"></div>
+      <div class="q-field"><label>Middle Name</label><input type="text" data-field="middle_name" value="{{ q.middle_name }}"></div>
+      <div class="q-field"><label>Date of Birth</label><input type="date" data-field="date_of_birth" value="{{ q.date_of_birth }}"></div>
+      <div class="q-field"><label>Email</label><input type="email" data-field="email" value="{{ q.email }}"></div>
+      <div class="q-field"><label>Cell Phone</label><input type="tel" data-field="cell_phone" value="{{ q.cell_phone }}"></div>
+      <div class="q-field"><label>Home Phone</label><input type="tel" data-field="home_phone" value="{{ q.home_phone }}"></div>
+      <div class="q-field full"><label>Street Address</label><input type="text" data-field="address_street" value="{{ q.address_street }}"></div>
+      <div class="q-field"><label>City</label><input type="text" data-field="address_city" value="{{ q.address_city }}"></div>
+      <div class="q-field"><label>State</label><input type="text" data-field="address_state" value="{{ q.address_state }}"></div>
+      <div class="q-field"><label>Zip Code</label><input type="text" data-field="address_zip" value="{{ q.address_zip }}"></div>
+      <div class="q-field"><label>Twitter / X</label><input type="text" data-field="twitter" value="{{ q.twitter }}" placeholder="@handle"></div>
+      <div class="q-field"><label>Instagram</label><input type="text" data-field="instagram" value="{{ q.instagram }}" placeholder="@handle"></div>
+      <div class="q-field"><label>HUDL Link</label><input type="url" data-field="hudl_link" value="{{ q.hudl_link }}" placeholder="https://"></div>
+    </div>
+  </div>
+
+  <!-- Academic Information -->
+  <div class="q-section">
+    <h2 class="q-section-title">Academic Information</h2>
+    <div class="q-grid">
+      <div class="q-field full"><label>High School Name</label><input type="text" data-field="school_name" value="{{ q.school_name }}"></div>
+      <div class="q-field"><label>School City</label><input type="text" data-field="school_city" value="{{ q.school_city }}"></div>
+      <div class="q-field"><label>School State</label><input type="text" data-field="school_state" value="{{ q.school_state }}"></div>
+      <div class="q-field"><label>School Zip</label><input type="text" data-field="school_zip" value="{{ q.school_zip }}"></div>
+      <div class="q-field"><label>School Phone</label><input type="tel" data-field="school_phone" value="{{ q.school_phone }}"></div>
+      <div class="q-field"><label>Counselor Name</label><input type="text" data-field="counselor_name" value="{{ q.counselor_name }}"></div>
+      <div class="q-field"><label>Counselor Email</label><input type="email" data-field="counselor_email" value="{{ q.counselor_email }}"></div>
+      <div class="q-field"><label>Counselor Phone</label><input type="tel" data-field="counselor_phone" value="{{ q.counselor_phone }}"></div>
+      <div class="q-field"><label>Graduation Year</label><input type="text" data-field="grad_year" value="{{ q.grad_year }}" placeholder="2027"></div>
+      <div class="q-field"><label>GPA</label><input type="text" data-field="gpa" value="{{ q.gpa }}"></div>
+      <div class="q-field"><label>SAT Composite</label><input type="text" data-field="sat_composite" value="{{ q.sat_composite }}"></div>
+      <div class="q-field"><label>SAT Math</label><input type="text" data-field="sat_math" value="{{ q.sat_math }}"></div>
+      <div class="q-field"><label>SAT Reading</label><input type="text" data-field="sat_reading" value="{{ q.sat_reading }}"></div>
+      <div class="q-field"><label>ACT Composite</label><input type="text" data-field="act_composite" value="{{ q.act_composite }}"></div>
+      <div class="q-field"><label>Intended Major</label><input type="text" data-field="intended_major" value="{{ q.intended_major }}"></div>
+      <div class="q-field"><label>NCAA Eligibility (Y/N)</label><input type="text" data-field="ncaa_eligibility" value="{{ q.ncaa_eligibility }}" placeholder="Y or N"></div>
+      <div class="q-field"><label>NCAA Eligibility ID</label><input type="text" data-field="ncaa_eligibility_id" value="{{ q.ncaa_eligibility_id }}"></div>
+    </div>
+  </div>
+
+  <!-- Athletic Information -->
+  <div class="q-section">
+    <h2 class="q-section-title">Athletic Information</h2>
+    <div class="q-grid">
+      <div class="q-field"><label>Height</label><input type="text" data-field="height" value="{{ q.height }}" placeholder="6'1&quot;"></div>
+      <div class="q-field"><label>Weight</label><input type="text" data-field="weight" value="{{ q.weight }}" placeholder="lbs"></div>
+      <div class="q-field"><label>Position (Offense)</label><input type="text" data-field="position_offense" value="{{ q.position_offense }}"></div>
+      <div class="q-field"><label>Position (Defense)</label><input type="text" data-field="position_defense" value="{{ q.position_defense }}"></div>
+      <div class="q-field"><label>Position (Special Teams)</label><input type="text" data-field="position_special_teams" value="{{ q.position_special_teams }}"></div>
+      <div class="q-field"><label>Jersey #</label><input type="text" data-field="jersey_number" value="{{ q.jersey_number }}"></div>
+      <div class="q-field"><label>40 Yard Dash</label><input type="text" data-field="forty_yard" value="{{ q.forty_yard }}"></div>
+      <div class="q-field"><label>Pro Agility / Shuttle</label><input type="text" data-field="shuttle" value="{{ q.shuttle }}"></div>
+      <div class="q-field"><label>Vertical Jump</label><input type="text" data-field="vertical" value="{{ q.vertical }}"></div>
+      <div class="q-field"><label>Broad Jump</label><input type="text" data-field="broad_jump" value="{{ q.broad_jump }}"></div>
+      <div class="q-field"><label>Bench Press</label><input type="text" data-field="bench_press" value="{{ q.bench_press }}"></div>
+      <div class="q-field"><label>Squat</label><input type="text" data-field="squat" value="{{ q.squat }}"></div>
+      <div class="q-field"><label>Power Clean</label><input type="text" data-field="powerclean" value="{{ q.powerclean }}"></div>
+      <div class="q-field"><label>Wingspan</label><input type="text" data-field="wingspan" value="{{ q.wingspan }}"></div>
+      <div class="q-field full"><label>Other Sports</label><input type="text" data-field="other_sports" value="{{ q.other_sports }}"></div>
+      <div class="q-field full"><label>Film / Highlight Link</label><input type="url" data-field="film_link" value="{{ q.film_link }}" placeholder="https://"></div>
+      <div class="q-field full"><label>Athletic Achievements</label><textarea data-field="athletic_achievements" rows="3" placeholder="All-conference, state championships, records, etc.">{{ q.athletic_achievements }}</textarea></div>
+      <div class="q-field full"><label>Injuries / Surgeries</label><textarea data-field="injuries" rows="2" placeholder="List any significant injuries or surgeries">{{ q.injuries }}</textarea></div>
+    </div>
+  </div>
+
+  <!-- Parent / Guardian 1 -->
+  <div class="q-section">
+    <h2 class="q-section-title">Parent / Guardian 1</h2>
+    <div class="q-grid">
+      <div class="q-field"><label>First Name</label><input type="text" data-field="parent1_first_name" value="{{ q.parent1_first_name }}"></div>
+      <div class="q-field"><label>Last Name</label><input type="text" data-field="parent1_last_name" value="{{ q.parent1_last_name }}"></div>
+      <div class="q-field"><label>Relationship</label><input type="text" data-field="parent1_relationship" value="{{ q.parent1_relationship }}" placeholder="Mother, Father, Guardian"></div>
+      <div class="q-field"><label>Email</label><input type="email" data-field="parent1_email" value="{{ q.parent1_email }}"></div>
+      <div class="q-field"><label>Cell Phone</label><input type="tel" data-field="parent1_cell_phone" value="{{ q.parent1_cell_phone }}"></div>
+      <div class="q-field"><label>Occupation</label><input type="text" data-field="parent1_occupation" value="{{ q.parent1_occupation }}"></div>
+      <div class="q-field"><label>College Attended</label><input type="text" data-field="parent1_college" value="{{ q.parent1_college }}"></div>
+    </div>
+  </div>
+
+  <!-- Parent / Guardian 2 -->
+  <div class="q-section">
+    <h2 class="q-section-title">Parent / Guardian 2</h2>
+    <div class="q-grid">
+      <div class="q-field"><label>First Name</label><input type="text" data-field="parent2_first_name" value="{{ q.parent2_first_name }}"></div>
+      <div class="q-field"><label>Last Name</label><input type="text" data-field="parent2_last_name" value="{{ q.parent2_last_name }}"></div>
+      <div class="q-field"><label>Relationship</label><input type="text" data-field="parent2_relationship" value="{{ q.parent2_relationship }}" placeholder="Mother, Father, Guardian"></div>
+      <div class="q-field"><label>Email</label><input type="email" data-field="parent2_email" value="{{ q.parent2_email }}"></div>
+      <div class="q-field"><label>Cell Phone</label><input type="tel" data-field="parent2_cell_phone" value="{{ q.parent2_cell_phone }}"></div>
+      <div class="q-field"><label>Occupation</label><input type="text" data-field="parent2_occupation" value="{{ q.parent2_occupation }}"></div>
+      <div class="q-field"><label>College Attended</label><input type="text" data-field="parent2_college" value="{{ q.parent2_college }}"></div>
+    </div>
+  </div>
+
+  <!-- Family -->
+  <div class="q-section">
+    <h2 class="q-section-title">Family</h2>
+    <div class="q-grid">
+      <div class="q-field full"><label>Siblings (names & ages)</label><textarea data-field="siblings" rows="2" placeholder="John (16), Sarah (14)">{{ q.siblings }}</textarea></div>
+    </div>
+  </div>
+
+  <!-- Coaching Staff -->
+  <div class="q-section">
+    <h2 class="q-section-title">High School Coaching Staff</h2>
+    <div class="q-grid">
+      <div class="q-field"><label>Head Coach Name</label><input type="text" data-field="head_coach_name" value="{{ q.head_coach_name }}"></div>
+      <div class="q-field"><label>Head Coach Phone</label><input type="tel" data-field="head_coach_phone" value="{{ q.head_coach_phone }}"></div>
+      <div class="q-field"><label>Head Coach Email</label><input type="email" data-field="head_coach_email" value="{{ q.head_coach_email }}"></div>
+    </div>
+  </div>
+
+  <!-- Recruitment -->
+  <div class="q-section">
+    <h2 class="q-section-title">Recruitment</h2>
+    <div class="q-grid">
+      <div class="q-field full"><label>Top Schools (list your top choices)</label><textarea data-field="top_schools" rows="2" placeholder="School 1, School 2, School 3">{{ q.top_schools }}</textarea></div>
+      <div class="q-field full"><label>Current Offers</label><textarea data-field="offers" rows="2" placeholder="List any offers you've received">{{ q.offers }}</textarea></div>
+      <div class="q-field full"><label>Connection to School</label><textarea data-field="connection_to_school" rows="2" placeholder="Family members, alumni connections, campus visits, etc.">{{ q.connection_to_school }}</textarea></div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin:32px 0 48px;">
+    <a href="/my-questionnaire/pdf" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; padding:14px 32px; font-size:15px; font-weight:700; border-radius:10px; text-decoration:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download PDF
+    </a>
+  </div>
+</div>
+
+<style>
+.q-section { background:#fff; border:2px solid #e5e7eb; border-radius:14px; padding:24px; margin-bottom:20px; }
+.q-section-title { font-size:16px; font-weight:700; color:#0a1628; margin:0 0 16px 0; padding-bottom:10px; border-bottom:2px solid #f3f4f6; }
+.q-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.q-field { display:flex; flex-direction:column; gap:4px; }
+.q-field.full { grid-column:1 / -1; }
+.q-field label { font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+.q-field input, .q-field textarea {
+  border:2px solid #e5e7eb; border-radius:8px; padding:10px 12px; font-size:14px; color:#0a1628;
+  font-family:inherit; transition:border-color .15s; background:#fff; width:100%; box-sizing:border-box;
+}
+.q-field input:focus, .q-field textarea:focus { outline:none; border-color:#f0b429; }
+.q-field textarea { resize:vertical; }
+.q-disabled { background:#f3f4f6 !important; color:#9ca3af !important; cursor:not-allowed; }
+.q-field input.saving { border-color:#f0b429; }
+.q-field input.saved, .q-field textarea.saved { border-color:#22c55e; }
+@media (max-width:600px) { .q-grid { grid-template-columns:1fr; } }
+</style>
+
+<script>
+(function() {
+  let saveTimer = null;
+  const status = document.getElementById('save-status');
+
+  function saveField(el) {
+    const field = el.dataset.field;
+    if (!field) return;
+    el.classList.remove('saved');
+    el.classList.add('saving');
+    status.textContent = 'Saving...';
+
+    fetch('/my-questionnaire/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({field: field, value: el.value})
+    }).then(r => {
+      if (r.ok) {
+        el.classList.remove('saving');
+        el.classList.add('saved');
+        status.textContent = 'Saved';
+        setTimeout(() => { el.classList.remove('saved'); status.textContent = ''; }, 2000);
+      } else {
+        el.classList.remove('saving');
+        status.textContent = 'Error saving';
+      }
+    }).catch(() => {
+      el.classList.remove('saving');
+      status.textContent = 'Error saving';
+    });
+  }
+
+  document.querySelectorAll('[data-field]').forEach(el => {
+    el.addEventListener('input', function() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveField(this), 800);
+    });
+    el.addEventListener('change', function() {
+      clearTimeout(saveTimer);
+      saveField(this);
+    });
+  });
+})();
+</script>
+{% endblock %}

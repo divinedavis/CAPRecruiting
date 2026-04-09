@@ -399,6 +399,89 @@ class InPersonPaymentToken(Base):
 
 
 
+class PlayerQuestionnaire(Base):
+    __tablename__ = "player_questionnaires"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Personal
+    preferred_name = Column(String, default="")
+    middle_name = Column(String, default="")
+    date_of_birth = Column(String, default="")
+    address_street = Column(String, default="")
+    address_city = Column(String, default="")
+    address_state = Column(String, default="")
+    address_zip = Column(String, default="")
+    home_phone = Column(String, default="")
+    cell_phone = Column(String, default="")
+    email = Column(String, default="")
+    twitter = Column(String, default="")
+    instagram = Column(String, default="")
+    hudl_link = Column(String, default="")
+    # Academic
+    school_name = Column(String, default="")
+    school_city = Column(String, default="")
+    school_state = Column(String, default="")
+    school_zip = Column(String, default="")
+    school_phone = Column(String, default="")
+    counselor_name = Column(String, default="")
+    counselor_email = Column(String, default="")
+    counselor_phone = Column(String, default="")
+    grad_year = Column(String, default="")
+    gpa = Column(String, default="")
+    sat_composite = Column(String, default="")
+    sat_math = Column(String, default="")
+    sat_reading = Column(String, default="")
+    act_composite = Column(String, default="")
+    intended_major = Column(String, default="")
+    ncaa_eligibility = Column(String, default="")  # Y/N
+    ncaa_eligibility_id = Column(String, default="")
+    # Athletic
+    height = Column(String, default="")
+    weight = Column(String, default="")
+    position_offense = Column(String, default="")
+    position_defense = Column(String, default="")
+    position_special_teams = Column(String, default="")
+    jersey_number = Column(String, default="")
+    forty_yard = Column(String, default="")
+    shuttle = Column(String, default="")
+    vertical = Column(String, default="")
+    bench_press = Column(String, default="")
+    squat = Column(String, default="")
+    powerclean = Column(String, default="")
+    broad_jump = Column(String, default="")
+    wingspan = Column(String, default="")
+    other_sports = Column(String, default="")
+    athletic_achievements = Column(Text, default="")
+    injuries = Column(Text, default="")
+    # Parent/Guardian 1
+    parent1_first_name = Column(String, default="")
+    parent1_last_name = Column(String, default="")
+    parent1_relationship = Column(String, default="")
+    parent1_email = Column(String, default="")
+    parent1_cell_phone = Column(String, default="")
+    parent1_occupation = Column(String, default="")
+    parent1_college = Column(String, default="")
+    # Parent/Guardian 2
+    parent2_first_name = Column(String, default="")
+    parent2_last_name = Column(String, default="")
+    parent2_relationship = Column(String, default="")
+    parent2_email = Column(String, default="")
+    parent2_cell_phone = Column(String, default="")
+    parent2_occupation = Column(String, default="")
+    parent2_college = Column(String, default="")
+    # Family
+    siblings = Column(Text, default="")
+    # Coaching
+    head_coach_name = Column(String, default="")
+    head_coach_phone = Column(String, default="")
+    head_coach_email = Column(String, default="")
+    # Recruitment
+    top_schools = Column(Text, default="")
+    offers = Column(Text, default="")
+    film_link = Column(String, default="")
+    connection_to_school = Column(Text, default="")
+
 class LoginAttempt(Base):
     __tablename__ = "login_attempts"
     id = Column(Integer, primary_key=True)
@@ -3567,6 +3650,269 @@ async def questionnaires_page(request: Request, db: Session = Depends(get_db)):
         "unread_count": unread_count,
         "data": QUESTIONNAIRE_DATA,
     })
+
+@app.get("/my-questionnaire", response_class=HTMLResponse)
+async def my_questionnaire_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player":
+        return RedirectResponse("/dashboard", status_code=302)
+    if not tier_gte(user.subscription_tier or "free", "premium"):
+        return RedirectResponse("/upgrade", status_code=302)
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+    q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
+    if not q:
+        # Create questionnaire and auto-populate from profile
+        q = PlayerQuestionnaire(user_id=user_id)
+        if profile:
+            q.email = user.email or ""
+            q.cell_phone = profile.phone or ""
+            q.school_name = profile.school or ""
+            q.school_city = profile.city or ""
+            q.school_state = profile.state or ""
+            q.gpa = profile.gpa or ""
+            q.intended_major = profile.intended_major or ""
+            q.ncaa_eligibility_id = profile.ncaa_eligibility_num or ""
+            q.height = profile.height or ""
+            q.weight = profile.weight or ""
+            q.position_offense = profile.position or ""
+            q.forty_yard = profile.forty_yard or ""
+            q.bench_press = profile.bench_press or ""
+            q.squat = profile.squat or ""
+            q.powerclean = profile.clean or ""
+            q.vertical = profile.vertical or ""
+            q.broad_jump = profile.broad_jump or ""
+            q.wingspan = profile.wingspan or ""
+            q.hudl_link = profile.hudl_url or ""
+            q.twitter = profile.x_url or ""
+            q.instagram = profile.instagram_url or ""
+            q.grad_year = profile.year or ""
+            q.parent1_first_name = profile.mother_first_name or ""
+            q.parent1_last_name = profile.mother_last_name or ""
+            q.parent1_relationship = "Mother" if profile.mother_first_name else ""
+            q.parent2_first_name = profile.father_first_name or ""
+            q.parent2_last_name = profile.father_last_name or ""
+            q.parent2_relationship = "Father" if profile.father_first_name else ""
+            # Populate offers
+            offers = []
+            for i in range(1, 6):
+                o = getattr(profile, f"offer{i}", "")
+                if o:
+                    offers.append(o)
+            q.offers = ", ".join(offers)
+            # Film link
+            q.film_link = profile.hudl_url or ""
+        db.add(q)
+        db.commit()
+        db.refresh(q)
+    request.session["subscription_tier"] = user.subscription_tier or "free"
+    unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("my_questionnaire.html", {
+        "request": request,
+        "user": user,
+        "profile": profile,
+        "q": q,
+        "unread_count": unread_count,
+    })
+
+@app.post("/my-questionnaire/save")
+async def save_questionnaire_field(request: Request, db: Session = Depends(get_db)):
+    """Auto-save individual questionnaire fields via AJAX."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"error": "Not logged in"}, status_code=401)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not tier_gte(user.subscription_tier or "free", "premium"):
+        return JSONResponse({"error": "Premium required"}, status_code=403)
+    q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
+    if not q:
+        return JSONResponse({"error": "Questionnaire not found"}, status_code=404)
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid request"}, status_code=400)
+    field = data.get("field", "")
+    value = data.get("value", "")
+    # Only allow updating known questionnaire columns
+    allowed = {c.name for c in PlayerQuestionnaire.__table__.columns} - {"id", "user_id", "updated_at"}
+    if field not in allowed:
+        return JSONResponse({"error": "Invalid field"}, status_code=400)
+    setattr(q, field, value[:2000])
+    q.updated_at = datetime.utcnow()
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.get("/my-questionnaire/pdf")
+async def download_questionnaire_pdf(request: Request, db: Session = Depends(get_db)):
+    """Generate and download questionnaire as PDF."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not tier_gte(user.subscription_tier or "free", "premium"):
+        return RedirectResponse("/upgrade", status_code=302)
+    q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+    if not q:
+        return RedirectResponse("/my-questionnaire", status_code=302)
+
+    full_name = f"{profile.first_name} {profile.last_name}".strip() if profile else user.username
+
+    # Build PDF using reportlab
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    import io
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch, leftMargin=0.6*inch, rightMargin=0.6*inch)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Header
+    header_style = ParagraphStyle("Header", parent=styles["Title"], fontSize=20, textColor=colors.HexColor("#0a1628"), spaceAfter=4)
+    sub_style = ParagraphStyle("Sub", parent=styles["Normal"], fontSize=10, textColor=colors.HexColor("#6b7280"), spaceAfter=16)
+    section_style = ParagraphStyle("Section", parent=styles["Heading2"], fontSize=13, textColor=colors.HexColor("#0a1628"), spaceBefore=16, spaceAfter=8, borderWidth=0)
+    label_style = ParagraphStyle("Label", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#6b7280"))
+    value_style = ParagraphStyle("Value", parent=styles["Normal"], fontSize=10, textColor=colors.HexColor("#0a1628"))
+
+    elements.append(Paragraph("Collegiate Athletic Planning", header_style))
+    elements.append(Paragraph(f"Recruiting Questionnaire — {full_name}", sub_style))
+
+    def add_section(title, fields):
+        elements.append(Paragraph(title, section_style))
+        data = []
+        row = []
+        for label, val in fields:
+            row.append([Paragraph(label, label_style), Paragraph(str(val or "—"), value_style)])
+            if len(row) == 2:
+                data.append(row)
+                row = []
+        if row:
+            row.append(["", ""])
+            data.append(row)
+        for r in data:
+            t = Table([[r[0][0], r[0][1], r[1][0], r[1][1]]], colWidths=[1.4*inch, 2.1*inch, 1.4*inch, 2.1*inch])
+            t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ]))
+            elements.append(t)
+
+    add_section("Personal Information", [
+        ("First Name", profile.first_name if profile else ""),
+        ("Last Name", profile.last_name if profile else ""),
+        ("Preferred Name", q.preferred_name),
+        ("Middle Name", q.middle_name),
+        ("Date of Birth", q.date_of_birth),
+        ("Email", q.email),
+        ("Cell Phone", q.cell_phone),
+        ("Home Phone", q.home_phone),
+        ("Street Address", q.address_street),
+        ("City", q.address_city),
+        ("State", q.address_state),
+        ("Zip", q.address_zip),
+        ("Twitter / X", q.twitter),
+        ("Instagram", q.instagram),
+    ])
+
+    add_section("Academic Information", [
+        ("High School", q.school_name),
+        ("School City", q.school_city),
+        ("School State", q.school_state),
+        ("School Zip", q.school_zip),
+        ("School Phone", q.school_phone),
+        ("Counselor Name", q.counselor_name),
+        ("Counselor Email", q.counselor_email),
+        ("Counselor Phone", q.counselor_phone),
+        ("Grad Year", q.grad_year),
+        ("GPA", q.gpa),
+        ("SAT Composite", q.sat_composite),
+        ("SAT Math", q.sat_math),
+        ("SAT Reading", q.sat_reading),
+        ("ACT Composite", q.act_composite),
+        ("Intended Major", q.intended_major),
+        ("NCAA Eligibility", q.ncaa_eligibility),
+        ("NCAA ID", q.ncaa_eligibility_id),
+    ])
+
+    add_section("Athletic Information", [
+        ("Height", q.height),
+        ("Weight", q.weight),
+        ("Position (Offense)", q.position_offense),
+        ("Position (Defense)", q.position_defense),
+        ("Position (Special Teams)", q.position_special_teams),
+        ("Jersey #", q.jersey_number),
+        ("40 Yard Dash", q.forty_yard),
+        ("Pro Agility / Shuttle", q.shuttle),
+        ("Vertical Jump", q.vertical),
+        ("Broad Jump", q.broad_jump),
+        ("Bench Press", q.bench_press),
+        ("Squat", q.squat),
+        ("Power Clean", q.powerclean),
+        ("Wingspan", q.wingspan),
+        ("Other Sports", q.other_sports),
+        ("HUDL Link", q.hudl_link),
+        ("Film Link", q.film_link),
+    ])
+
+    add_section("Parent / Guardian 1", [
+        ("First Name", q.parent1_first_name),
+        ("Last Name", q.parent1_last_name),
+        ("Relationship", q.parent1_relationship),
+        ("Email", q.parent1_email),
+        ("Cell Phone", q.parent1_cell_phone),
+        ("Occupation", q.parent1_occupation),
+        ("College", q.parent1_college),
+    ])
+
+    add_section("Parent / Guardian 2", [
+        ("First Name", q.parent2_first_name),
+        ("Last Name", q.parent2_last_name),
+        ("Relationship", q.parent2_relationship),
+        ("Email", q.parent2_email),
+        ("Cell Phone", q.parent2_cell_phone),
+        ("Occupation", q.parent2_occupation),
+        ("College", q.parent2_college),
+    ])
+
+    add_section("Family", [
+        ("Siblings", q.siblings),
+    ])
+
+    add_section("Coaching Staff", [
+        ("Head Coach Name", q.head_coach_name),
+        ("Head Coach Phone", q.head_coach_phone),
+        ("Head Coach Email", q.head_coach_email),
+    ])
+
+    add_section("Recruitment", [
+        ("Top Schools", q.top_schools),
+        ("Offers", q.offers),
+        ("Connection to School", q.connection_to_school),
+    ])
+
+    if q.athletic_achievements:
+        elements.append(Paragraph("Athletic Achievements", section_style))
+        elements.append(Paragraph(q.athletic_achievements or "—", value_style))
+
+    if q.injuries:
+        elements.append(Paragraph("Injuries / Surgeries", section_style))
+        elements.append(Paragraph(q.injuries or "—", value_style))
+
+    doc.build(elements)
+    buf.seek(0)
+    filename = f"CAP_Questionnaire_{full_name.replace(' ', '_')}.pdf"
+    return Response(
+        content=buf.read(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 @app.get("/api/schools/states")
 def schools_states(request: Request, db: Session = Depends(get_db)):
