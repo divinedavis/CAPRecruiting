@@ -2227,9 +2227,8 @@ async def download_transcript(transcript_id: int, request: Request, db: Session 
         raise HTTPException(status_code=404)
     transcript_owner = db.query(User).filter(User.id == t.user_id).first()
     _pt = player_tier(transcript_owner)
-    if current_user.id != t.user_id and not current_user.is_admin:
-        if current_user.role != "coach" or not tier_gte(_pt, "advanced"):
-            raise HTTPException(status_code=403, detail="Player must be on Advanced plan or higher")
+    if current_user.id != t.user_id and not current_user.is_admin and current_user.role != "coach":
+        raise HTTPException(status_code=403, detail="Not authorized to view this transcript")
     key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
     obj = s3.get_object(Bucket=SPACES_BUCKET, Key=key)
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else "pdf"
@@ -2241,6 +2240,26 @@ async def download_transcript(transcript_id: int, request: Request, db: Session 
         media_type=content_type,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"}
     )
+
+@app.get("/profile/transcripts/{transcript_id}/inline")
+async def inline_transcript(transcript_id: int, request: Request, db: Session = Depends(get_db)):
+    """Serve transcript PDF inline for iframe embedding."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user:
+        return RedirectResponse("/login", status_code=302)
+    t = db.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if not t:
+        raise HTTPException(status_code=404)
+    if current_user.id != t.user_id and not current_user.is_admin and current_user.role != "coach":
+        raise HTTPException(status_code=403)
+    key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
+    obj = s3.get_object(Bucket=SPACES_BUCKET, Key=key)
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else "pdf"
+    content_type = TRANSCRIPT_CONTENT_TYPES.get(ext, "application/pdf")
+    return Response(content=obj["Body"].read(), media_type=content_type)
 
 @app.get("/profile/transcripts/{transcript_id}/view", response_class=HTMLResponse)
 async def view_transcript(transcript_id: int, request: Request, db: Session = Depends(get_db)):
@@ -2258,18 +2277,8 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
     if current_user.id != t.user_id and not current_user.is_admin and current_user.role != "coach":
         raise HTTPException(status_code=403, detail="Not authorized to view this transcript")
     ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
-    # Generate presigned URL (valid 1 hour) so private objects are viewable
-    _key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
-    try:
-        presigned_url = s3.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": SPACES_BUCKET, "Key": _key},
-            ExpiresIn=600  # 10 minutes
-        )
-    except Exception:
-        presigned_url = t.file_url
     if ext == "pdf":
-        viewer_url = presigned_url
+        viewer_url = f"/profile/transcripts/{transcript_id}/inline"
     else:
         # Non-PDF: redirect to download instead of leaking presigned URL to Google
         return RedirectResponse(f"/profile/transcripts/{transcript_id}/download", status_code=302)
@@ -2281,7 +2290,7 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
 <html>
 <head>
   <meta charset='UTF-8'>
-  <meta http-equiv='Content-Security-Policy' content="default-src 'none'; style-src 'unsafe-inline'; frame-src https: blob:; connect-src 'self';">
+  <meta http-equiv='Content-Security-Policy' content="default-src 'none'; style-src 'unsafe-inline'; frame-src 'self' https: blob:; connect-src 'self';">
   <title>{safe_title}</title>
   <style>
     * {{ margin:0; padding:0; box-sizing:border-box; }}
