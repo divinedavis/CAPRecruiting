@@ -97,13 +97,23 @@
             <input type="text" id="custom-last" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
           </div>
         </div>
-        <div style="margin-top:10px;">
+        <div style="margin-top:10px; position:relative;">
           <label style="font-size:12px; font-weight:600; color:#6b7280;">High School</label>
-          <input type="text" id="custom-school" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+          <input type="text" id="custom-school-search" placeholder="Type to search schools..." autocomplete="off" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+          <input type="hidden" id="custom-school" value="">
+          <div id="custom-school-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:200px; overflow-y:auto; background:#fff; border:1.5px solid #e5e7eb; border-top:none; border-radius:0 0 8px 8px; z-index:1001; box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
         </div>
         <div style="margin-top:10px;">
           <label style="font-size:12px; font-weight:600; color:#6b7280;">Grad Year</label>
-          <input type="text" id="custom-grad" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+          <select id="custom-grad" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+            <option value="">Select year</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+            <option value="2029">2029</option>
+            <option value="2030">2030</option>
+          </select>
         </div>
       </div>
     </div>
@@ -192,6 +202,7 @@ function openAddCardModal() {
   document.getElementById('custom-first').value = '';
   document.getElementById('custom-last').value = '';
   document.getElementById('custom-school').value = '';
+  document.getElementById('custom-school-search').value = '';
   document.getElementById('custom-grad').value = '';
   selectedPlayerId = null;
   setAddMode('existing');
@@ -216,6 +227,43 @@ function setAddMode(mode) {
   btn2.style.color = mode === 'custom' ? '#fff' : '#0a1628';
   btn2.style.border = mode === 'custom' ? 'none' : '1.5px solid #e5e7eb';
 }
+
+var schoolSearchTimer;
+(function() {
+  var input = document.getElementById('custom-school-search');
+  var dropdown = document.getElementById('custom-school-dropdown');
+  var hidden = document.getElementById('custom-school');
+  if (!input) return;
+  input.addEventListener('input', function() {
+    var q = this.value;
+    hidden.value = q;
+    clearTimeout(schoolSearchTimer);
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    schoolSearchTimer = setTimeout(function() {
+      fetch('/api/highschools/search?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(results) {
+          dropdown.innerHTML = '';
+          results.forEach(function(s) {
+            var item = document.createElement('div');
+            item.textContent = s.label;
+            item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:13px; color:#0a1628;';
+            item.onmousedown = function(e) {
+              e.preventDefault();
+              input.value = s.name;
+              hidden.value = s.name;
+              dropdown.style.display = 'none';
+            };
+            item.onmouseover = function() { this.style.background = '#f3f4f6'; };
+            item.onmouseout = function() { this.style.background = ''; };
+            dropdown.appendChild(item);
+          });
+          dropdown.style.display = results.length ? '' : 'none';
+        });
+    }, 300);
+  });
+  input.addEventListener('blur', function() { setTimeout(function() { dropdown.style.display = 'none'; }, 150); });
+})();
 
 var searchTimer;
 function searchPlayers(q) {

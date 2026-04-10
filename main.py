@@ -4497,6 +4497,18 @@ async def list_colleges(request: Request):
     """Return the full NCAA college football list."""
     return JSONResponse(sorted(set(ALL_COLLEGES)))
 
+@app.get("/api/highschools/search")
+async def search_highschools(q: str = "", db: Session = Depends(get_db)):
+    """Search high schools by name (partial match, any state)."""
+    if not q or len(q) < 2:
+        return JSONResponse([])
+    from sqlalchemy import text as _text
+    rows = db.execute(
+        _text("SELECT name, city, state FROM schools WHERE name LIKE :q ORDER BY name LIMIT 20"),
+        {"q": f"%{q}%"}
+    ).fetchall()
+    return JSONResponse([{"name": r[0], "city": r[1], "state": r[2], "label": f"{r[0]} — {r[1]}, {r[2]}"} for r in rows])
+
 @app.get("/dashboard/scout/search-players")
 async def scout_search_players(request: Request, q: str = "", db: Session = Depends(get_db)):
     """Search platform players to add to the board."""
