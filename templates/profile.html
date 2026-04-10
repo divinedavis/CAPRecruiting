@@ -296,7 +296,8 @@
                 </div>
             </div>
             {% endif %}
-            <!-- Videos -->
+            <!-- Videos (players only) -->
+            {% if target.role == "player" %}
             {% if not can_view_videos and not is_owner and target.role == "player" %}
             <div class="profile-section">
                 <h2>Videos</h2>
@@ -372,6 +373,7 @@
                 {% endif %}
                 {% endif %}
             </div>
+            {% endif %}
             {% endif %}
 
             <!-- Campus Visits — logged-in users only -->

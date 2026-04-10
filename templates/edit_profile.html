@@ -619,7 +619,8 @@
 
         </form>
 
-        <!-- Videos section (outside main form) -->
+        <!-- Videos section (outside main form, players only) -->
+        {% if user.role == "player" %}
         <div class="form-section">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                 <h2 style="margin-bottom:0;">Videos</h2>
@@ -681,6 +682,7 @@
             <p style="color:var(--gray-400); font-size:14px;">No videos yet. Add your first video above.</p>
             {% endif %}
         </div>
+        {% endif %}
 
         {% if user.role == "player" %}
         <!-- Photos section -->
