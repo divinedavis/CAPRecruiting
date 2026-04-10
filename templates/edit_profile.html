@@ -537,33 +537,60 @@
                         <label>Title</label>
                         <input type="text" name="title" value="{{ profile.title if profile else '' }}" placeholder="e.g. Head Coach, OC, DB Coach">
                     </div>
-                    <div class="form-group">
-                        <label>School / University</label>
-                        <input type="text" name="school" value="{{ profile.school if profile else '' }}" placeholder="School name">
-                    </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>College (for Scout Dashboard)</label>
-                        <input type="text" name="college" value="{{ profile.college if profile else '' }}" placeholder="e.g. Kent State">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Division</label>
-                        <select name="division">
-                            <option value="">Select division</option>
-                            {% for div in ["FBS", "FCS", "D2", "D3", "NAIA", "JUCO", "High School"] %}
-                            <option value="{{ div }}" {{ "selected" if profile and profile.division == div else "" }}>{{ div }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Conference</label>
-                        <input type="text" name="conference" value="{{ profile.conference if profile else '' }}" placeholder="e.g. Big 12, SEC">
+                    <div class="form-group" style="position:relative;">
+                        <label>College</label>
+                        <input type="text" id="college-search" value="{{ profile.college if profile else '' }}" placeholder="Type to search colleges..." autocomplete="off" style="width:100%;">
+                        <div id="college-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:240px; overflow-y:auto; background:#fff; border:1.5px solid #e5e7eb; border-top:none; border-radius:0 0 8px 8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+                        <input type="hidden" name="college" id="college-value" value="{{ profile.college if profile else '' }}">
+                        <input type="hidden" name="school" value="{{ profile.college if profile else '' }}">
                     </div>
                 </div>
             </div>
+
+            <script>
+            (function() {
+                var allColleges = [];
+                var searchInput = document.getElementById('college-search');
+                var dropdown = document.getElementById('college-dropdown');
+                var hiddenInput = document.getElementById('college-value');
+
+                fetch('/api/colleges').then(function(r) { return r.json(); }).then(function(data) {
+                    allColleges = data;
+                });
+
+                function render(filter) {
+                    dropdown.innerHTML = '';
+                    var term = (filter || '').toLowerCase();
+                    var matches = allColleges.filter(function(c) { return !term || c.toLowerCase().indexOf(term) !== -1; });
+                    matches.slice(0, 30).forEach(function(c) {
+                        var item = document.createElement('div');
+                        item.textContent = c;
+                        item.style.cssText = 'padding:8px 14px; cursor:pointer; font-size:14px; color:#0a1628;';
+                        item.onmousedown = function(e) {
+                            e.preventDefault();
+                            searchInput.value = c;
+                            hiddenInput.value = c;
+                            document.querySelector('input[name="school"]').value = c;
+                            dropdown.style.display = 'none';
+                        };
+                        item.onmouseover = function() { this.style.background = '#f3f4f6'; };
+                        item.onmouseout = function() { this.style.background = ''; };
+                        dropdown.appendChild(item);
+                    });
+                    dropdown.style.display = matches.length ? '' : 'none';
+                }
+
+                searchInput.addEventListener('focus', function() { render(this.value); });
+                searchInput.addEventListener('input', function() {
+                    hiddenInput.value = this.value;
+                    document.querySelector('input[name="school"]').value = this.value;
+                    render(this.value);
+                });
+                searchInput.addEventListener('blur', function() { setTimeout(function() { dropdown.style.display = 'none'; }, 150); });
+            })();
+            </script>
 
             <div class="form-section">
                 <h2>About</h2>

@@ -4374,6 +4374,16 @@ async def scout_create_scout(request: Request, db: Session = Depends(get_db)):
     db.refresh(scout)
     return JSONResponse({"ok": True, "id": scout.id, "name": f"{first_name} {last_name}"})
 
+@app.get("/api/colleges")
+async def list_colleges(request: Request):
+    """Return sorted list of all colleges from QUESTIONNAIRE_DATA."""
+    colleges = set()
+    for division in QUESTIONNAIRE_DATA.values():
+        for conference in division.values():
+            for school_name in conference.keys():
+                colleges.add(school_name)
+    return JSONResponse(sorted(colleges))
+
 @app.get("/dashboard/scout/search-players")
 async def scout_search_players(request: Request, q: str = "", db: Session = Depends(get_db)):
     """Search platform players to add to the board."""
