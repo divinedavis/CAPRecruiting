@@ -46,7 +46,7 @@
                     {% endif %}
                 </a>
                 {% if request.session.get("role") == "player" and request.session.get("subscription_tier") == "premium" %}
-                <a href="/questionnaires" class="btn btn-outline" style="border-color:#f0b429; color:#f0b429;">Questionnaires</a>
+                <a href="/questionnaires" class="btn btn-outline" style="border-color:#f0b429; color:#f0b429;">College Prep</a>
                 {% endif %}
                 {% if request.session.get("is_admin") %}
                 <a href="/admin/teams" class="btn btn-outline">Admin</a>
