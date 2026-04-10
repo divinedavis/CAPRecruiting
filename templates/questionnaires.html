@@ -7,64 +7,78 @@
     <p style="color:#6b7280; font-size:15px; max-width:520px; margin:0 auto;">Select a division, conference, and team to open their recruiting questionnaire.</p>
   </div>
 
-  <!-- Universal Questionnaire CTA — premium only -->
+  <!-- My Recruiting Questionnaire -->
   {% if is_premium %}
-  <div style="background:linear-gradient(135deg, #0a1628 0%, #1a2d4a 100%); border-radius:14px; padding:24px 28px; margin-bottom:32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
-    <div>
-      <div style="color:#f0b429; font-weight:700; font-size:16px; margin-bottom:4px;">My Recruiting Questionnaire</div>
-      <div style="color:#cbd5e1; font-size:13px;">Fill out once, download as PDF, and use it for every school.</div>
+  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:28px; margin-bottom:24px;">
+    <div style="text-align:center; margin-bottom:20px;">
+      <h2 style="font-size:24px; font-weight:800; color:#f0b429; margin-bottom:6px;">My Recruiting Questionnaire</h2>
+      <p style="color:#cbd5e1; font-size:14px;">Fill out once, download as PDF, and use it for every school.</p>
     </div>
-    <a href="/my-questionnaire" style="background:#f0b429; color:#0a1628; padding:10px 24px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; white-space:nowrap;">Fill Out My Questionnaire</a>
+    <div style="text-align:center;">
+      <a href="/my-questionnaire" style="background:#f0b429; color:#0a1628; padding:12px 28px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; display:inline-block;">Fill Out My Questionnaire</a>
+    </div>
   </div>
   {% else %}
-  <div style="background:linear-gradient(135deg, #0a1628 0%, #1a2d4a 100%); border-radius:14px; padding:24px 28px; margin-bottom:32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
-    <div>
-      <div style="color:#f0b429; font-weight:700; font-size:16px; margin-bottom:4px;">My Recruiting Questionnaire (Premium)</div>
-      <div style="color:#cbd5e1; font-size:13px;">Upgrade to fill out once and use for every school.</div>
+  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:28px; margin-bottom:24px;">
+    <div style="text-align:center; margin-bottom:20px;">
+      <h2 style="font-size:24px; font-weight:800; color:#f0b429; margin-bottom:6px;">My Recruiting Questionnaire <span style="font-size:12px; background:#f0b429; color:#0a1628; padding:3px 8px; border-radius:4px; vertical-align:middle;">PREMIUM</span></h2>
+      <p style="color:#cbd5e1; font-size:14px;">Upgrade to fill out once and use for every school.</p>
     </div>
-    <a href="/upgrade" style="background:#f0b429; color:#0a1628; padding:10px 24px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; white-space:nowrap;">Upgrade</a>
+    <div style="text-align:center;">
+      <a href="/upgrade" style="background:#f0b429; color:#0a1628; padding:12px 28px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; display:inline-block;">Upgrade</a>
+    </div>
   </div>
   {% endif %}
 
-  <!-- NCAA Eligibility Center CTA -->
-  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:24px 28px; margin-bottom:32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
-    <div>
-      <div style="color:#f0b429; font-weight:700; font-size:16px; margin-bottom:4px;">NCAA Eligibility Center</div>
-      <div style="color:#cbd5e1; font-size:13px;">Register and manage your NCAA amateurism and academic eligibility.</div>
+  <!-- NCAA Eligibility Center -->
+  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:28px; margin-bottom:24px;">
+    <div style="text-align:center; margin-bottom:20px;">
+      <h2 style="font-size:24px; font-weight:800; color:#f0b429; margin-bottom:6px;">NCAA Eligibility Center</h2>
+      <p style="color:#cbd5e1; font-size:14px;">Register and manage your NCAA amateurism and academic eligibility.</p>
     </div>
-    <a href="https://web3.ncaa.org/ecwr3/" target="_blank" rel="noopener" style="background:#f0b429; color:#0a1628; padding:10px 24px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; white-space:nowrap;">Open NCAA Portal ↗</a>
-  </div>
-
-  <!-- Step 1: Division -->
-  <div id="step-division">
-    <div style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; margin-bottom:12px;">Step 1: Select Division</div>
-    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;">
-      <button onclick="selectDivision('D1')" class="q-btn" id="btn-D1">Division I</button>
-      <button onclick="selectDivision('D2')" class="q-btn" id="btn-D2">Division II</button>
-      <button onclick="selectDivision('D3')" class="q-btn" id="btn-D3">Division III</button>
+    <div style="text-align:center;">
+      <a href="https://web3.ncaa.org/ecwr3/" target="_blank" rel="noopener" style="background:#f0b429; color:#0a1628; padding:12px 28px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; display:inline-block;">Open NCAA Portal ↗</a>
     </div>
   </div>
 
-  <!-- Step 2: Conference -->
-  <div id="step-conference" style="display:none; margin-top:28px;">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-      <div style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280;">Step 2: Select Conference</div>
-      <button onclick="resetToDiv()" style="background:none; border:none; color:#f0b429; font-size:13px; font-weight:600; cursor:pointer;">&larr; Back</button>
+  <!-- External Questionnaires -->
+  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:28px; margin-bottom:24px;">
+    <div style="text-align:center; margin-bottom:24px;">
+      <h2 style="font-size:24px; font-weight:800; color:#f0b429; margin-bottom:6px;">External Questionnaires</h2>
+      <p style="color:#cbd5e1; font-size:14px;">Open recruiting questionnaires from individual schools.</p>
     </div>
-    <div id="conference-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;"></div>
-  </div>
 
-  <!-- Step 3: Teams -->
-  <div id="step-teams" style="display:none; margin-top:28px;">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-      <div style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6b7280;">Step 3: Select Team</div>
-      <button onclick="resetToConf()" style="background:none; border:none; color:#f0b429; font-size:13px; font-weight:600; cursor:pointer;">&larr; Back</button>
+    <!-- Step 1: Division -->
+    <div id="step-division">
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#f0b429; margin-bottom:10px;">Step 1: Select Division</div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+        <button onclick="selectDivision('D1')" class="q-btn" id="btn-D1">Division I</button>
+        <button onclick="selectDivision('D2')" class="q-btn" id="btn-D2">Division II</button>
+        <button onclick="selectDivision('D3')" class="q-btn" id="btn-D3">Division III</button>
+      </div>
     </div>
-    <div id="team-list" style="display:grid; grid-template-columns:1fr; gap:8px;"></div>
+
+    <!-- Step 2: Conference -->
+    <div id="step-conference" style="display:none; margin-top:24px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#f0b429;">Step 2: Select Conference</div>
+        <button onclick="resetToDiv()" style="background:none; border:none; color:#fff; font-size:13px; font-weight:600; cursor:pointer;">&larr; Back</button>
+      </div>
+      <div id="conference-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;"></div>
+    </div>
+
+    <!-- Step 3: Teams -->
+    <div id="step-teams" style="display:none; margin-top:24px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#f0b429;">Step 3: Select Team</div>
+        <button onclick="resetToConf()" style="background:none; border:none; color:#fff; font-size:13px; font-weight:600; cursor:pointer;">&larr; Back</button>
+      </div>
+      <div id="team-list" style="display:grid; grid-template-columns:1fr; gap:8px;"></div>
+    </div>
   </div>
 
   <!-- College Discovery Widget -->
-  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:28px; margin-top:48px;">
+  <div style="background:linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border-radius:14px; padding:28px; margin-bottom:24px;">
     <div style="text-align:center; margin-bottom:24px;">
       <h2 style="font-size:24px; font-weight:800; color:#f0b429; margin-bottom:6px;">College Discovery</h2>
       <p style="color:#cbd5e1; font-size:14px;">Browse all college football programs by state.</p>
@@ -133,18 +147,18 @@ function loadStateColleges(state) {
 
 <style>
 .q-btn {
-  background:#fff; border:2px solid #e5e7eb; border-radius:12px; padding:16px 12px;
+  background:rgba(255,255,255,.95); border:2px solid rgba(255,255,255,.3); border-radius:12px; padding:16px 12px;
   font-size:15px; font-weight:700; color:#0a1628; cursor:pointer; transition:all .15s;
 }
-.q-btn:hover { border-color:#f0b429; background:#fffbeb; }
+.q-btn:hover { border-color:#f0b429; background:#fff; }
 .q-btn.active { border-color:#f0b429; background:#f0b429; color:#0a1628; }
 .q-team {
   display:flex; justify-content:space-between; align-items:center;
-  background:#fff; border:2px solid #e5e7eb; border-radius:10px; padding:14px 18px;
+  background:rgba(255,255,255,.95); border:2px solid rgba(255,255,255,.3); border-radius:10px; padding:14px 18px;
   font-size:14px; font-weight:600; color:#0a1628; cursor:pointer; transition:all .15s;
   text-decoration:none;
 }
-.q-team:hover { border-color:#f0b429; background:#fffbeb; }
+.q-team:hover { border-color:#f0b429; background:#fff; }
 .q-team span.arrow { color:#f0b429; font-size:18px; }
 </style>
 
