@@ -134,6 +134,27 @@
   </div>
 </div>
 
+<!-- Add Scout Modal -->
+<div id="add-scout-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1100; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:14px; padding:28px; max-width:440px; width:90%;">
+    <h2 style="margin:0 0 20px 0; color:#0a1628;">Add New Scout</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#6b7280;">First Name</label>
+        <input type="text" id="new-scout-first" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#6b7280;">Last Name</label>
+        <input type="text" id="new-scout-last" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeAddScoutModal()" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
+      <button onclick="submitNewScout()" style="flex:1; padding:12px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Add Scout</button>
+    </div>
+  </div>
+</div>
+
 <!-- Card Detail Modal -->
 <div id="card-detail-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
   <div style="background:#fff; border-radius:14px; padding:28px; max-width:640px; width:90%; max-height:90vh; overflow-y:auto;">
@@ -417,10 +438,20 @@ function deleteLane(laneId) {
 }
 
 function addScout() {
-  var first = prompt('Scout first name:');
-  if (!first) return;
-  var last = prompt('Scout last name:');
-  if (!last) return;
+  document.getElementById('new-scout-first').value = '';
+  document.getElementById('new-scout-last').value = '';
+  document.getElementById('add-scout-modal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('new-scout-first').focus(); }, 50);
+}
+
+function closeAddScoutModal() {
+  document.getElementById('add-scout-modal').style.display = 'none';
+}
+
+function submitNewScout() {
+  var first = document.getElementById('new-scout-first').value.trim();
+  var last = document.getElementById('new-scout-last').value.trim();
+  if (!first || !last) { alert('First and last name required'); return; }
   fetch('/dashboard/scout/scout', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({first_name: first, last_name: last}) })
     .then(function(r) { return r.json(); })
     .then(function(res) {
@@ -431,6 +462,9 @@ function addScout() {
         opt.selected = true;
         document.getElementById('cd-scout').appendChild(opt);
         saveCard();
+        closeAddScoutModal();
+      } else {
+        alert(res.error || 'Error');
       }
     });
 }
