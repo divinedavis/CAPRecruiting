@@ -436,6 +436,7 @@ textarea { resize: vertical; }
 /* ── Transcripts ──────────────────────────────────────────────── */
 .transcript-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
 .transcript-card {
+    max-width: 160px;
     display: flex;
     flex-direction: column;
     align-items: center;
