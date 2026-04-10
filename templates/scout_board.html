@@ -197,11 +197,11 @@
 </div>
 
 <!-- Card Detail Modal -->
-<div id="card-detail-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
+<div id="card-detail-modal" onclick="if(event.target===this)handleBackdropClick()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
   <div style="background:#fff; border-radius:14px; padding:28px; max-width:640px; width:90%; max-height:90vh; overflow-y:auto;">
     <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:16px;">
       <h2 id="cd-name" style="margin:0; color:#0a1628;"></h2>
-      <button onclick="closeCardDetail()" style="background:none; border:none; font-size:24px; color:#9ca3af; cursor:pointer;">×</button>
+      <button onclick="handleBackdropClick()" style="background:none; border:none; font-size:24px; color:#9ca3af; cursor:pointer;">×</button>
     </div>
 
     <div style="display:flex; gap:16px; margin-bottom:20px;">
@@ -219,18 +219,18 @@
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
       <div>
         <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Campus Visit Date</label>
-        <input type="date" id="cd-visit-date" onchange="saveCard()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+        <input type="date" id="cd-visit-date" onchange="markDirty()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
       </div>
       <div>
         <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">HS Visit Date</label>
-        <input type="date" id="cd-hs-visit-date" onchange="saveCard()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+        <input type="date" id="cd-hs-visit-date" onchange="markDirty()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
       </div>
     </div>
 
     <div style="margin-bottom:16px;">
       <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Scout</label>
       <div style="display:flex; gap:8px; margin-top:4px;">
-        <select id="cd-scout" onchange="saveCard()" style="flex:1; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px;">
+        <select id="cd-scout" onchange="markDirty()" style="flex:1; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px;">
           <option value="">— No scout —</option>
           {% for s in scouts %}
           <option value="{{ s.first_name }} {{ s.last_name }}">{{ s.first_name }} {{ s.last_name }}</option>
@@ -242,12 +242,12 @@
 
     <div style="margin-bottom:16px;">
       <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Notes</label>
-      <textarea id="cd-notes" rows="5" onblur="saveCard()" placeholder="Add notes about this player..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box; font-family:inherit;"></textarea>
+      <textarea id="cd-notes" rows="5" oninput="markDirty()" placeholder="Add notes about this player..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box; font-family:inherit;"></textarea>
     </div>
 
     <div style="display:flex; justify-content:space-between;">
       <button onclick="deleteCard()" style="padding:10px 16px; background:#fee2e2; color:#dc2626; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Delete</button>
-      <button onclick="closeCardDetail()" style="padding:10px 24px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Done</button>
+      <button onclick="doneCard()" style="padding:10px 24px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Done</button>
     </div>
   </div>
 </div>
@@ -256,6 +256,9 @@
 var currentCardId = null;
 var addMode = 'existing';
 var selectedPlayerId = null;
+var cardDirty = false;
+
+function markDirty() { cardDirty = true; }
 
 function openAddCardModal() {
   document.getElementById('add-card-modal').style.display = 'flex';
@@ -406,17 +409,39 @@ function openCard(cardId) {
       document.getElementById('cd-hs-visit-date').value = c.high_school_visit_date || '';
       document.getElementById('cd-scout').value = c.scout_name || '';
       document.getElementById('cd-notes').value = c.notes || '';
+      cardDirty = false;
       document.getElementById('card-detail-modal').style.display = 'flex';
     });
 }
 
-function closeCardDetail() {
-  document.getElementById('card-detail-modal').style.display = 'none';
-  currentCardId = null;
-  location.reload();
+function handleBackdropClick() {
+  if (cardDirty) {
+    if (confirm('You have unsaved changes. Save before closing?')) {
+      saveCard(true);
+    } else {
+      closeCardDetail(false);
+    }
+  } else {
+    closeCardDetail(false);
+  }
 }
 
-function saveCard() {
+function closeCardDetail(reload) {
+  document.getElementById('card-detail-modal').style.display = 'none';
+  currentCardId = null;
+  cardDirty = false;
+  if (reload !== false) location.reload();
+}
+
+function doneCard() {
+  if (cardDirty) {
+    saveCard(true);
+  } else {
+    closeCardDetail(true);
+  }
+}
+
+function saveCard(thenClose) {
   if (!currentCardId) return;
   var body = {
     visit_date: document.getElementById('cd-visit-date').value,
@@ -424,7 +449,12 @@ function saveCard() {
     scout_name: document.getElementById('cd-scout').value,
     notes: document.getElementById('cd-notes').value,
   };
-  fetch('/dashboard/scout/card/' + currentCardId + '/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  fetch('/dashboard/scout/card/' + currentCardId + '/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+      cardDirty = false;
+      if (thenClose) { closeCardDetail(true); }
+    });
 }
 
 function uploadCardImage() {
@@ -504,7 +534,7 @@ function submitNewScout() {
         opt.textContent = res.name;
         opt.selected = true;
         document.getElementById('cd-scout').appendChild(opt);
-        saveCard();
+        markDirty();
         closeAddScoutModal();
       } else {
         alert(res.error || 'Error');
