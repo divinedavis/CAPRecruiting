@@ -2255,9 +2255,8 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
         raise HTTPException(status_code=404)
     transcript_owner2 = db.query(User).filter(User.id == t.user_id).first()
     _pt2 = player_tier(transcript_owner2)
-    if current_user.id != t.user_id and not current_user.is_admin:
-        if current_user.role != "coach" or not tier_gte(_pt2, "advanced"):
-            raise HTTPException(status_code=403, detail="Player must be on Advanced plan or higher")
+    if current_user.id != t.user_id and not current_user.is_admin and current_user.role != "coach":
+        raise HTTPException(status_code=403, detail="Not authorized to view this transcript")
     ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
     # Generate presigned URL (valid 1 hour) so private objects are viewable
     _key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
