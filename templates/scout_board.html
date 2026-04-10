@@ -33,7 +33,7 @@
       </div>
       <div class="sb-cards" data-lane-id="{{ lane.id }}" style="display:flex; flex-direction:column; gap:10px; min-height:60px;">
         {% for card in cards_by_lane[lane.id] %}
-        <div class="sb-card" draggable="true" data-card-id="{{ card.id }}" onclick="openCard({{ card.id }})"
+        <div class="sb-card" draggable="true" data-card-id="{{ card.id }}"
              style="background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; padding:12px; cursor:pointer; transition:all .15s;">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
             {% if card.photo %}
@@ -512,18 +512,26 @@ function submitNewScout() {
     });
 }
 
-// Drag and drop
+// Drag and drop + click
 var draggedCard = null;
+var wasDragging = false;
 
 document.querySelectorAll('.sb-card').forEach(function(card) {
   card.addEventListener('dragstart', function(e) {
     draggedCard = this;
+    wasDragging = true;
     this.style.opacity = '0.5';
     e.dataTransfer.effectAllowed = 'move';
   });
   card.addEventListener('dragend', function() {
     this.style.opacity = '1';
     draggedCard = null;
+    setTimeout(function() { wasDragging = false; }, 50);
+  });
+  card.addEventListener('click', function(e) {
+    if (wasDragging) { wasDragging = false; return; }
+    var cardId = this.dataset.cardId;
+    if (cardId) openCard(cardId);
   });
 });
 
