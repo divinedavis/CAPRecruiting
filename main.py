@@ -2277,36 +2277,11 @@ async def view_transcript(transcript_id: int, request: Request, db: Session = De
     if current_user.id != t.user_id and not current_user.is_admin and current_user.role != "coach":
         raise HTTPException(status_code=403, detail="Not authorized to view this transcript")
     ext = t.file_url.split("?")[0].rsplit(".", 1)[-1].lower() if "." in t.file_url else "pdf"
-    if ext == "pdf":
-        viewer_url = f"/profile/transcripts/{transcript_id}/inline"
-    else:
-        # Non-PDF: redirect to download instead of leaking presigned URL to Google
-        return RedirectResponse(f"/profile/transcripts/{transcript_id}/download", status_code=302)
-    from html import escape as _escape
-    title = t.title or t.filename or "Transcript"
-    safe_title = _escape(title)
-    safe_viewer_url = _escape(viewer_url)
+    # Redirect to inline endpoint — browser renders PDF natively
+    return RedirectResponse(f"/profile/transcripts/{transcript_id}/inline", status_code=302)
+
+    # Dead code below kept for reference
     html = f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset='UTF-8'>
-  <meta http-equiv='Content-Security-Policy' content="default-src 'none'; style-src 'unsafe-inline'; frame-src 'self' https: blob:; connect-src 'self';">
-  <title>{safe_title}</title>
-  <style>
-    * {{ margin:0; padding:0; box-sizing:border-box; }}
-    body {{ display:flex; flex-direction:column; height:100vh; font-family:sans-serif; background:#f5f5f5; }}
-    .toolbar {{ display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#1e3a5f; color:#fff; flex-shrink:0; }}
-    .toolbar h2 {{ font-size:15px; font-weight:600; }}
-    .toolbar a {{ color:#fff; text-decoration:none; font-size:13px; background:rgba(255,255,255,0.15); padding:6px 12px; border-radius:6px; }}
-    iframe {{ flex:1; border:none; width:100%; }}
-  </style>
-</head>
-<body>
-  <div class='toolbar'>
-    <h2>{safe_title}</h2>
-    <a href='/profile/transcripts/{transcript_id}/download'>Download</a>
-  </div>
-  <iframe src='{safe_viewer_url}'></iframe>
 </body>
 </html>"""
     return HTMLResponse(content=html)
