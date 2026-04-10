@@ -537,6 +537,7 @@ class ScoutBoardCard(Base):
     custom_last_name = Column(String, default="")
     custom_high_school = Column(String, default="")
     custom_grad_year = Column(String, default="")
+    custom_position = Column(String, default="")
     # Tile fields
     tile_image_url = Column(String, default="")
     visit_date = Column(String, default="")  # scheduled campus visit
@@ -4103,15 +4104,18 @@ async def scout_board_page(request: Request, db: Session = Depends(get_db)):
                 p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == c.player_user_id).first() if p_user else None
                 display_name = f"{p_profile.first_name} {p_profile.last_name}".strip() if p_profile and (p_profile.first_name or p_profile.last_name) else (p_user.username if p_user else "Unknown")
                 high_school = p_profile.school if p_profile else ""
+                position = p_profile.position if p_profile else ""
                 photo = c.tile_image_url or (p_profile.photo if p_profile else "")
             else:
                 display_name = f"{c.custom_first_name} {c.custom_last_name}".strip()
                 high_school = c.custom_high_school
+                position = c.custom_position
                 photo = c.tile_image_url
             cards_by_lane[c.lane_id].append({
                 "id": c.id,
                 "name": display_name,
                 "high_school": high_school,
+                "position": position,
                 "visit_date": c.visit_date,
                 "scout_name": c.scout_name,
                 "photo": photo,
@@ -4205,6 +4209,7 @@ async def scout_create_card(request: Request, db: Session = Depends(get_db)):
         custom_last_name=(data.get("custom_last_name") or "")[:100],
         custom_high_school=(data.get("custom_high_school") or "")[:200],
         custom_grad_year=(data.get("custom_grad_year") or "")[:10],
+        custom_position=(data.get("custom_position") or "")[:20],
         visit_date=(data.get("visit_date") or "")[:50],
         scout_name=(data.get("scout_name") or "")[:200],
         notes=(data.get("notes") or "")[:5000],
@@ -4242,7 +4247,7 @@ async def scout_get_card(card_id: int, request: Request, db: Session = Depends(g
         first_name = card.custom_first_name
         last_name = card.custom_last_name
         high_school = card.custom_high_school
-        position = ""
+        position = card.custom_position
         grad_year = card.custom_grad_year
         height = ""
         weight = ""
@@ -4293,6 +4298,8 @@ async def scout_update_card(card_id: int, request: Request, db: Session = Depend
             card.custom_last_name = (data.get("custom_last_name") or "")[:100]
         if "custom_high_school" in data:
             card.custom_high_school = (data.get("custom_high_school") or "")[:200]
+        if "custom_position" in data:
+            card.custom_position = (data.get("custom_position") or "")[:20]
     db.commit()
     return JSONResponse({"ok": True})
 
