@@ -1049,6 +1049,7 @@ async def signup_post(
     coach_division: str = Form(""),
     coach_conference: str = Form(""),
     coach_college: str = Form(""),
+    school_county: str = Form(""),
     invite_token: Optional[str] = Form(None),
     bypass_token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
@@ -1117,7 +1118,7 @@ async def signup_post(
     db.refresh(user)
 
     if role == "player":
-        db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip(), county=form.get('school_county', '').strip()))
+        db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip(), county=school_county.strip()))
     else:
         db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
     db.commit()
