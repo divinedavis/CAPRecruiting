@@ -522,7 +522,7 @@
                     <div class="transcript-card">
                         <a href="/profile/transcripts/{{ t.id }}/view" target="_blank" style="text-decoration:none;display:flex;flex-direction:column;align-items:center;">
                             <img src="/static/transcript-icon.png" alt="Transcript">
-                            <span class="transcript-card-name">{{ t.title or t.filename or 'Transcript' }}</span>
+                            <span class="transcript-card-name">{{ (t.title or t.filename or 'Transcript')[:20] }}{{ '...' if (t.title or t.filename or '')|length > 20 else '' }}</span>
                         </a>
                         {% if current_user and (current_user.id == target.id or current_user.is_admin) %}
                         <form method="post" action="/profile/transcripts/{{ t.id }}/delete" onsubmit="return confirm('Delete this transcript?')" style="margin-top:6px;">
