@@ -517,6 +517,44 @@ class LoginAttempt(Base):
     success = Column(Boolean, default=False)
 
 
+class ScoutBoardLane(Base):
+    __tablename__ = "scout_board_lanes"
+    id = Column(Integer, primary_key=True)
+    college = Column(String, nullable=False, index=True)  # e.g. "Kent State"
+    name = Column(String, nullable=False)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ScoutBoardCard(Base):
+    __tablename__ = "scout_board_cards"
+    id = Column(Integer, primary_key=True)
+    college = Column(String, nullable=False, index=True)
+    lane_id = Column(Integer, ForeignKey("scout_board_lanes.id"), nullable=False)
+    sort_order = Column(Integer, default=0)
+    # Player reference — either linked to a platform user OR custom
+    player_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    custom_first_name = Column(String, default="")
+    custom_last_name = Column(String, default="")
+    custom_high_school = Column(String, default="")
+    custom_grad_year = Column(String, default="")
+    # Tile fields
+    tile_image_url = Column(String, default="")
+    visit_date = Column(String, default="")  # scheduled campus visit
+    high_school_visit_date = Column(String, default="")  # scheduled HS visit
+    scout_name = Column(String, default="")
+    notes = Column(Text, default="")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class ScoutBoardScout(Base):
+    __tablename__ = "scout_board_scouts"
+    id = Column(Integer, primary_key=True)
+    college = Column(String, nullable=False, index=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class AdminAuditLog(Base):
     __tablename__ = "admin_audit_log"
     id = Column(Integer, primary_key=True)
@@ -1710,6 +1748,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         c.first_name = form.get("first_name", "")[:100]
         c.last_name = form.get("last_name", "")[:100]
         c.school = form.get("school", "")[:100]
+        c.college = form.get("college", "")[:100]
         c.title = form.get("title", "")[:100]
         c.division = form.get("division", "")[:100]
         c.conference = form.get("conference", "")[:100]
@@ -2504,6 +2543,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         c.first_name = form.get("first_name", "")[:100]
         c.last_name = form.get("last_name", "")[:100]
         c.school = form.get("school", "")[:100]
+        c.college = form.get("college", "")[:100]
         c.title = form.get("title", "")[:100]
         c.division = form.get("division", "")[:100]
         c.conference = form.get("conference", "")[:100]
@@ -4017,6 +4057,344 @@ async def download_questionnaire_pdf(request: Request, db: Session = Depends(get
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+# ── Scout Board (Coach Dashboard) ─────────────────────────────────────────────
+DEFAULT_LANES = ["Watching", "Contacted", "Evaluating", "Offered", "Committed"]
+
+def _coach_college(user: "User", db: Session) -> str:
+    """Get the college a coach is associated with."""
+    if not user or user.role != "coach":
+        return ""
+    cp = db.query(CoachProfile).filter(CoachProfile.user_id == user.id).first()
+    return (cp.college or cp.school or "").strip() if cp else ""
+
+def _ensure_default_lanes(college: str, db: Session):
+    """Create default lanes for a college if none exist."""
+    existing = db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).count()
+    if existing == 0:
+        for idx, name in enumerate(DEFAULT_LANES):
+            db.add(ScoutBoardLane(college=college, name=name, sort_order=idx))
+        db.commit()
+
+@app.get("/dashboard/scout", response_class=HTMLResponse)
+async def scout_board_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or (user.role != "coach" and not user.is_admin):
+        return RedirectResponse("/dashboard", status_code=302)
+    college = _coach_college(user, db)
+    if not college:
+        return templates.TemplateResponse("scout_board.html", {
+            "request": request, "user": user, "college": "",
+            "lanes": [], "cards_by_lane": {}, "scouts": [],
+            "needs_college": True,
+        })
+    _ensure_default_lanes(college, db)
+    lanes = db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).order_by(ScoutBoardLane.sort_order).all()
+    cards = db.query(ScoutBoardCard).filter(ScoutBoardCard.college == college).order_by(ScoutBoardCard.sort_order).all()
+    cards_by_lane = {lane.id: [] for lane in lanes}
+    for c in cards:
+        if c.lane_id in cards_by_lane:
+            # Resolve player info
+            if c.player_user_id:
+                p_user = db.query(User).filter(User.id == c.player_user_id).first()
+                p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == c.player_user_id).first() if p_user else None
+                display_name = f"{p_profile.first_name} {p_profile.last_name}".strip() if p_profile and (p_profile.first_name or p_profile.last_name) else (p_user.username if p_user else "Unknown")
+                high_school = p_profile.school if p_profile else ""
+                photo = c.tile_image_url or (p_profile.photo if p_profile else "")
+            else:
+                display_name = f"{c.custom_first_name} {c.custom_last_name}".strip()
+                high_school = c.custom_high_school
+                photo = c.tile_image_url
+            cards_by_lane[c.lane_id].append({
+                "id": c.id,
+                "name": display_name,
+                "high_school": high_school,
+                "visit_date": c.visit_date,
+                "scout_name": c.scout_name,
+                "photo": photo,
+                "is_custom": not c.player_user_id,
+                "player_user_id": c.player_user_id,
+            })
+    scouts = db.query(ScoutBoardScout).filter(ScoutBoardScout.college == college).order_by(ScoutBoardScout.last_name).all()
+    return templates.TemplateResponse("scout_board.html", {
+        "request": request, "user": user, "college": college,
+        "lanes": lanes, "cards_by_lane": cards_by_lane, "scouts": scouts,
+        "needs_college": False,
+    })
+
+@app.post("/dashboard/scout/lane")
+async def scout_create_lane(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    if not college:
+        return JSONResponse({"error": "No college assigned"}, status_code=400)
+    data = await request.json()
+    name = (data.get("name") or "").strip()[:50]
+    if not name:
+        return JSONResponse({"error": "Name required"}, status_code=400)
+    count = db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).count()
+    if count >= 5:
+        return JSONResponse({"error": "Maximum 5 swimlanes"}, status_code=400)
+    lane = ScoutBoardLane(college=college, name=name, sort_order=count)
+    db.add(lane)
+    db.commit()
+    db.refresh(lane)
+    return JSONResponse({"ok": True, "id": lane.id, "name": lane.name})
+
+@app.post("/dashboard/scout/lane/{lane_id}/rename")
+async def scout_rename_lane(lane_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.id == lane_id, ScoutBoardLane.college == college).first()
+    if not lane:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    data = await request.json()
+    name = (data.get("name") or "").strip()[:50]
+    if not name:
+        return JSONResponse({"error": "Name required"}, status_code=400)
+    lane.name = name
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.post("/dashboard/scout/lane/{lane_id}/delete")
+async def scout_delete_lane(lane_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.id == lane_id, ScoutBoardLane.college == college).first()
+    if not lane:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    # Delete all cards in this lane first
+    db.query(ScoutBoardCard).filter(ScoutBoardCard.lane_id == lane_id).delete()
+    db.delete(lane)
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.post("/dashboard/scout/card")
+async def scout_create_card(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    if not college:
+        return JSONResponse({"error": "No college assigned"}, status_code=400)
+    data = await request.json()
+    lane_id = int(data.get("lane_id", 0))
+    lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.id == lane_id, ScoutBoardLane.college == college).first()
+    if not lane:
+        return JSONResponse({"error": "Invalid lane"}, status_code=400)
+    count = db.query(ScoutBoardCard).filter(ScoutBoardCard.lane_id == lane_id).count()
+    card = ScoutBoardCard(
+        college=college,
+        lane_id=lane_id,
+        sort_order=count,
+        player_user_id=int(data["player_user_id"]) if data.get("player_user_id") else None,
+        custom_first_name=(data.get("custom_first_name") or "")[:100],
+        custom_last_name=(data.get("custom_last_name") or "")[:100],
+        custom_high_school=(data.get("custom_high_school") or "")[:200],
+        custom_grad_year=(data.get("custom_grad_year") or "")[:10],
+        visit_date=(data.get("visit_date") or "")[:50],
+        scout_name=(data.get("scout_name") or "")[:200],
+        notes=(data.get("notes") or "")[:5000],
+        created_by=user.id,
+    )
+    db.add(card)
+    db.commit()
+    db.refresh(card)
+    return JSONResponse({"ok": True, "id": card.id})
+
+@app.get("/dashboard/scout/card/{card_id}")
+async def scout_get_card(card_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
+    if not card:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    # Resolve player info
+    if card.player_user_id:
+        p_user = db.query(User).filter(User.id == card.player_user_id).first()
+        p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == card.player_user_id).first() if p_user else None
+        first_name = p_profile.first_name if p_profile else ""
+        last_name = p_profile.last_name if p_profile else ""
+        high_school = p_profile.school if p_profile else ""
+        position = p_profile.position if p_profile else ""
+        grad_year = p_profile.year if p_profile else ""
+        height = p_profile.height if p_profile else ""
+        weight = p_profile.weight if p_profile else ""
+        photo = card.tile_image_url or (p_profile.photo if p_profile else "")
+        profile_username = p_user.username if p_user else ""
+    else:
+        first_name = card.custom_first_name
+        last_name = card.custom_last_name
+        high_school = card.custom_high_school
+        position = ""
+        grad_year = card.custom_grad_year
+        height = ""
+        weight = ""
+        photo = card.tile_image_url
+        profile_username = ""
+    return JSONResponse({
+        "id": card.id,
+        "is_custom": not card.player_user_id,
+        "profile_username": profile_username,
+        "first_name": first_name,
+        "last_name": last_name,
+        "high_school": high_school,
+        "position": position,
+        "grad_year": grad_year,
+        "height": height,
+        "weight": weight,
+        "photo": photo,
+        "visit_date": card.visit_date,
+        "high_school_visit_date": card.high_school_visit_date,
+        "scout_name": card.scout_name,
+        "notes": card.notes,
+        "lane_id": card.lane_id,
+    })
+
+@app.post("/dashboard/scout/card/{card_id}/update")
+async def scout_update_card(card_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
+    if not card:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    data = await request.json()
+    if "visit_date" in data:
+        card.visit_date = (data.get("visit_date") or "")[:50]
+    if "high_school_visit_date" in data:
+        card.high_school_visit_date = (data.get("high_school_visit_date") or "")[:50]
+    if "scout_name" in data:
+        card.scout_name = (data.get("scout_name") or "")[:200]
+    if "notes" in data:
+        card.notes = (data.get("notes") or "")[:5000]
+    if card.player_user_id is None:
+        if "custom_first_name" in data:
+            card.custom_first_name = (data.get("custom_first_name") or "")[:100]
+        if "custom_last_name" in data:
+            card.custom_last_name = (data.get("custom_last_name") or "")[:100]
+        if "custom_high_school" in data:
+            card.custom_high_school = (data.get("custom_high_school") or "")[:200]
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.post("/dashboard/scout/card/{card_id}/delete")
+async def scout_delete_card(card_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
+    if not card:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    db.delete(card)
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.post("/dashboard/scout/reorder")
+async def scout_reorder_cards(request: Request, db: Session = Depends(get_db)):
+    """Accept array of {card_id, lane_id, sort_order} to update positions after drag/drop."""
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    data = await request.json()
+    items = data.get("items", [])
+    for item in items:
+        card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == int(item["card_id"]), ScoutBoardCard.college == college).first()
+        if card:
+            card.lane_id = int(item["lane_id"])
+            card.sort_order = int(item["sort_order"])
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.post("/dashboard/scout/card/{card_id}/image")
+async def scout_upload_card_image(card_id: int, request: Request, image: UploadFile = File(...), db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
+    if not card:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    ext = image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else "jpg"
+    if ext not in ("jpg", "jpeg", "png", "gif", "webp"):
+        return JSONResponse({"error": "Invalid file type"}, status_code=400)
+    key = f"scout_board/{card.college.replace(' ', '_')}/{uuid.uuid4().hex}.{ext}"
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: s3.upload_fileobj(image.file, SPACES_BUCKET, key, ExtraArgs={"ContentType": image.content_type or f"image/{ext}", "ACL": "public-read"})
+        )
+    except Exception as e:
+        return JSONResponse({"error": f"Upload failed: {e}"}, status_code=500)
+    card.tile_image_url = f"{SPACES_BASE_URL}/{key}"
+    db.commit()
+    return JSONResponse({"ok": True, "url": card.tile_image_url})
+
+@app.post("/dashboard/scout/scout")
+async def scout_create_scout(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    if not college:
+        return JSONResponse({"error": "No college assigned"}, status_code=400)
+    data = await request.json()
+    first_name = (data.get("first_name") or "").strip()[:100]
+    last_name = (data.get("last_name") or "").strip()[:100]
+    if not first_name or not last_name:
+        return JSONResponse({"error": "First and last name required"}, status_code=400)
+    scout = ScoutBoardScout(college=college, first_name=first_name, last_name=last_name)
+    db.add(scout)
+    db.commit()
+    db.refresh(scout)
+    return JSONResponse({"ok": True, "id": scout.id, "name": f"{first_name} {last_name}"})
+
+@app.get("/dashboard/scout/search-players")
+async def scout_search_players(request: Request, q: str = "", db: Session = Depends(get_db)):
+    """Search platform players to add to the board."""
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    if not q or len(q) < 2:
+        return JSONResponse([])
+    like = f"%{q}%"
+    results = db.query(User, PlayerProfile).join(PlayerProfile, User.id == PlayerProfile.user_id).filter(
+        User.role == "player",
+        (User.username.ilike(like)) | (PlayerProfile.first_name.ilike(like)) | (PlayerProfile.last_name.ilike(like))
+    ).limit(10).all()
+    return JSONResponse([{
+        "user_id": u.id,
+        "name": f"{p.first_name} {p.last_name}".strip() or u.username,
+        "school": p.school or "",
+        "position": p.position or "",
+        "photo": p.photo or "",
+    } for u, p in results])
 
 @app.get("/api/schools/states")
 def schools_states(request: Request, db: Session = Depends(get_db)):

@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% block title %}Scout Dashboard — CAP Recruiting{% endblock %}
+{% block content %}
+<div style="max-width:1600px; margin:0 auto; padding:24px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+    <div>
+      <h1 style="font-size:28px; font-weight:800; color:#0a1628; margin:0 0 4px 0;">Scout Dashboard</h1>
+      <p style="color:#6b7280; font-size:14px; margin:0;">{% if college %}{{ college }} · Shared with all coaches at your school{% else %}Set your college to start{% endif %}</p>
+    </div>
+    {% if not needs_college %}
+    <button onclick="openAddCardModal()" class="btn btn-primary" style="padding:10px 20px; font-weight:700; border-radius:8px; border:none; cursor:pointer;">+ Add Player</button>
+    {% endif %}
+  </div>
+
+  {% if needs_college %}
+  <div style="background:#fef3c7; border:2px solid #fbbf24; border-radius:12px; padding:24px; text-align:center;">
+    <h2 style="margin:0 0 8px 0; color:#92400e;">College Not Set</h2>
+    <p style="color:#92400e; margin:0 0 16px 0;">Set your college on your profile edit page to use the Scout Dashboard.</p>
+    <a href="/profile/edit" class="btn btn-primary" style="padding:10px 20px; text-decoration:none; border-radius:8px; display:inline-block;">Go to Profile</a>
+  </div>
+  {% else %}
+
+  <!-- Board -->
+  <div id="board" style="display:flex; gap:16px; overflow-x:auto; padding-bottom:20px; align-items:flex-start;">
+    {% for lane in lanes %}
+    <div class="sb-lane" data-lane-id="{{ lane.id }}" style="flex:0 0 280px; background:#f3f4f6; border-radius:12px; padding:12px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div class="lane-title" data-lane-id="{{ lane.id }}" style="font-weight:700; font-size:14px; color:#0a1628; text-transform:uppercase; letter-spacing:.04em; cursor:pointer;" ondblclick="renameLane({{ lane.id }}, this)">{{ lane.name }}</div>
+        <div style="display:flex; gap:4px;">
+          <span style="background:#e5e7eb; color:#6b7280; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">{{ cards_by_lane[lane.id]|length }}</span>
+          <button onclick="deleteLane({{ lane.id }})" title="Delete lane" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:14px;">×</button>
+        </div>
+      </div>
+      <div class="sb-cards" data-lane-id="{{ lane.id }}" style="display:flex; flex-direction:column; gap:10px; min-height:60px;">
+        {% for card in cards_by_lane[lane.id] %}
+        <div class="sb-card" draggable="true" data-card-id="{{ card.id }}" onclick="openCard({{ card.id }})"
+             style="background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; padding:12px; cursor:pointer; transition:all .15s;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            {% if card.photo %}
+            <img src="{{ card.photo }}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" alt="">
+            {% else %}
+            <div style="width:40px; height:40px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; font-weight:700; color:#6b7280; flex-shrink:0;">{{ card.name[0] if card.name else '?' }}</div>
+            {% endif %}
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; font-size:14px; color:#0a1628; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ card.name or 'Unnamed' }}</div>
+              {% if card.is_custom %}<div style="font-size:10px; color:#9ca3af; font-weight:600;">CUSTOM</div>{% endif %}
+            </div>
+          </div>
+          {% if card.high_school %}
+          <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">{{ card.high_school }}</div>
+          {% endif %}
+          {% if card.visit_date %}
+          <div style="font-size:11px; color:#3b82f6; font-weight:600;">Visit: {{ card.visit_date }}</div>
+          {% endif %}
+          {% if card.scout_name %}
+          <div style="font-size:11px; color:#6b7280; margin-top:4px;">Scout: {{ card.scout_name }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% if lanes|length < 5 %}
+    <div style="flex:0 0 280px;">
+      <button onclick="addLane()" style="width:100%; padding:14px; background:transparent; border:2px dashed #d1d5db; border-radius:12px; color:#6b7280; font-weight:600; cursor:pointer;">+ Add Swimlane</button>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add Card Modal -->
+<div id="add-card-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:14px; padding:28px; max-width:560px; width:90%; max-height:90vh; overflow-y:auto;">
+    <h2 style="margin:0 0 20px 0; color:#0a1628;">Add Player to Board</h2>
+
+    <div style="margin-bottom:20px;">
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button onclick="setAddMode('existing')" id="mode-existing" class="btn btn-primary" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer;">Select from Directory</button>
+        <button onclick="setAddMode('custom')" id="mode-custom" class="btn" style="flex:1; padding:8px; border:1.5px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer;">Custom Player</button>
+      </div>
+
+      <div id="mode-existing-form">
+        <label style="font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase;">Search Player</label>
+        <input type="text" id="player-search" oninput="searchPlayers(this.value)" placeholder="Type player name..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+        <div id="player-search-results" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+      </div>
+
+      <div id="mode-custom-form" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#6b7280;">First Name</label>
+            <input type="text" id="custom-first" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#6b7280;">Last Name</label>
+            <input type="text" id="custom-last" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:12px; font-weight:600; color:#6b7280;">High School</label>
+          <input type="text" id="custom-school" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:12px; font-weight:600; color:#6b7280;">Grad Year</label>
+          <input type="text" id="custom-grad" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase;">Add to Lane</label>
+      <select id="add-lane" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+        {% for lane in lanes %}
+        <option value="{{ lane.id }}">{{ lane.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeAddCardModal()" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
+      <button onclick="createCard()" style="flex:1; padding:12px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Add Card</button>
+    </div>
+  </div>
+</div>
+
+<!-- Card Detail Modal -->
+<div id="card-detail-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:14px; padding:28px; max-width:640px; width:90%; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:16px;">
+      <h2 id="cd-name" style="margin:0; color:#0a1628;"></h2>
+      <button onclick="closeCardDetail()" style="background:none; border:none; font-size:24px; color:#9ca3af; cursor:pointer;">×</button>
+    </div>
+
+    <div style="display:flex; gap:16px; margin-bottom:20px;">
+      <div style="flex:0 0 100px;">
+        <img id="cd-photo" src="" style="width:100px; height:100px; border-radius:50%; object-fit:cover; background:#f3f4f6;" alt="">
+        <input type="file" id="cd-image-upload" accept="image/*" style="display:none;" onchange="uploadCardImage()">
+        <button onclick="document.getElementById('cd-image-upload').click()" style="width:100%; margin-top:8px; padding:6px; background:#f3f4f6; border:none; border-radius:6px; font-size:11px; cursor:pointer;">Change Image</button>
+      </div>
+      <div style="flex:1;">
+        <div id="cd-info" style="font-size:13px; color:#6b7280; line-height:1.6;"></div>
+        <a id="cd-profile-link" href="#" target="_blank" style="display:none; margin-top:8px; font-size:13px; color:#3b82f6; font-weight:600;">View Full Profile →</a>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+      <div>
+        <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Campus Visit Date</label>
+        <input type="date" id="cd-visit-date" onchange="saveCard()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">HS Visit Date</label>
+        <input type="date" id="cd-hs-visit-date" onchange="saveCard()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Scout</label>
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <select id="cd-scout" onchange="saveCard()" style="flex:1; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px;">
+          <option value="">— No scout —</option>
+          {% for s in scouts %}
+          <option value="{{ s.first_name }} {{ s.last_name }}">{{ s.first_name }} {{ s.last_name }}</option>
+          {% endfor %}
+        </select>
+        <button onclick="addScout()" style="padding:8px 12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-size:12px;">+ New Scout</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Notes</label>
+      <textarea id="cd-notes" rows="5" onblur="saveCard()" placeholder="Add notes about this player..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box; font-family:inherit;"></textarea>
+    </div>
+
+    <div style="display:flex; justify-content:space-between;">
+      <button onclick="deleteCard()" style="padding:10px 16px; background:#fee2e2; color:#dc2626; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Delete</button>
+      <button onclick="closeCardDetail()" style="padding:10px 24px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentCardId = null;
+var addMode = 'existing';
+var selectedPlayerId = null;
+
+function openAddCardModal() {
+  document.getElementById('add-card-modal').style.display = 'flex';
+  document.getElementById('player-search').value = '';
+  document.getElementById('player-search-results').innerHTML = '';
+  document.getElementById('custom-first').value = '';
+  document.getElementById('custom-last').value = '';
+  document.getElementById('custom-school').value = '';
+  document.getElementById('custom-grad').value = '';
+  selectedPlayerId = null;
+  setAddMode('existing');
+}
+
+function closeAddCardModal() {
+  document.getElementById('add-card-modal').style.display = 'none';
+}
+
+function setAddMode(mode) {
+  addMode = mode;
+  document.getElementById('mode-existing-form').style.display = mode === 'existing' ? '' : 'none';
+  document.getElementById('mode-custom-form').style.display = mode === 'custom' ? '' : 'none';
+  var btn1 = document.getElementById('mode-existing');
+  var btn2 = document.getElementById('mode-custom');
+  btn1.className = mode === 'existing' ? 'btn btn-primary' : 'btn';
+  btn1.style.background = mode === 'existing' ? '#0a1628' : '#fff';
+  btn1.style.color = mode === 'existing' ? '#fff' : '#0a1628';
+  btn1.style.border = mode === 'existing' ? 'none' : '1.5px solid #e5e7eb';
+  btn2.className = mode === 'custom' ? 'btn btn-primary' : 'btn';
+  btn2.style.background = mode === 'custom' ? '#0a1628' : '#fff';
+  btn2.style.color = mode === 'custom' ? '#fff' : '#0a1628';
+  btn2.style.border = mode === 'custom' ? 'none' : '1.5px solid #e5e7eb';
+}
+
+var searchTimer;
+function searchPlayers(q) {
+  clearTimeout(searchTimer);
+  if (!q || q.length < 2) {
+    document.getElementById('player-search-results').innerHTML = '';
+    return;
+  }
+  searchTimer = setTimeout(function() {
+    fetch('/dashboard/scout/search-players?q=' + encodeURIComponent(q))
+      .then(function(r) { return r.json(); })
+      .then(function(results) {
+        var html = results.map(function(p) {
+          return '<div onclick="selectPlayer(' + p.user_id + ', this)" data-player-id="' + p.user_id + '" style="padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-bottom:6px; cursor:pointer; display:flex; align-items:center; gap:10px;">' +
+            (p.photo ? '<img src="' + p.photo + '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">' : '<div style="width:32px; height:32px; border-radius:50%; background:#e5e7eb;"></div>') +
+            '<div><div style="font-weight:600; font-size:14px; color:#0a1628;">' + p.name + '</div><div style="font-size:12px; color:#6b7280;">' + (p.school || '') + ' · ' + (p.position || '') + '</div></div></div>';
+        }).join('');
+        document.getElementById('player-search-results').innerHTML = html || '<p style="color:#9ca3af; font-size:13px;">No results</p>';
+      });
+  }, 300);
+}
+
+function selectPlayer(id, el) {
+  selectedPlayerId = id;
+  document.querySelectorAll('#player-search-results div[data-player-id]').forEach(function(d) { d.style.background = ''; d.style.borderColor = '#e5e7eb'; });
+  el.style.background = '#fef3c7';
+  el.style.borderColor = '#f0b429';
+}
+
+function createCard() {
+  var laneId = document.getElementById('add-lane').value;
+  var body = { lane_id: laneId };
+  if (addMode === 'existing') {
+    if (!selectedPlayerId) { alert('Select a player'); return; }
+    body.player_user_id = selectedPlayerId;
+  } else {
+    var first = document.getElementById('custom-first').value.trim();
+    var last = document.getElementById('custom-last').value.trim();
+    if (!first || !last) { alert('First and last name required'); return; }
+    body.custom_first_name = first;
+    body.custom_last_name = last;
+    body.custom_high_school = document.getElementById('custom-school').value.trim();
+    body.custom_grad_year = document.getElementById('custom-grad').value.trim();
+  }
+  fetch('/dashboard/scout/card', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) { location.reload(); }
+      else { alert(res.error || 'Error'); }
+    });
+}
+
+function openCard(cardId) {
+  currentCardId = cardId;
+  fetch('/dashboard/scout/card/' + cardId)
+    .then(function(r) { return r.json(); })
+    .then(function(c) {
+      document.getElementById('cd-name').textContent = (c.first_name + ' ' + c.last_name).trim() || 'Player';
+      document.getElementById('cd-photo').src = c.photo || '/static/cap-logo.png';
+      var info = [];
+      if (c.high_school) info.push('<strong>School:</strong> ' + c.high_school);
+      if (c.position) info.push('<strong>Position:</strong> ' + c.position);
+      if (c.grad_year) info.push('<strong>Class:</strong> ' + c.grad_year);
+      if (c.height) info.push('<strong>Height:</strong> ' + c.height);
+      if (c.weight) info.push('<strong>Weight:</strong> ' + c.weight);
+      if (c.is_custom) info.push('<em>Custom Player</em>');
+      document.getElementById('cd-info').innerHTML = info.join('<br>');
+      var link = document.getElementById('cd-profile-link');
+      if (c.profile_username) {
+        link.href = '/profile/' + c.profile_username;
+        link.style.display = '';
+      } else {
+        link.style.display = 'none';
+      }
+      document.getElementById('cd-visit-date').value = c.visit_date || '';
+      document.getElementById('cd-hs-visit-date').value = c.high_school_visit_date || '';
+      document.getElementById('cd-scout').value = c.scout_name || '';
+      document.getElementById('cd-notes').value = c.notes || '';
+      document.getElementById('card-detail-modal').style.display = 'flex';
+    });
+}
+
+function closeCardDetail() {
+  document.getElementById('card-detail-modal').style.display = 'none';
+  currentCardId = null;
+  location.reload();
+}
+
+function saveCard() {
+  if (!currentCardId) return;
+  var body = {
+    visit_date: document.getElementById('cd-visit-date').value,
+    high_school_visit_date: document.getElementById('cd-hs-visit-date').value,
+    scout_name: document.getElementById('cd-scout').value,
+    notes: document.getElementById('cd-notes').value,
+  };
+  fetch('/dashboard/scout/card/' + currentCardId + '/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+}
+
+function uploadCardImage() {
+  if (!currentCardId) return;
+  var file = document.getElementById('cd-image-upload').files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append('image', file);
+  fetch('/dashboard/scout/card/' + currentCardId + '/image', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) { document.getElementById('cd-photo').src = res.url; }
+      else { alert(res.error || 'Upload failed'); }
+    });
+}
+
+function deleteCard() {
+  if (!currentCardId || !confirm('Delete this card?')) return;
+  fetch('/dashboard/scout/card/' + currentCardId + '/delete', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) { closeCardDetail(); location.reload(); }
+    });
+}
+
+function addLane() {
+  var name = prompt('Swimlane name:');
+  if (!name) return;
+  fetch('/dashboard/scout/lane', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: name}) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) { location.reload(); }
+      else { alert(res.error || 'Error'); }
+    });
+}
+
+function renameLane(laneId, el) {
+  var name = prompt('Rename swimlane:', el.textContent);
+  if (!name) return;
+  fetch('/dashboard/scout/lane/' + laneId + '/rename', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: name}) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) { el.textContent = name; }
+    });
+}
+
+function deleteLane(laneId) {
+  if (!confirm('Delete this swimlane and all its cards?')) return;
+  fetch('/dashboard/scout/lane/' + laneId + '/delete', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) { location.reload(); }
+    });
+}
+
+function addScout() {
+  var first = prompt('Scout first name:');
+  if (!first) return;
+  var last = prompt('Scout last name:');
+  if (!last) return;
+  fetch('/dashboard/scout/scout', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({first_name: first, last_name: last}) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.ok) {
+        var opt = document.createElement('option');
+        opt.value = res.name;
+        opt.textContent = res.name;
+        opt.selected = true;
+        document.getElementById('cd-scout').appendChild(opt);
+        saveCard();
+      }
+    });
+}
+
+// Drag and drop
+var draggedCard = null;
+
+document.querySelectorAll('.sb-card').forEach(function(card) {
+  card.addEventListener('dragstart', function(e) {
+    draggedCard = this;
+    this.style.opacity = '0.5';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  card.addEventListener('dragend', function() {
+    this.style.opacity = '1';
+    draggedCard = null;
+  });
+});
+
+document.querySelectorAll('.sb-cards').forEach(function(lane) {
+  lane.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var afterEl = getDragAfterElement(this, e.clientY);
+    if (afterEl == null) {
+      this.appendChild(draggedCard);
+    } else {
+      this.insertBefore(draggedCard, afterEl);
+    }
+  });
+  lane.addEventListener('drop', function(e) {
+    e.preventDefault();
+    saveBoardState();
+  });
+});
+
+function getDragAfterElement(container, y) {
+  var draggableElements = Array.from(container.querySelectorAll('.sb-card:not([style*="opacity: 0.5"])'));
+  return draggableElements.reduce(function(closest, child) {
+    var box = child.getBoundingClientRect();
+    var offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function saveBoardState() {
+  var items = [];
+  document.querySelectorAll('.sb-cards').forEach(function(lane) {
+    var laneId = lane.dataset.laneId;
+    Array.from(lane.querySelectorAll('.sb-card')).forEach(function(card, idx) {
+      items.push({ card_id: card.dataset.cardId, lane_id: laneId, sort_order: idx });
+    });
+  });
+  fetch('/dashboard/scout/reorder', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({items: items}) });
+}
+</script>
+{% endblock %}
