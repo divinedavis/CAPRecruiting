@@ -498,6 +498,7 @@ function uploadCardImage() {
 
 function completeCard() {
   if (!currentCardId) return;
+  if (!confirm('Are you sure you want to complete this card? It will be moved to the archived list.')) return;
   function doArchive() {
     fetch('/dashboard/scout/card/' + currentCardId + '/archive', { method: 'POST' })
       .then(function(r) { return r.json(); })
