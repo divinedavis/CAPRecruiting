@@ -547,6 +547,8 @@ class ScoutBoardCard(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    archived_at = Column(DateTime, nullable=True, index=True)
+    archived_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 class ScoutBoardScout(Base):
     __tablename__ = "scout_board_scouts"
@@ -4094,7 +4096,7 @@ async def scout_board_page(request: Request, db: Session = Depends(get_db)):
         })
     _ensure_default_lanes(college, db)
     lanes = db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).order_by(ScoutBoardLane.sort_order).all()
-    cards = db.query(ScoutBoardCard).filter(ScoutBoardCard.college == college).order_by(ScoutBoardCard.sort_order).all()
+    cards = db.query(ScoutBoardCard).filter(ScoutBoardCard.college == college, ScoutBoardCard.archived_at.is_(None)).order_by(ScoutBoardCard.sort_order).all()
     cards_by_lane = {lane.id: [] for lane in lanes}
     for c in cards:
         if c.lane_id in cards_by_lane:
@@ -4303,8 +4305,8 @@ async def scout_update_card(card_id: int, request: Request, db: Session = Depend
     db.commit()
     return JSONResponse({"ok": True})
 
-@app.post("/dashboard/scout/card/{card_id}/delete")
-async def scout_delete_card(card_id: int, request: Request, db: Session = Depends(get_db)):
+@app.post("/dashboard/scout/card/{card_id}/archive")
+async def scout_archive_card(card_id: int, request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user or (user.role != "coach" and not user.is_admin):
@@ -4313,9 +4315,82 @@ async def scout_delete_card(card_id: int, request: Request, db: Session = Depend
     card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
     if not card:
         return JSONResponse({"error": "Not found"}, status_code=404)
-    db.delete(card)
+    card.archived_at = datetime.utcnow()
+    card.archived_by = user.id
     db.commit()
     return JSONResponse({"ok": True})
+
+@app.post("/dashboard/scout/card/{card_id}/restore")
+async def scout_restore_card(card_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
+    if not card:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.id == card.lane_id, ScoutBoardLane.college == college).first()
+    if not lane:
+        _ensure_default_lanes(college, db)
+        lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).order_by(ScoutBoardLane.sort_order).first()
+        if lane:
+            card.lane_id = lane.id
+    card.archived_at = None
+    card.archived_by = None
+    count = db.query(ScoutBoardCard).filter(ScoutBoardCard.lane_id == card.lane_id, ScoutBoardCard.archived_at.is_(None)).count()
+    card.sort_order = count
+    db.commit()
+    return JSONResponse({"ok": True})
+
+@app.get("/dashboard/scout/archived")
+async def scout_list_archived(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    if not college:
+        return JSONResponse({"cards": []})
+    cards = db.query(ScoutBoardCard).filter(
+        ScoutBoardCard.college == college,
+        ScoutBoardCard.archived_at.isnot(None),
+    ).order_by(ScoutBoardCard.archived_at.desc()).all()
+    lanes = {l.id: l.name for l in db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).all()}
+    result = []
+    for c in cards:
+        if c.player_user_id:
+            p_user = db.query(User).filter(User.id == c.player_user_id).first()
+            p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == c.player_user_id).first() if p_user else None
+            name = f"{p_profile.first_name} {p_profile.last_name}".strip() if p_profile and (p_profile.first_name or p_profile.last_name) else (p_user.username if p_user else "Unknown")
+            high_school = p_profile.school if p_profile else ""
+            position = p_profile.position if p_profile else ""
+            photo = c.tile_image_url or (p_profile.photo if p_profile else "")
+        else:
+            name = f"{c.custom_first_name} {c.custom_last_name}".strip()
+            high_school = c.custom_high_school
+            position = c.custom_position
+            photo = c.tile_image_url
+        archiver_name = ""
+        if c.archived_by:
+            archiver = db.query(User).filter(User.id == c.archived_by).first()
+            if archiver:
+                cp = db.query(CoachProfile).filter(CoachProfile.user_id == archiver.id).first()
+                if cp and (cp.first_name or cp.last_name):
+                    archiver_name = f"{cp.first_name} {cp.last_name}".strip()
+                else:
+                    archiver_name = archiver.username
+        result.append({
+            "id": c.id,
+            "name": name or "Unnamed",
+            "high_school": high_school,
+            "position": position,
+            "photo": photo,
+            "lane_name": lanes.get(c.lane_id, ""),
+            "archived_at": c.archived_at.isoformat() if c.archived_at else "",
+            "archived_by": archiver_name,
+        })
+    return JSONResponse({"cards": result})
 
 @app.post("/dashboard/scout/reorder")
 async def scout_reorder_cards(request: Request, db: Session = Depends(get_db)):
