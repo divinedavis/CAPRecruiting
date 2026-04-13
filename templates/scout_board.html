@@ -97,8 +97,65 @@
 
       <div id="mode-existing-form">
         <label style="font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase;">Search Player</label>
-        <input type="text" id="player-search" oninput="searchPlayers(this.value)" placeholder="Type player name..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
-        <div id="player-search-results" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+        <input type="text" id="player-search" oninput="onNameInput(this.value)" placeholder="Type player name..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+
+        <div id="filter-panel" style="margin-top:12px; padding:12px; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:8px;">
+          <div style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Or filter by</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <label style="font-size:11px; font-weight:600; color:#6b7280;">40 Time</label>
+              <select id="filter-forty" onchange="runFilterSearch()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
+                <option value="">Any</option>
+                <option value="u44">Below 4.4</option>
+                <option value="44_45">4.4 – 4.5</option>
+                <option value="45_47">4.5 – 4.7</option>
+                <option value="o47">4.7+</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:#6b7280;">Grad Year</label>
+              <select id="filter-grad" onchange="runFilterSearch()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
+                <option value="">Any</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+                <option value="2028">2028</option>
+                <option value="2029">2029</option>
+                <option value="2030">2030</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:#6b7280;">Position</label>
+              <select id="filter-position" onchange="runFilterSearch()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
+                <option value="">Any</option>
+                <optgroup label="Offense"><option>QB</option><option>RB</option><option>FB</option><option>WR</option><option>TE</option><option>OL</option><option>OT</option><option>OG</option><option>C</option></optgroup>
+                <optgroup label="Defense"><option>DL</option><option>DE</option><option>DT</option><option>LB</option><option>ILB</option><option>OLB</option><option>DB</option><option>CB</option><option>S</option><option>FS</option><option>SS</option></optgroup>
+                <optgroup label="Special Teams"><option>K</option><option>P</option><option>LS</option></optgroup>
+                <option>ATH</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:#6b7280;">State</label>
+              <select id="filter-state" onchange="onFilterStateChange()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
+                <option value="">Any</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:#6b7280;">City</label>
+              <select id="filter-city" onchange="onFilterCityChange()" disabled style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
+                <option value="">Any</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:#6b7280;">School</label>
+              <select id="filter-school" onchange="runFilterSearch()" disabled style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
+                <option value="">Any</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="player-search-results" style="margin-top:12px; max-height:260px; overflow-y:auto;"></div>
       </div>
 
       <div id="mode-custom-form" style="display:none;">
@@ -289,6 +346,9 @@ function openAddCardModal() {
   document.getElementById('add-card-modal').style.display = 'flex';
   document.getElementById('player-search').value = '';
   document.getElementById('player-search-results').innerHTML = '';
+  var panel = document.getElementById('filter-panel');
+  if (panel) panel.style.display = '';
+  clearFilterValues();
   document.getElementById('custom-first').value = '';
   document.getElementById('custom-last').value = '';
   document.getElementById('custom-school').value = '';
@@ -357,7 +417,28 @@ var schoolSearchTimer;
 })();
 
 var searchTimer;
-function searchPlayers(q) {
+function renderPlayerResults(results) {
+  var html = results.map(function(p) {
+    var meta = [p.school || '', p.position || '', p.grad_year || '', p.forty_yard ? p.forty_yard + ' 40' : ''].filter(Boolean).join(' · ');
+    return '<div onclick="selectPlayer(' + p.user_id + ', this)" data-player-id="' + p.user_id + '" style="padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-bottom:6px; cursor:pointer; display:flex; align-items:center; gap:10px;">' +
+      (p.photo ? '<img src="' + p.photo + '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">' : '<div style="width:32px; height:32px; border-radius:50%; background:#e5e7eb;"></div>') +
+      '<div><div style="font-weight:600; font-size:14px; color:#0a1628;">' + p.name + '</div><div style="font-size:12px; color:#6b7280;">' + meta + '</div></div></div>';
+  }).join('');
+  document.getElementById('player-search-results').innerHTML = html || '<p style="color:#9ca3af; font-size:13px;">No results</p>';
+}
+
+function onNameInput(q) {
+  var panel = document.getElementById('filter-panel');
+  if (q && q.length > 0) {
+    panel.style.display = 'none';
+    clearFilterValues();
+  } else {
+    panel.style.display = '';
+  }
+  searchByName(q);
+}
+
+function searchByName(q) {
   clearTimeout(searchTimer);
   if (!q || q.length < 2) {
     document.getElementById('player-search-results').innerHTML = '';
@@ -366,16 +447,94 @@ function searchPlayers(q) {
   searchTimer = setTimeout(function() {
     fetch('/dashboard/scout/search-players?q=' + encodeURIComponent(q))
       .then(function(r) { return r.json(); })
-      .then(function(results) {
-        var html = results.map(function(p) {
-          return '<div onclick="selectPlayer(' + p.user_id + ', this)" data-player-id="' + p.user_id + '" style="padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-bottom:6px; cursor:pointer; display:flex; align-items:center; gap:10px;">' +
-            (p.photo ? '<img src="' + p.photo + '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">' : '<div style="width:32px; height:32px; border-radius:50%; background:#e5e7eb;"></div>') +
-            '<div><div style="font-weight:600; font-size:14px; color:#0a1628;">' + p.name + '</div><div style="font-size:12px; color:#6b7280;">' + (p.school || '') + ' · ' + (p.position || '') + '</div></div></div>';
-        }).join('');
-        document.getElementById('player-search-results').innerHTML = html || '<p style="color:#9ca3af; font-size:13px;">No results</p>';
-      });
+      .then(renderPlayerResults);
   }, 300);
 }
+
+function clearFilterValues() {
+  document.getElementById('filter-forty').value = '';
+  document.getElementById('filter-grad').value = '';
+  document.getElementById('filter-position').value = '';
+  document.getElementById('filter-state').value = '';
+  var city = document.getElementById('filter-city'); city.innerHTML = '<option value="">Any</option>'; city.disabled = true;
+  var school = document.getElementById('filter-school'); school.innerHTML = '<option value="">Any</option>'; school.disabled = true;
+}
+
+function runFilterSearch() {
+  clearTimeout(searchTimer);
+  var params = new URLSearchParams();
+  var forty = document.getElementById('filter-forty').value;
+  var grad = document.getElementById('filter-grad').value;
+  var pos = document.getElementById('filter-position').value;
+  var st = document.getElementById('filter-state').value;
+  var ct = document.getElementById('filter-city').value;
+  var sc = document.getElementById('filter-school').value;
+  if (forty) params.set('forty_bucket', forty);
+  if (grad) params.set('grad_year', grad);
+  if (pos) params.set('position', pos);
+  if (st) params.set('state', st);
+  if (ct) params.set('city', ct);
+  if (sc) params.set('school', sc);
+  if (![...params.keys()].length) {
+    document.getElementById('player-search-results').innerHTML = '';
+    return;
+  }
+  searchTimer = setTimeout(function() {
+    fetch('/dashboard/scout/search-players?' + params.toString())
+      .then(function(r) { return r.json(); })
+      .then(renderPlayerResults);
+  }, 200);
+}
+
+function onFilterStateChange() {
+  var st = document.getElementById('filter-state').value;
+  var city = document.getElementById('filter-city');
+  var school = document.getElementById('filter-school');
+  city.innerHTML = '<option value="">Any</option>';
+  city.disabled = true;
+  school.innerHTML = '<option value="">Any</option>';
+  school.disabled = true;
+  if (st) {
+    fetch('/api/schools/cities?state=' + encodeURIComponent(st))
+      .then(function(r) { return r.json(); })
+      .then(function(cities) {
+        cities.forEach(function(c) {
+          var o = document.createElement('option'); o.value = c; o.textContent = c; city.appendChild(o);
+        });
+        city.disabled = false;
+      });
+  }
+  runFilterSearch();
+}
+
+function onFilterCityChange() {
+  var st = document.getElementById('filter-state').value;
+  var ct = document.getElementById('filter-city').value;
+  var school = document.getElementById('filter-school');
+  school.innerHTML = '<option value="">Any</option>';
+  school.disabled = true;
+  if (st && ct) {
+    fetch('/api/schools/list?state=' + encodeURIComponent(st) + '&city=' + encodeURIComponent(ct))
+      .then(function(r) { return r.json(); })
+      .then(function(schools) {
+        schools.forEach(function(s) {
+          var o = document.createElement('option'); o.value = s; o.textContent = s; school.appendChild(o);
+        });
+        school.disabled = false;
+      });
+  }
+  runFilterSearch();
+}
+
+(function loadFilterStates() {
+  var sel = document.getElementById('filter-state');
+  if (!sel) return;
+  fetch('/api/schools/states').then(function(r) { return r.json(); }).then(function(states) {
+    states.forEach(function(st) {
+      var o = document.createElement('option'); o.value = st; o.textContent = st; sel.appendChild(o);
+    });
+  });
+})();
 
 function selectPlayer(id, el) {
   selectedPlayerId = id;

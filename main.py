@@ -5564,24 +5564,73 @@ async def search_highschools(q: str = "", db: Session = Depends(get_db)):
     return JSONResponse([{"name": r[0], "city": r[1], "state": r[2], "label": f"{r[0]} — {r[1]}, {r[2]}"} for r in rows])
 
 @app.get("/dashboard/scout/search-players")
-async def scout_search_players(request: Request, q: str = "", db: Session = Depends(get_db)):
-    """Search platform players to add to the board."""
+async def scout_search_players(
+    request: Request,
+    q: str = "",
+    forty_bucket: str = "",
+    grad_year: str = "",
+    position: str = "",
+    state: str = "",
+    city: str = "",
+    school: str = "",
+    db: Session = Depends(get_db),
+):
+    """Search platform players to add to the board. Accepts name query OR filters."""
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user or (user.role != "coach" and not user.is_admin):
         return JSONResponse({"error": "Not authorized"}, status_code=403)
-    if not q or len(q) < 2:
-        return JSONResponse([])
-    like = f"%{q}%"
-    results = db.query(User, PlayerProfile).join(PlayerProfile, User.id == PlayerProfile.user_id).filter(
-        User.role == "player",
-        (User.username.ilike(like)) | (PlayerProfile.first_name.ilike(like)) | (PlayerProfile.last_name.ilike(like))
-    ).limit(10).all()
+
+    query = db.query(User, PlayerProfile).join(PlayerProfile, User.id == PlayerProfile.user_id).filter(User.role == "player")
+    q = (q or "").strip()
+
+    if q:
+        if len(q) < 2:
+            return JSONResponse([])
+        like = f"%{q}%"
+        query = query.filter(
+            (User.username.ilike(like)) | (PlayerProfile.first_name.ilike(like)) | (PlayerProfile.last_name.ilike(like))
+        )
+        results = query.limit(25).all()
+    else:
+        if not any([forty_bucket, grad_year, position, state, city, school]):
+            return JSONResponse([])
+        if grad_year:
+            query = query.filter(PlayerProfile.year == grad_year)
+        if position:
+            query = query.filter(PlayerProfile.position == position)
+        if state:
+            query = query.filter(PlayerProfile.state.ilike(state))
+        if city:
+            query = query.filter(PlayerProfile.city.ilike(city))
+        if school:
+            query = query.filter(PlayerProfile.school.ilike(school))
+        rows = query.limit(200).all()
+        if forty_bucket:
+            def in_bucket(val):
+                try:
+                    f = float(val)
+                except (TypeError, ValueError):
+                    return False
+                if forty_bucket == "u44":
+                    return f < 4.4
+                if forty_bucket == "44_45":
+                    return 4.4 <= f < 4.5
+                if forty_bucket == "45_47":
+                    return 4.5 <= f < 4.7
+                if forty_bucket == "o47":
+                    return f >= 4.7
+                return True
+            rows = [(u, p) for (u, p) in rows if in_bucket(p.forty_yard)]
+        results = rows[:25]
+
     return JSONResponse([{
         "user_id": u.id,
         "name": f"{p.first_name} {p.last_name}".strip() or u.username,
         "school": p.school or "",
         "position": p.position or "",
+        "grad_year": p.year or "",
+        "forty_yard": p.forty_yard or "",
         "photo": p.photo or "",
     } for u, p in results])
 
