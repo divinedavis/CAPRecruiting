@@ -4307,6 +4307,7 @@ async def scout_get_card(card_id: int, request: Request, db: Session = Depends(g
     if not card:
         return JSONResponse({"error": "Not found"}, status_code=404)
     # Resolve player info
+    has_questionnaire = False
     if card.player_user_id:
         p_user = db.query(User).filter(User.id == card.player_user_id).first()
         p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == card.player_user_id).first() if p_user else None
@@ -4319,6 +4320,7 @@ async def scout_get_card(card_id: int, request: Request, db: Session = Depends(g
         weight = p_profile.weight if p_profile else ""
         photo = card.tile_image_url or (p_profile.photo if p_profile else "")
         profile_username = p_user.username if p_user else ""
+        has_questionnaire = db.query(PlayerQuestionnaire.id).filter(PlayerQuestionnaire.user_id == card.player_user_id).first() is not None
     else:
         first_name = card.custom_first_name
         last_name = card.custom_last_name
@@ -4346,6 +4348,7 @@ async def scout_get_card(card_id: int, request: Request, db: Session = Depends(g
         "scout_name": card.scout_name,
         "notes": card.notes,
         "lane_id": card.lane_id,
+        "has_questionnaire": has_questionnaire,
     })
 
 @app.post("/dashboard/scout/card/{card_id}/update")
@@ -4485,6 +4488,64 @@ async def scout_export_csv(request: Request, db: Session = Depends(get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+@app.get("/questionnaires/view", response_class=HTMLResponse)
+async def questionnaires_view_list(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or (user.role != "coach" and not user.is_admin):
+        return RedirectResponse("/dashboard", status_code=302)
+    rows = db.query(PlayerQuestionnaire, User, PlayerProfile).join(
+        User, User.id == PlayerQuestionnaire.user_id
+    ).outerjoin(
+        PlayerProfile, PlayerProfile.user_id == PlayerQuestionnaire.user_id
+    ).all()
+    groups = {}
+    for q, u, p in rows:
+        if u.role != "player":
+            continue
+        school = ((p.school if p else "") or "").strip() or "Unknown School"
+        display_name = ""
+        if p and (p.first_name or p.last_name):
+            display_name = f"{p.first_name or ''} {p.last_name or ''}".strip()
+        if not display_name:
+            display_name = u.username
+        groups.setdefault(school, []).append({
+            "username": u.username,
+            "name": display_name,
+            "position": (p.position if p else "") or "",
+            "grad_year": (p.year if p else "") or "",
+            "updated_at": q.updated_at,
+        })
+    for school in groups:
+        groups[school].sort(key=lambda r: r["name"].lower())
+    sorted_schools = sorted(groups.keys(), key=lambda s: (s == "Unknown School", s.lower()))
+    return templates.TemplateResponse("questionnaires_list.html", {
+        "request": request, "user": user,
+        "schools": [(s, groups[s]) for s in sorted_schools],
+        "total": sum(len(v) for v in groups.values()),
+    })
+
+@app.get("/questionnaires/view/{username}", response_class=HTMLResponse)
+async def questionnaires_view_detail(username: str, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    viewer = db.query(User).filter(User.id == user_id).first()
+    if not viewer or (viewer.role != "coach" and not viewer.is_admin):
+        return RedirectResponse("/dashboard", status_code=302)
+    target = db.query(User).filter(User.username == username).first()
+    if not target or target.role != "player":
+        raise HTTPException(status_code=404, detail="Player not found")
+    q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == target.id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="No questionnaire on file")
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target.id).first()
+    return templates.TemplateResponse("questionnaire_detail.html", {
+        "request": request, "user": viewer, "target": target, "q": q, "profile": profile,
+    })
 
 @app.get("/dashboard/scout/archived")
 async def scout_list_archived(request: Request, db: Session = Depends(get_db)):

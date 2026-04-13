@@ -14,7 +14,9 @@
         <button onclick="toggleScoutMenu(event)" title="Menu" aria-label="Menu" style="padding:10px 12px; background:#f3f4f6; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a1628" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <div id="scout-menu" style="display:none; position:absolute; top:100%; right:0; margin-top:6px; background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:200px; z-index:900; overflow:hidden;">
+        <div id="scout-menu" style="display:none; position:absolute; top:100%; right:0; margin-top:6px; background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:220px; z-index:900; overflow:hidden;">
+          <a href="/questionnaires/view" style="display:block; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600; text-decoration:none;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">View Questionnaires</a>
+          <div style="height:1px; background:#e5e7eb;"></div>
           <button onclick="exportCsv()" style="display:block; width:100%; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">Export CSV</button>
           <div style="height:1px; background:#e5e7eb;"></div>
           <button onclick="openArchiveDrawer()" style="display:block; width:100%; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">View Archived</button>
@@ -288,6 +290,7 @@
       <div style="flex:1;">
         <div id="cd-info" style="font-size:13px; color:#6b7280; line-height:1.6;"></div>
         <a id="cd-profile-link" href="#" target="_blank" style="display:none; margin-top:8px; font-size:13px; color:#3b82f6; font-weight:600;">View Full Profile →</a>
+        <a id="cd-questionnaire-link" href="#" target="_blank" style="display:none; margin-top:4px; font-size:13px; color:#3b82f6; font-weight:600;">View Questionnaire →</a>
       </div>
     </div>
 
@@ -610,6 +613,13 @@ function openCard(cardId) {
         link.style.display = '';
       } else {
         link.style.display = 'none';
+      }
+      var qlink = document.getElementById('cd-questionnaire-link');
+      if (c.profile_username && c.has_questionnaire) {
+        qlink.href = '/questionnaires/view/' + c.profile_username;
+        qlink.style.display = '';
+      } else {
+        qlink.style.display = 'none';
       }
       document.getElementById('cd-visit-date').value = c.visit_date || '';
       document.getElementById('cd-hs-visit-date').value = c.high_school_visit_date || '';

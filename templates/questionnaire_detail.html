@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ target.username }} — Questionnaire — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+@media print {
+  nav, .navbar, footer, #q-actions { display: none !important; }
+  body { background: #fff !important; }
+  .q-page { padding: 0 !important; max-width: none !important; }
+  .q-section { page-break-inside: avoid; }
+}
+.q-page { max-width: 880px; margin: 0 auto; padding: 24px; }
+.q-title { font-size: 28px; font-weight: 800; color: #0a1628; margin: 0; }
+.q-subtitle { color: #6b7280; font-size: 14px; margin: 4px 0 0 0; }
+.q-section { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 20px 24px; margin-top: 20px; }
+.q-section h2 { font-size: 15px; font-weight: 800; color: #0a1628; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 14px 0; padding-bottom: 8px; border-bottom: 1.5px solid #e5e7eb; }
+.q-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; }
+.q-field { display: flex; flex-direction: column; gap: 2px; }
+.q-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.q-value { font-size: 14px; color: #0a1628; word-break: break-word; }
+.q-value.empty { color: #d1d5db; }
+.q-full { grid-column: 1 / -1; }
+</style>
+
+<div class="q-page">
+  <div id="q-actions" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h1 class="q-title">
+        {% if q.preferred_name or profile and (profile.first_name or profile.last_name) %}
+          {{ (q.preferred_name or ((profile.first_name or '') ~ ' ' ~ (profile.last_name or '')).strip()) }}
+        {% else %}{{ target.username }}{% endif %}
+      </h1>
+      <p class="q-subtitle">Recruiting Questionnaire{% if q.updated_at %} · Updated {{ q.updated_at.strftime('%Y-%m-%d') }}{% endif %}</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="/questionnaires/view" style="padding:10px 16px; background:#f3f4f6; color:#0a1628; border:1.5px solid #e5e7eb; border-radius:8px; text-decoration:none; font-weight:600; font-size:13px;">← Back</a>
+      <button onclick="window.print()" style="padding:10px 20px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px;">Download / Print PDF</button>
+    </div>
+  </div>
+
+  {% macro field(label, value, full=False) %}
+  <div class="q-field{% if full %} q-full{% endif %}">
+    <div class="q-label">{{ label }}</div>
+    <div class="q-value{% if not value %} empty{% endif %}">{{ value or '—' }}</div>
+  </div>
+  {% endmacro %}
+
+  <div class="q-section">
+    <h2>Personal</h2>
+    <div class="q-grid">
+      {{ field('Preferred Name', q.preferred_name) }}
+      {{ field('Middle Name', q.middle_name) }}
+      {{ field('Date of Birth', q.date_of_birth) }}
+      {{ field('Email', q.email) }}
+      {{ field('Cell Phone', q.cell_phone) }}
+      {{ field('Home Phone', q.home_phone) }}
+      {{ field('Best Time to Call', q.best_time_to_call) }}
+      {{ field('Street Address', q.address_street, full=True) }}
+      {{ field('City', q.address_city) }}
+      {{ field('State', q.address_state) }}
+      {{ field('Zip', q.address_zip) }}
+      {{ field('Twitter', q.twitter) }}
+      {{ field('Instagram', q.instagram) }}
+      {{ field('Facebook', q.facebook) }}
+      {{ field('Hudl', q.hudl_link) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Academic</h2>
+    <div class="q-grid">
+      {{ field('High School', q.school_name, full=True) }}
+      {{ field('School City', q.school_city) }}
+      {{ field('School State', q.school_state) }}
+      {{ field('School Zip', q.school_zip) }}
+      {{ field('School Phone', q.school_phone) }}
+      {{ field('School Fax', q.school_fax) }}
+      {{ field('Counselor Name', q.counselor_name) }}
+      {{ field('Counselor Email', q.counselor_email) }}
+      {{ field('Counselor Phone', q.counselor_phone) }}
+      {{ field('Graduation Year', q.grad_year) }}
+      {{ field('GPA', q.gpa) }}
+      {{ field('SAT Composite', q.sat_composite) }}
+      {{ field('SAT Math', q.sat_math) }}
+      {{ field('SAT Reading', q.sat_reading) }}
+      {{ field('ACT Composite', q.act_composite) }}
+      {{ field('Intended Major', q.intended_major) }}
+      {{ field('NCAA Eligibility', q.ncaa_eligibility) }}
+      {{ field('NCAA Eligibility ID', q.ncaa_eligibility_id) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Athletic</h2>
+    <div class="q-grid">
+      {{ field('Height', q.height) }}
+      {{ field('Weight', q.weight) }}
+      {{ field('Jersey Number', q.jersey_number) }}
+      {{ field('Wingspan', q.wingspan) }}
+      {{ field('Offense Position', q.position_offense) }}
+      {{ field('Defense Position', q.position_defense) }}
+      {{ field('Special Teams Position', q.position_special_teams) }}
+      {{ field('40 Yard', q.forty_yard) }}
+      {{ field('Shuttle', q.shuttle) }}
+      {{ field('Vertical', q.vertical) }}
+      {{ field('Broad Jump', q.broad_jump) }}
+      {{ field('Bench Press', q.bench_press) }}
+      {{ field('Squat', q.squat) }}
+      {{ field('Power Clean', q.powerclean) }}
+      {{ field('Other Sports', q.other_sports, full=True) }}
+      {{ field('Athletic Achievements', q.athletic_achievements, full=True) }}
+      {{ field('Injuries', q.injuries, full=True) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Parent / Guardian 1</h2>
+    <div class="q-grid">
+      {{ field('First Name', q.parent1_first_name) }}
+      {{ field('Last Name', q.parent1_last_name) }}
+      {{ field('Relationship', q.parent1_relationship) }}
+      {{ field('Email', q.parent1_email) }}
+      {{ field('Cell Phone', q.parent1_cell_phone) }}
+      {{ field('Business Phone', q.parent1_business_phone) }}
+      {{ field('Occupation', q.parent1_occupation) }}
+      {{ field('College', q.parent1_college) }}
+      {{ field('Address', q.parent1_address, full=True) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Parent / Guardian 2</h2>
+    <div class="q-grid">
+      {{ field('First Name', q.parent2_first_name) }}
+      {{ field('Last Name', q.parent2_last_name) }}
+      {{ field('Relationship', q.parent2_relationship) }}
+      {{ field('Email', q.parent2_email) }}
+      {{ field('Cell Phone', q.parent2_cell_phone) }}
+      {{ field('Business Phone', q.parent2_business_phone) }}
+      {{ field('Occupation', q.parent2_occupation) }}
+      {{ field('College', q.parent2_college) }}
+      {{ field('Address', q.parent2_address, full=True) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Family</h2>
+    <div class="q-grid">
+      {{ field('Siblings', q.siblings, full=True) }}
+      {{ field('Influential Person 1', q.influential_person1) }}
+      {{ field('Influential Person 2', q.influential_person2) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Coaching</h2>
+    <div class="q-grid">
+      {{ field('Head Coach Name', q.head_coach_name) }}
+      {{ field('Head Coach Email', q.head_coach_email) }}
+      {{ field('Head Coach Phone', q.head_coach_phone) }}
+      {{ field('Club Team Name', q.club_team_name) }}
+      {{ field('Club Coach Name', q.club_coach_name) }}
+      {{ field('Club Coach Email', q.club_coach_email) }}
+      {{ field('Club Coach Phone', q.club_coach_phone) }}
+    </div>
+  </div>
+
+  <div class="q-section">
+    <h2>Recruitment</h2>
+    <div class="q-grid">
+      {{ field('Decision Timeline', q.decision_timeline, full=True) }}
+      {{ field('Film Link', q.film_link, full=True) }}
+      {{ field('Top Schools', q.top_schools, full=True) }}
+      {{ field('Offers', q.offers, full=True) }}
+      {{ field('Connection to School', q.connection_to_school, full=True) }}
+      {{ field('Campus Visits', q.campus_visits, full=True) }}
+      {{ field('Planned Visits', q.planned_visits, full=True) }}
+    </div>
+  </div>
+</div>
+{% endblock %}
