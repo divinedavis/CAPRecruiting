@@ -4113,9 +4113,12 @@ async def scout_board_page(request: Request, db: Session = Depends(get_db)):
     lanes = db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).order_by(ScoutBoardLane.sort_order).all()
     cards = db.query(ScoutBoardCard).filter(ScoutBoardCard.college == college, ScoutBoardCard.archived_at.is_(None)).order_by(ScoutBoardCard.sort_order).all()
     cards_by_lane = {lane.id: [] for lane in lanes}
+    from sqlalchemy import text as _text
     for c in cards:
         if c.lane_id in cards_by_lane:
             # Resolve player info
+            city = ""
+            state = ""
             if c.player_user_id:
                 p_user = db.query(User).filter(User.id == c.player_user_id).first()
                 p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == c.player_user_id).first() if p_user else None
@@ -4123,15 +4126,25 @@ async def scout_board_page(request: Request, db: Session = Depends(get_db)):
                 high_school = p_profile.school if p_profile else ""
                 position = p_profile.position if p_profile else ""
                 photo = c.tile_image_url or (p_profile.photo if p_profile else "")
+                if p_profile:
+                    city = p_profile.city or ""
+                    state = p_profile.state or ""
             else:
                 display_name = f"{c.custom_first_name} {c.custom_last_name}".strip()
                 high_school = c.custom_high_school
                 position = c.custom_position
                 photo = c.tile_image_url
+                if high_school:
+                    row = db.execute(_text("SELECT city, state FROM schools WHERE name = :n LIMIT 1"), {"n": high_school}).fetchone()
+                    if row:
+                        city = row[0] or ""
+                        state = row[1] or ""
             cards_by_lane[c.lane_id].append({
                 "id": c.id,
                 "name": display_name,
                 "high_school": high_school,
+                "city": city,
+                "state": state,
                 "position": position,
                 "visit_date": c.visit_date,
                 "scout_name": c.scout_name,
