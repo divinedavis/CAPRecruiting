@@ -4313,6 +4313,16 @@ async def scout_update_card(card_id: int, request: Request, db: Session = Depend
     if not card:
         return JSONResponse({"error": "Not found"}, status_code=404)
     data = await request.json()
+    if "lane_id" in data:
+        try:
+            new_lane_id = int(data.get("lane_id"))
+        except (TypeError, ValueError):
+            new_lane_id = None
+        if new_lane_id and new_lane_id != card.lane_id:
+            new_lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.id == new_lane_id, ScoutBoardLane.college == college).first()
+            if new_lane:
+                card.lane_id = new_lane_id
+                card.sort_order = db.query(ScoutBoardCard).filter(ScoutBoardCard.lane_id == new_lane_id, ScoutBoardCard.archived_at.is_(None)).count()
     if "visit_date" in data:
         card.visit_date = (data.get("visit_date") or "")[:50]
     if "high_school_visit_date" in data:

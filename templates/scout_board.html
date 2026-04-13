@@ -316,6 +316,15 @@
     </div>
 
     <div style="margin-bottom:16px;">
+      <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Swimlane</label>
+      <select id="cd-lane" onchange="markDirty()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px;">
+        {% for lane in lanes %}
+        <option value="{{ lane.id }}">{{ lane.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="margin-bottom:16px;">
       <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Notes</label>
       <textarea id="cd-notes" rows="5" oninput="markDirty()" placeholder="Add notes about this player..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box; font-family:inherit;"></textarea>
     </div>
@@ -598,6 +607,7 @@ function openCard(cardId) {
       document.getElementById('cd-visit-date').value = c.visit_date || '';
       document.getElementById('cd-hs-visit-date').value = c.high_school_visit_date || '';
       document.getElementById('cd-scout').value = c.scout_name || '';
+      document.getElementById('cd-lane').value = c.lane_id || '';
       document.getElementById('cd-notes').value = c.notes || '';
       cardDirty = false;
       document.getElementById('card-detail-modal').style.display = 'flex';
@@ -637,6 +647,7 @@ function saveCard(thenClose) {
     visit_date: document.getElementById('cd-visit-date').value,
     high_school_visit_date: document.getElementById('cd-hs-visit-date').value,
     scout_name: document.getElementById('cd-scout').value,
+    lane_id: document.getElementById('cd-lane').value,
     notes: document.getElementById('cd-notes').value,
   };
   fetch('/dashboard/scout/card/' + currentCardId + '/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
