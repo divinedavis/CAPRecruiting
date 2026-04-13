@@ -579,6 +579,18 @@ class VerifiedStat(Base):
     verified_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     verified_at = Column(DateTime, default=datetime.utcnow)
 
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type = Column(String, default="signup", index=True)
+    title = Column(String, default="")
+    body = Column(String, default="")
+    link = Column(String, default="")
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    is_read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1166,6 +1178,12 @@ async def signup_post(
         db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
     db.commit()
 
+    if role == "player":
+        try:
+            _notify_coaches_of_new_player(db, user, school_name.strip())
+        except Exception as _e:
+            _logger.warning("Notification fan-out failed: %s", type(_e).__name__)
+
     if role == "coach" and invite_token:
         inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token).first()
         if inv:
@@ -1226,6 +1244,25 @@ async def signup_post(
         except Exception:
             return RedirectResponse("/upgrade", status_code=302)
     return RedirectResponse("/profile/edit", status_code=302)
+
+def _notify_coaches_of_new_player(db: Session, new_user: "User", school: str):
+    """Insert one Notification row per coach for the new player signup."""
+    coaches = db.query(User).filter(User.role == "coach").all()
+    if not coaches:
+        return
+    display = new_user.username
+    body = f"{school}" if school else ""
+    link = f"/profile/{new_user.username}"
+    for c in coaches:
+        db.add(Notification(
+            user_id=c.id,
+            type="signup",
+            title=f"New player: {display}",
+            body=body,
+            link=link,
+            actor_user_id=new_user.id,
+        ))
+    db.commit()
 
 async def send_reset_email(to_email: str, reset_url: str):
     import aiosmtplib
@@ -5594,6 +5631,44 @@ async def search_highschools(q: str = "", db: Session = Depends(get_db)):
         {"q": f"%{q}%"}
     ).fetchall()
     return JSONResponse([{"name": r[0], "city": r[1], "state": r[2], "label": f"{r[0]} — {r[1]}, {r[2]}"} for r in rows])
+
+@app.get("/notifications", response_class=HTMLResponse)
+async def notifications_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    notifs = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.created_at >= cutoff,
+    ).order_by(Notification.created_at.desc()).limit(200).all()
+    # Mark all unread as read on open
+    db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False,
+    ).update({"is_read": True})
+    db.commit()
+    return templates.TemplateResponse("notifications.html", {
+        "request": request,
+        "user": user,
+        "notifications": notifs,
+    })
+
+@app.get("/api/notifications/unread-count")
+async def notifications_unread_count(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"count": 0})
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    count = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False,
+        Notification.created_at >= cutoff,
+    ).count()
+    return JSONResponse({"count": count})
 
 @app.get("/dashboard/scout/search-players")
 async def scout_search_players(

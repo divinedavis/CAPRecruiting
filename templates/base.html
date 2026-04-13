@@ -46,6 +46,10 @@
                     {% endif %}
                 </a>
                 {% if request.session.get("role") == "coach" or request.session.get("is_admin") %}
+                <a href="/notifications" class="notif-link">
+                    Notifications
+                    <span class="badge" id="notif-badge" style="display:none;"></span>
+                </a>
                 <a href="/profile/me">Profile</a>
                 {% endif %}
                 {% if request.session.get("role") == "player" and request.session.get("subscription_tier") == "premium" %}
@@ -139,6 +143,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('nav-links').classList.remove('mobile-open');
         });
     });
+    var notifBadge = document.getElementById('notif-badge');
+    if (notifBadge) {
+        fetch('/api/notifications/unread-count').then(function(r) { return r.json(); }).then(function(res) {
+            var n = res && res.count ? res.count : 0;
+            if (n > 0) { notifBadge.textContent = n; notifBadge.style.display = ''; }
+            else { notifBadge.style.display = 'none'; }
+        }).catch(function() {});
+    }
     // Close on outside click
     document.addEventListener('click', function(e) {
         const nav = document.getElementById('main-nav');
