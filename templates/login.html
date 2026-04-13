@@ -45,6 +45,11 @@
             <p style="text-align:center; margin-top:12px; font-size:14px;"><a href="/forgot-password">Forgot password?</a></p>
         </form>
         <p class="auth-alt">Don't have an account? <a href="/signup">Sign up</a></p>
+        <p style="margin-top:6px; text-align:center; font-size:13px; color:#6b7280;">
+          Are you a college coach? <a href="#" onclick="openCoachRequestModal(); return false;" style="color:#0a1628; font-weight:700; text-decoration:underline;">Request access →</a>
+        </p>
+        <script src="/static/college-data.js"></script>
+        {% include "_coach_request_modal.html" %}
     </div>
 </div>
 {% endblock %}

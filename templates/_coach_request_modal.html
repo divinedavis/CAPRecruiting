@@ -1,0 +1,115 @@
+<div id="coach-request-modal" onclick="if(event.target===this)closeCoachRequestModal()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:14px; padding:28px; max-width:480px; width:90%; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+      <h2 style="margin:0; color:#0a1628; font-size:20px;">Request Coach Access</h2>
+      <button onclick="closeCoachRequestModal()" style="background:none; border:none; font-size:24px; color:#9ca3af; cursor:pointer; line-height:1;">×</button>
+    </div>
+    <p style="color:#6b7280; font-size:13px; margin:0 0 18px 0;">Fill out your details below. We'll email you a signup link right away and notify our admins of your request.</p>
+
+    <div id="cr-success" style="display:none; background:#dcfce7; border:1.5px solid #86efac; border-radius:10px; padding:14px 16px; margin-bottom:16px; font-size:13px; color:#166534; font-weight:600;">
+      ✅ Request submitted. Check your email for your signup link (valid for 7 days).
+    </div>
+    <div id="cr-error" style="display:none; background:#fee2e2; border:1.5px solid #fca5a5; border-radius:10px; padding:14px 16px; margin-bottom:16px; font-size:13px; color:#991b1b; font-weight:600;"></div>
+
+    <div id="cr-form">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">Email</label>
+        <input type="email" id="cr-email" placeholder="coach@school.edu" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">Division</label>
+        <select id="cr-division" onchange="onCrDivision()" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
+          <option value="">— Select division —</option>
+          <option value="D1">NCAA Division I</option>
+          <option value="D2">NCAA Division II</option>
+          <option value="D3">NCAA Division III</option>
+          <option value="NAIA">NAIA</option>
+          <option value="JUCO">Junior College (JUCO)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">Conference</label>
+        <select id="cr-conference" onchange="onCrConference()" disabled style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
+          <option value="">— Select conference —</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">College / University</label>
+        <select id="cr-college" disabled style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
+          <option value="">— Select college —</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" onclick="closeCoachRequestModal()" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
+        <button type="button" onclick="submitCoachRequest()" id="cr-submit" style="flex:1; padding:12px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Submit Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openCoachRequestModal() {
+  document.getElementById('coach-request-modal').style.display = 'flex';
+  document.getElementById('cr-success').style.display = 'none';
+  document.getElementById('cr-error').style.display = 'none';
+  document.getElementById('cr-form').style.display = '';
+}
+function closeCoachRequestModal() {
+  document.getElementById('coach-request-modal').style.display = 'none';
+}
+function onCrDivision() {
+  var div = document.getElementById('cr-division').value;
+  var conf = document.getElementById('cr-conference');
+  var col = document.getElementById('cr-college');
+  conf.innerHTML = '<option value="">— Select conference —</option>';
+  col.innerHTML = '<option value="">— Select college —</option>';
+  conf.disabled = true; col.disabled = true;
+  if (!div || !window.COLLEGE_DATA || !window.COLLEGE_DATA[div]) return;
+  Object.keys(window.COLLEGE_DATA[div]).sort().forEach(function(c) {
+    var opt = document.createElement('option'); opt.value = c; opt.textContent = c; conf.appendChild(opt);
+  });
+  conf.disabled = false;
+}
+function onCrConference() {
+  var div = document.getElementById('cr-division').value;
+  var conf = document.getElementById('cr-conference').value;
+  var col = document.getElementById('cr-college');
+  col.innerHTML = '<option value="">— Select college —</option>';
+  col.disabled = true;
+  if (!conf || !window.COLLEGE_DATA[div] || !window.COLLEGE_DATA[div][conf]) return;
+  window.COLLEGE_DATA[div][conf].sort().forEach(function(s) {
+    var opt = document.createElement('option'); opt.value = s; opt.textContent = s; col.appendChild(opt);
+  });
+  col.disabled = false;
+}
+function submitCoachRequest() {
+  var email = document.getElementById('cr-email').value.trim();
+  var div = document.getElementById('cr-division').value;
+  var conf = document.getElementById('cr-conference').value;
+  var school = document.getElementById('cr-college').value;
+  var err = document.getElementById('cr-error');
+  err.style.display = 'none';
+  if (!email) { err.textContent = 'Please enter an email address.'; err.style.display = ''; return; }
+  if (!school) { err.textContent = 'Please select your college.'; err.style.display = ''; return; }
+  var btn = document.getElementById('cr-submit'); btn.disabled = true; btn.textContent = 'Submitting...';
+  fetch('/coach-request', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email: email, division: div, conference: conf, school: school})
+  }).then(function(r) { return r.json().then(function(j) { return {status: r.status, json: j}; }); })
+    .then(function(res) {
+      btn.disabled = false; btn.textContent = 'Submit Request';
+      if (res.status === 200 && res.json.ok) {
+        document.getElementById('cr-form').style.display = 'none';
+        document.getElementById('cr-success').style.display = '';
+      } else {
+        err.textContent = res.json.error || 'Something went wrong. Please try again.';
+        err.style.display = '';
+      }
+    }).catch(function() {
+      btn.disabled = false; btn.textContent = 'Submit Request';
+      err.textContent = 'Network error. Please try again.';
+      err.style.display = '';
+    });
+}
+</script>

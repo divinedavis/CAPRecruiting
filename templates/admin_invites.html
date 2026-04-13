@@ -66,10 +66,21 @@
                             {% else %}
                             <span style="background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;">Active</span>
                             {% endif %}
+                            {% if inv.source == "self_request" %}
+                            <span style="background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;">Self-Requested</span>
+                            {% endif %}
                             {% if inv.note %}
                             <span style="font-weight:600; color:var(--navy); font-size:14px;">{{ inv.note }}</span>
                             {% endif %}
                         </div>
+                        {% if inv.source == "self_request" %}
+                        <div style="font-size:12px; color:var(--gray-500); margin-bottom:6px; line-height:1.5;">
+                            Requested by <strong style="color:var(--navy);">{{ inv.requested_email }}</strong>
+                            {% if inv.requested_school %}· {{ inv.requested_school }}{% endif %}
+                            {% if inv.requested_division %}· {{ inv.requested_division }}{% endif %}
+                            {% if inv.requested_conference %}· {{ inv.requested_conference }}{% endif %}
+                        </div>
+                        {% endif %}
 
                         {% if not inv.used and not expired %}
                         <div style="display:flex; align-items:center; gap:8px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:8px; padding:8px 12px; margin-bottom:8px;">

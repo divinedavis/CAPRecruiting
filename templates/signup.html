@@ -183,6 +183,11 @@
             </script>
         </form>
         <p class="auth-alt">Already have an account? <a href="/login">Sign in</a></p>
+        {% if not invite_valid %}
+        <p style="margin-top:6px; text-align:center; font-size:13px; color:#6b7280;">
+          Are you a college coach? <a href="#" onclick="openCoachRequestModal(); return false;" style="color:#0a1628; font-weight:700; text-decoration:underline;">Request access →</a>
+        </p>
+        {% endif %}
     </div>
 </div>
 
@@ -195,7 +200,7 @@ const teamSelect      = document.getElementById('team-select');
 const teamError       = document.getElementById('team-error');
 
 // ── Coach college cascading dropdowns ────────────────────────────────────────
-const COLLEGE_DATA = {
+window.COLLEGE_DATA = {
     "D1": {
         "ACC": ["Boston College","Clemson","Duke","Florida State","Georgia Tech","Louisville","Miami (FL)","NC State","Notre Dame","North Carolina","Pittsburgh","Syracuse","Virginia","Virginia Tech","Wake Forest"],
         "Big Ten": ["Illinois","Indiana","Iowa","Maryland","Michigan","Michigan State","Minnesota","Nebraska","Northwestern","Ohio State","Penn State","Purdue","Rutgers","UCLA","USC","Washington","Wisconsin"],
@@ -253,6 +258,7 @@ const COLLEGE_DATA = {
         "California CC": ["Allan Hancock","Cerritos","Citrus","College of the Canyons","Diablo Valley","El Camino","Fresno City","Golden West","Grossmont","Modesto","Mt. San Antonio","Pasadena City","Pierce","Riverside City","Sacramento City","San Bernardino Valley","Santa Monica"]
     }
 };
+const COLLEGE_DATA = window.COLLEGE_DATA;
 
 const coachDivision   = document.getElementById('coach-division');
 const coachConference = document.getElementById('coach-conference');
@@ -420,4 +426,5 @@ usernameInput.addEventListener('input', function() {
     }
 });
 </script>
+{% include "_coach_request_modal.html" %}
 {% endblock %}

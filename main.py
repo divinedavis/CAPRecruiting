@@ -349,12 +349,17 @@ class CoachInvite(Base):
     __tablename__ = "coach_invites"
     id = Column(Integer, primary_key=True)
     token = Column(String, nullable=False, unique=True)
-    created_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False)
     used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     note = Column(String, default="")
+    source = Column(String, default="admin", index=True)  # "admin" or "self_request"
+    requested_email = Column(String, default="", index=True)
+    requested_school = Column(String, default="")
+    requested_division = Column(String, default="")
+    requested_conference = Column(String, default="")
 
 class ProfileImage(Base):
     __tablename__ = "profile_images"
@@ -1244,6 +1249,118 @@ async def signup_post(
         except Exception:
             return RedirectResponse("/upgrade", status_code=302)
     return RedirectResponse("/profile/edit", status_code=302)
+
+@app.post("/coach-request")
+async def coach_request_post(request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    if _check_rate_limit(f"coach_req:{client_ip}", 5, 3600):
+        return JSONResponse({"error": "Too many requests from this address. Please try again later."}, status_code=429)
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    email = (data.get("email") or "").strip().lower()[:200]
+    school = (data.get("school") or "").strip()[:200]
+    division = (data.get("division") or "").strip()[:50]
+    conference = (data.get("conference") or "").strip()[:100]
+    if not email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return JSONResponse({"error": "Please enter a valid email address."}, status_code=400)
+    if not school:
+        return JSONResponse({"error": "Please select your college."}, status_code=400)
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        return JSONResponse({"error": "An account already exists for this email. Please sign in instead."}, status_code=400)
+    # Reuse pending invite if present
+    pending = db.query(CoachInvite).filter(
+        CoachInvite.requested_email == email,
+        CoachInvite.source == "self_request",
+        CoachInvite.used == False,
+        CoachInvite.expires_at > datetime.utcnow(),
+    ).first()
+    if pending:
+        invite = pending
+    else:
+        token = uuid.uuid4().hex
+        invite = CoachInvite(
+            token=token,
+            created_by=None,
+            expires_at=datetime.utcnow() + timedelta(days=7),
+            source="self_request",
+            requested_email=email,
+            requested_school=school,
+            requested_division=division,
+            requested_conference=conference,
+            note=f"Self-requested by {email}",
+        )
+        db.add(invite)
+        db.commit()
+        db.refresh(invite)
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    signup_link = f"{site_url}/signup?invite={invite.token}"
+    import asyncio
+    asyncio.create_task(_send_coach_request_emails(email, school, division, conference, signup_link))
+    return JSONResponse({"ok": True})
+
+async def _send_coach_request_emails(coach_email: str, school: str, division: str, conference: str, signup_link: str):
+    try:
+        import aiosmtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from html import escape as _esc
+        # Fetch admin emails
+        db = SessionLocal()
+        try:
+            admins = db.query(User).filter(User.is_admin == True).all()
+            admin_emails = [a.email for a in admins if a.email]
+        finally:
+            db.close()
+        if not admin_emails:
+            admin_emails = [SMTP_USER]
+        site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+        # 1) Email the coach with their signup link
+        coach_msg = MIMEMultipart("alternative")
+        coach_msg["Subject"] = "Your CAP Recruiting Coach Signup Link"
+        coach_msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+        coach_msg["To"] = coach_email
+        coach_html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+            <h2 style="color:#0a1628;">Welcome to CAP Recruiting</h2>
+            <p>Thanks for requesting coach access. Click the button below to finish creating your account. This link is valid for 7 days.</p>
+            <p style="margin:28px 0;">
+                <a href="{_esc(signup_link)}" style="background:#0a1628;color:#f0b429;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Create Your Coach Account</a>
+            </p>
+            <p style="color:#888;font-size:13px;">If the button doesn't work, copy and paste this link into your browser:<br>{_esc(signup_link)}</p>
+        </div>"""
+        coach_msg.attach(MIMEText(coach_html, "html"))
+        try:
+            await aiosmtplib.send(coach_msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+        except Exception as e:
+            _logger.warning("Coach invite email send failed: %s", type(e).__name__)
+        # 2) Email admins with the request details
+        for admin_email in admin_emails:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"Coach Access Request: {coach_email}"
+            msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+            msg["To"] = admin_email
+            admin_html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+                <h2 style="color:#0a1628;">New Coach Access Request</h2>
+                <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Email</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_esc(coach_email)}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">School</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_esc(school) or '—'}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Division</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_esc(division) or '—'}</td></tr>
+                    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Conference</td><td style="padding:8px 0;font-weight:700;color:#0a1628;">{_esc(conference) or '—'}</td></tr>
+                </table>
+                <p style="color:#6b7280;font-size:13px;">A signup link has been emailed to the coach automatically. You can revoke it from <a href="{site_url}/admin/invites" style="color:#0a1628;font-weight:700;">the admin invites page</a> if this looks suspicious.</p>
+            </div>"""
+            msg.attach(MIMEText(admin_html, "html"))
+            try:
+                await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+            except Exception as e:
+                _logger.warning("Coach request admin email failed: %s", type(e).__name__)
+    except Exception as e:
+        _logger.warning("Coach request email flow error: %s", type(e).__name__)
+
 
 def _notify_coaches_of_new_player(db: Session, new_user: "User", school: str):
     """Insert one Notification row per coach for the new player signup."""
