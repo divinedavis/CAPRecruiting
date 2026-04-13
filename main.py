@@ -4497,35 +4497,52 @@ async def questionnaires_view_list(request: Request, db: Session = Depends(get_d
     user = db.query(User).filter(User.id == user_id).first()
     if not user or (user.role != "coach" and not user.is_admin):
         return RedirectResponse("/dashboard", status_code=302)
+    college = _coach_college(user, db)
+    on_board_ids = set()
+    if college:
+        rows_cards = db.query(ScoutBoardCard.player_user_id).filter(
+            ScoutBoardCard.college == college,
+            ScoutBoardCard.player_user_id.isnot(None),
+            ScoutBoardCard.archived_at.is_(None),
+        ).all()
+        on_board_ids = {r[0] for r in rows_cards if r[0]}
     rows = db.query(PlayerQuestionnaire, User, PlayerProfile).join(
         User, User.id == PlayerQuestionnaire.user_id
     ).outerjoin(
         PlayerProfile, PlayerProfile.user_id == PlayerQuestionnaire.user_id
     ).all()
+    on_board_players = []
     groups = {}
     for q, u, p in rows:
         if u.role != "player":
             continue
-        school = ((p.school if p else "") or "").strip() or "Unknown School"
         display_name = ""
         if p and (p.first_name or p.last_name):
             display_name = f"{p.first_name or ''} {p.last_name or ''}".strip()
         if not display_name:
             display_name = u.username
-        groups.setdefault(school, []).append({
+        entry = {
             "username": u.username,
             "name": display_name,
+            "school": (p.school if p else "") or "",
             "position": (p.position if p else "") or "",
             "grad_year": (p.year if p else "") or "",
             "updated_at": q.updated_at,
-        })
+        }
+        if u.id in on_board_ids:
+            on_board_players.append(entry)
+        else:
+            school = (entry["school"] or "").strip() or "Unknown School"
+            groups.setdefault(school, []).append(entry)
+    on_board_players.sort(key=lambda r: r["name"].lower())
     for school in groups:
         groups[school].sort(key=lambda r: r["name"].lower())
     sorted_schools = sorted(groups.keys(), key=lambda s: (s == "Unknown School", s.lower()))
     return templates.TemplateResponse("questionnaires_list.html", {
         "request": request, "user": user,
+        "on_board_players": on_board_players,
         "schools": [(s, groups[s]) for s in sorted_schools],
-        "total": sum(len(v) for v in groups.values()),
+        "total": len(on_board_players) + sum(len(v) for v in groups.values()),
     })
 
 @app.get("/questionnaires/view/{username}", response_class=HTMLResponse)

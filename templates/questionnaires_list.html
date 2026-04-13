@@ -6,18 +6,42 @@
     <h1 style="font-size:28px; font-weight:800; color:#0a1628; margin:0;">View Questionnaires</h1>
     <span style="font-size:13px; color:#6b7280;">{{ total }} player{% if total != 1 %}s{% endif %}</span>
   </div>
-  <p style="color:#6b7280; font-size:14px; margin:0 0 20px 0;">Players who have filled out the recruiting questionnaire, grouped by high school.</p>
+  <p style="color:#6b7280; font-size:14px; margin:0 0 20px 0;">Players who have filled out the recruiting questionnaire. Scout board players listed first, then the rest grouped by high school.</p>
 
-  <input type="text" id="q-search" oninput="filterQuestionnaires()" placeholder="Search by player name..." style="width:100%; padding:12px 14px; border:2px solid #0a1628; border-radius:10px; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
+  <input type="text" id="q-search" oninput="applyQuestionnaireFilter()" placeholder="Search by player name..." style="width:100%; padding:12px 14px; border:2px solid #0a1628; border-radius:10px; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
 
-  {% if not schools %}
+  {% if total == 0 %}
   <div style="background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:12px; padding:40px; text-align:center;">
     <p style="color:#6b7280; margin:0;">No questionnaires on file yet.</p>
   </div>
   {% else %}
   <div id="q-groups">
+    {% if on_board_players %}
+    <div class="q-group" data-section="board" style="margin-bottom:24px;">
+      <div style="font-size:12px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">⭐ On Your Scout Board</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        {% for p in on_board_players %}
+        <a class="q-row" data-name="{{ p.name | lower }}" href="/questionnaires/view/{{ p.username }}" style="text-decoration:none; color:inherit;">
+          <div style="background:#fff; border:2px solid #0a1628; border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; font-size:15px; color:#0a1628;">{{ p.name }}</div>
+              <div style="font-size:12px; color:#6b7280;">
+                {% if p.school %}{{ p.school }}{% endif %}
+                {% if p.school and p.position %} · {% endif %}
+                {% if p.position %}{{ p.position }}{% endif %}
+                {% if p.grad_year %} · Class of {{ p.grad_year }}{% endif %}
+                {% if p.updated_at %} · Updated {{ p.updated_at.strftime('%Y-%m-%d') }}{% endif %}
+              </div>
+            </div>
+            <span style="color:#0a1628; font-weight:700; font-size:18px;">→</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     {% for school, players in schools %}
-    <div class="q-group" data-school="{{ school | lower }}" style="margin-bottom:24px;">
+    <div class="q-group" data-section="school" style="margin-bottom:24px;">
       <div style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">{{ school }}</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         {% for p in players %}
@@ -43,26 +67,60 @@
   <div id="q-empty" style="display:none; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:12px; padding:40px; text-align:center;">
     <p style="color:#6b7280; margin:0;">No players match your search.</p>
   </div>
+  <div id="q-more-wrap" style="text-align:center; margin-top:8px;">
+    <button id="q-more-btn" onclick="showMoreQuestionnaires()" style="padding:10px 20px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px;">Show 10 more</button>
+  </div>
   {% endif %}
 </div>
 
 <script>
-function filterQuestionnaires() {
-  var q = document.getElementById('q-search').value.toLowerCase().trim();
-  var anyVisible = false;
+var qVisibleLimit = 10;
+
+function applyQuestionnaireFilter() {
+  var q = (document.getElementById('q-search').value || '').toLowerCase().trim();
+  var searching = q.length > 0;
+  var allRows = document.querySelectorAll('.q-row');
+  var totalMatching = 0;
+  var shown = 0;
+  allRows.forEach(function(row) {
+    var name = row.dataset.name || '';
+    var matches = !q || name.indexOf(q) !== -1;
+    if (!matches) {
+      row.style.display = 'none';
+      return;
+    }
+    totalMatching++;
+    if (searching || shown < qVisibleLimit) {
+      row.style.display = '';
+      shown++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
   document.querySelectorAll('.q-group').forEach(function(group) {
-    var matches = 0;
+    var hasVisible = false;
     group.querySelectorAll('.q-row').forEach(function(row) {
-      var name = row.dataset.name || '';
-      var show = !q || name.indexOf(q) !== -1;
-      row.style.display = show ? '' : 'none';
-      if (show) matches++;
+      if (row.style.display !== 'none') hasVisible = true;
     });
-    group.style.display = matches > 0 ? '' : 'none';
-    if (matches > 0) anyVisible = true;
+    group.style.display = hasVisible ? '' : 'none';
   });
   var empty = document.getElementById('q-empty');
-  if (empty) empty.style.display = anyVisible ? 'none' : '';
+  if (empty) empty.style.display = (totalMatching === 0) ? '' : 'none';
+  var moreWrap = document.getElementById('q-more-wrap');
+  if (moreWrap) {
+    if (searching || shown >= totalMatching) {
+      moreWrap.style.display = 'none';
+    } else {
+      moreWrap.style.display = '';
+    }
+  }
 }
+
+function showMoreQuestionnaires() {
+  qVisibleLimit += 10;
+  applyQuestionnaireFilter();
+}
+
+applyQuestionnaireFilter();
 </script>
 {% endblock %}
