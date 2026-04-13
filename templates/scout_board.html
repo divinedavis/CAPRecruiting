@@ -38,7 +38,7 @@
     {% if not loop.first %}
     <div aria-hidden="true" style="flex:0 0 1px; background:#cbd5e1; align-self:stretch; margin:8px 0;"></div>
     {% endif %}
-    <div class="sb-lane" data-lane-id="{{ lane.id }}" style="flex:0 0 280px; background:#f3f4f6; border-radius:12px; padding:12px;">
+    <div class="sb-lane" data-lane-id="{{ lane.id }}" style="flex:0 0 280px; background:#f3f4f6; border-radius:12px; padding:12px; display:flex; flex-direction:column;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
         <div class="lane-title" data-lane-id="{{ lane.id }}" style="font-weight:700; font-size:14px; color:#0a1628; text-transform:uppercase; letter-spacing:.04em; cursor:pointer;" ondblclick="renameLane({{ lane.id }}, this)">{{ lane.name }}</div>
         <div style="display:flex; gap:4px;">
@@ -46,7 +46,7 @@
           <button onclick="deleteLane({{ lane.id }})" title="Delete lane" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:14px;">×</button>
         </div>
       </div>
-      <div class="sb-cards" data-lane-id="{{ lane.id }}" style="display:flex; flex-direction:column; gap:10px; min-height:60px;">
+      <div class="sb-cards" data-lane-id="{{ lane.id }}" style="display:flex; flex-direction:column; gap:10px; min-height:60px; flex:1;">
         {% for card in cards_by_lane[lane.id] %}
         <div class="sb-card" draggable="true" data-card-id="{{ card.id }}"
              style="background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; padding:12px; cursor:pointer; transition:all .15s;">
