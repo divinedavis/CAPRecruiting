@@ -1762,8 +1762,11 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
         c.first_name = form.get("first_name", "")[:100]
         c.last_name = form.get("last_name", "")[:100]
-        c.school = form.get("school", "")[:100]
-        c.college = form.get("college", "")[:100]
+        # School/college are locked after initial set — admins must change via /admin/users/{id}/edit-profile
+        if not (c.school or "").strip():
+            c.school = form.get("school", "")[:100]
+        if not (c.college or "").strip():
+            c.college = form.get("college", "")[:100]
         c.title = form.get("title", "")[:100]
         c.division = form.get("division", "")[:100]
         c.conference = form.get("conference", "")[:100]

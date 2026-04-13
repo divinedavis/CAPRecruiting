@@ -538,13 +538,17 @@
                         <input type="text" name="title" value="{{ profile.title if profile else '' }}" placeholder="e.g. Head Coach, OC, DB Coach">
                     </div>
                 </div>
+                {% set _coach_locked = profile and profile.college and not (profile_form_action is defined and "/admin/" in profile_form_action) %}
                 <div class="form-row">
                     <div class="form-group" style="position:relative;">
-                        <label>College</label>
-                        <input type="text" id="college-search" value="{{ profile.college if profile else '' }}" placeholder="Type to search colleges..." autocomplete="off" style="width:100%;">
+                        <label>College {% if _coach_locked %}<span style="font-size:11px; font-weight:600; color:#6b7280; margin-left:6px;">🔒 Locked</span>{% endif %}</label>
+                        <input type="text" id="college-search" value="{{ profile.college if profile else '' }}" placeholder="Type to search colleges..." autocomplete="off" style="width:100%;{% if _coach_locked %} background:#f3f4f6; color:#6b7280; cursor:not-allowed;{% endif %}"{% if _coach_locked %} readonly{% endif %}>
                         <div id="college-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:240px; overflow-y:auto; background:#fff; border:1.5px solid #e5e7eb; border-top:none; border-radius:0 0 8px 8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
                         <input type="hidden" name="college" id="college-value" value="{{ profile.college if profile else '' }}">
                         <input type="hidden" name="school" value="{{ profile.college if profile else '' }}">
+                        {% if _coach_locked %}
+                        <span class="field-hint" style="font-size:12px; color:#6b7280; display:block; margin-top:6px;">Your college is locked to protect board access across programs. Contact an admin if this needs to change.</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
