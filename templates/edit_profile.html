@@ -102,26 +102,61 @@
                         <input type="text" name="home_address_street" value="{{ profile.home_address_street if profile and profile.home_address_street else '' }}" placeholder="123 Main St">
                     </div>
                 </div>
+                {% set _hs = (profile.home_address_state if profile and profile.home_address_state else '') %}
+                {% set _hc = (profile.home_address_city if profile and profile.home_address_city else '') %}
+                {% set _hz = (profile.home_address_zip if profile and profile.home_address_zip else '') %}
                 <div class="form-row">
                     <div class="form-group">
-                        <label>City</label>
-                        <input type="text" name="home_address_city" value="{{ profile.home_address_city if profile and profile.home_address_city else '' }}" placeholder="City">
-                    </div>
-                    <div class="form-group">
                         <label>State</label>
-                        {% set _hs = (profile.home_address_state if profile and profile.home_address_state else '') %}
-                        <select name="home_address_state">
+                        <select name="home_address_state" id="home-address-state" onchange="onHomeStateChange()">
                             <option value="">— Select state —</option>
                             {% for _code, _name in [('AL','Alabama'),('AK','Alaska'),('AZ','Arizona'),('AR','Arkansas'),('CA','California'),('CO','Colorado'),('CT','Connecticut'),('DE','Delaware'),('DC','District of Columbia'),('FL','Florida'),('GA','Georgia'),('HI','Hawaii'),('ID','Idaho'),('IL','Illinois'),('IN','Indiana'),('IA','Iowa'),('KS','Kansas'),('KY','Kentucky'),('LA','Louisiana'),('ME','Maine'),('MD','Maryland'),('MA','Massachusetts'),('MI','Michigan'),('MN','Minnesota'),('MS','Mississippi'),('MO','Missouri'),('MT','Montana'),('NE','Nebraska'),('NV','Nevada'),('NH','New Hampshire'),('NJ','New Jersey'),('NM','New Mexico'),('NY','New York'),('NC','North Carolina'),('ND','North Dakota'),('OH','Ohio'),('OK','Oklahoma'),('OR','Oregon'),('PA','Pennsylvania'),('RI','Rhode Island'),('SC','South Carolina'),('SD','South Dakota'),('TN','Tennessee'),('TX','Texas'),('UT','Utah'),('VT','Vermont'),('VA','Virginia'),('WA','Washington'),('WV','West Virginia'),('WI','Wisconsin'),('WY','Wyoming')] %}
                             <option value="{{ _code }}"{% if _hs == _code or _hs == _name %} selected{% endif %}>{{ _code }} — {{ _name }}</option>
                             {% endfor %}
                         </select>
                     </div>
+                </div>
+                <div class="form-row" id="home-city-row" style="{% if not _hs %}display:none;{% endif %}">
                     <div class="form-group">
-                        <label>Zip Code</label>
-                        <input type="text" name="home_address_zip" value="{{ profile.home_address_zip if profile and profile.home_address_zip else '' }}" placeholder="Zip">
+                        <label>City</label>
+                        <input type="text" name="home_address_city" id="home-address-city" value="{{ _hc }}" placeholder="City" oninput="onHomeCityInput()">
                     </div>
                 </div>
+                <div class="form-row" id="home-zip-row" style="{% if not _hc %}display:none;{% endif %}">
+                    <div class="form-group">
+                        <label>Zip Code</label>
+                        <input type="text" name="home_address_zip" id="home-address-zip" value="{{ _hz }}" placeholder="Zip">
+                    </div>
+                </div>
+                <script>
+                function onHomeStateChange() {
+                  var st = document.getElementById('home-address-state').value;
+                  var cityRow = document.getElementById('home-city-row');
+                  var zipRow = document.getElementById('home-zip-row');
+                  var cityInput = document.getElementById('home-address-city');
+                  var zipInput = document.getElementById('home-address-zip');
+                  if (!st) {
+                    cityRow.style.display = 'none';
+                    zipRow.style.display = 'none';
+                    cityInput.value = '';
+                    zipInput.value = '';
+                  } else {
+                    cityRow.style.display = '';
+                    if (!cityInput.value.trim()) zipRow.style.display = 'none';
+                  }
+                }
+                function onHomeCityInput() {
+                  var cityInput = document.getElementById('home-address-city');
+                  var zipRow = document.getElementById('home-zip-row');
+                  var zipInput = document.getElementById('home-address-zip');
+                  if (cityInput.value.trim()) {
+                    zipRow.style.display = '';
+                  } else {
+                    zipRow.style.display = 'none';
+                    zipInput.value = '';
+                  }
+                }
+                </script>
             </div>
 
             <div class="form-section">
