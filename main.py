@@ -4229,12 +4229,21 @@ async def scout_create_card(request: Request, db: Session = Depends(get_db)):
     lane = db.query(ScoutBoardLane).filter(ScoutBoardLane.id == lane_id, ScoutBoardLane.college == college).first()
     if not lane:
         return JSONResponse({"error": "Invalid lane"}, status_code=400)
+    player_user_id = int(data["player_user_id"]) if data.get("player_user_id") else None
+    if player_user_id:
+        existing = db.query(ScoutBoardCard).filter(
+            ScoutBoardCard.college == college,
+            ScoutBoardCard.player_user_id == player_user_id,
+            ScoutBoardCard.archived_at.is_(None),
+        ).first()
+        if existing:
+            return JSONResponse({"error": "This player is already on your board."}, status_code=400)
     count = db.query(ScoutBoardCard).filter(ScoutBoardCard.lane_id == lane_id).count()
     card = ScoutBoardCard(
         college=college,
         lane_id=lane_id,
         sort_order=count,
-        player_user_id=int(data["player_user_id"]) if data.get("player_user_id") else None,
+        player_user_id=player_user_id,
         custom_first_name=(data.get("custom_first_name") or "")[:100],
         custom_last_name=(data.get("custom_last_name") or "")[:100],
         custom_high_school=(data.get("custom_high_school") or "")[:200],
@@ -5647,6 +5656,16 @@ async def scout_search_players(
             rows = [(u, p) for (u, p) in rows if in_bucket(p.forty_yard)]
         results = rows[:25]
 
+    college = _coach_college(user, db)
+    on_board_ids = set()
+    if college and results:
+        ids = [u.id for u, _ in results]
+        rows = db.query(ScoutBoardCard.player_user_id).filter(
+            ScoutBoardCard.college == college,
+            ScoutBoardCard.player_user_id.in_(ids),
+            ScoutBoardCard.archived_at.is_(None),
+        ).all()
+        on_board_ids = {r[0] for r in rows}
     return JSONResponse([{
         "user_id": u.id,
         "name": f"{p.first_name} {p.last_name}".strip() or u.username,
@@ -5655,6 +5674,7 @@ async def scout_search_players(
         "grad_year": p.year or "",
         "forty_yard": p.forty_yard or "",
         "photo": p.photo or "",
+        "on_board": u.id in on_board_ids,
     } for u, p in results])
 
 @app.get("/api/schools/states")

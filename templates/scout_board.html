@@ -435,9 +435,16 @@ var searchTimer;
 function renderPlayerResults(results) {
   var html = results.map(function(p) {
     var meta = [p.school || '', p.position || '', p.grad_year || '', p.forty_yard ? p.forty_yard + ' 40' : ''].filter(Boolean).join(' · ');
-    return '<div onclick="selectPlayer(' + p.user_id + ', this)" data-player-id="' + p.user_id + '" style="padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-bottom:6px; cursor:pointer; display:flex; align-items:center; gap:10px;">' +
+    var disabled = p.on_board;
+    var rowStyle = 'padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-bottom:6px; display:flex; align-items:center; gap:10px;'
+      + (disabled ? ' opacity:0.55; cursor:not-allowed; background:#f9fafb;' : ' cursor:pointer;');
+    var click = disabled ? '' : ' onclick="selectPlayer(' + p.user_id + ', this)"';
+    var badge = disabled ? '<span style="margin-left:auto; font-size:10px; font-weight:700; color:#6b7280; background:#e5e7eb; padding:3px 8px; border-radius:10px; text-transform:uppercase;">On Board</span>' : '';
+    return '<div' + click + ' data-player-id="' + p.user_id + '" style="' + rowStyle + '">' +
       (p.photo ? '<img src="' + p.photo + '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">' : '<div style="width:32px; height:32px; border-radius:50%; background:#e5e7eb;"></div>') +
-      '<div><div style="font-weight:600; font-size:14px; color:#0a1628;">' + p.name + '</div><div style="font-size:12px; color:#6b7280;">' + meta + '</div></div></div>';
+      '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; color:#0a1628;">' + p.name + '</div><div style="font-size:12px; color:#6b7280;">' + meta + '</div></div>' +
+      badge +
+      '</div>';
   }).join('');
   document.getElementById('player-search-results').innerHTML = html || '<p style="color:#9ca3af; font-size:13px;">No results</p>';
 }
