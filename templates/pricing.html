@@ -2,9 +2,16 @@
 {% block title %}Choose Your Plan — CAP Recruiting{% endblock %}
 {% block content %}
 <div class="container page-top" style="max-width:960px;">
-  <div style="text-align:center; margin-bottom:32px;">
+  <div style="text-align:center; margin-bottom:24px;">
     <h1 style="font-size:32px; font-weight:800; color:#0a1628; margin-bottom:10px;">Get Recruited</h1>
     <p style="color:#6b7280; font-size:16px; max-width:560px; margin:0 auto;">Choose a plan to create your profile. The higher your plan, the more coaches can see — transcripts, videos, contact info, and more.</p>
+  </div>
+
+  <div style="background:#fef3c7; border:1.5px solid #f0b429; border-radius:12px; padding:14px 18px; margin:0 auto 32px; max-width:720px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+    <div style="font-size:14px; color:#92400e; font-weight:600; flex:1; min-width:220px;">
+      Not a player? If you're a college coach, request access to your school's free scout dashboard.
+    </div>
+    <button type="button" onclick="openCoachRequestModal()" style="flex-shrink:0; background:#0a1628; color:#f0b429; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer;">I'm a Coach →</button>
   </div>
 
   <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:24px; margin-bottom:40px;">
@@ -83,4 +90,6 @@
 
   <p style="text-align:center; color:#9ca3af; font-size:13px;">Already have an account? <a href="/login" style="color:#0a1628; font-weight:600;">Sign in</a> &nbsp;·&nbsp; Secure payment via Stripe &nbsp;·&nbsp; Cancel anytime</p>
 </div>
+<script src="/static/college-data.js"></script>
+{% include "_coach_request_modal.html" %}
 {% endblock %}
