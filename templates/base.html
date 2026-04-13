@@ -45,6 +45,9 @@
                         <span class="badge">{{ unread_count }}</span>
                     {% endif %}
                 </a>
+                {% if request.session.get("role") == "coach" or request.session.get("is_admin") %}
+                <a href="/profile/me">Profile</a>
+                {% endif %}
                 {% if request.session.get("role") == "player" and request.session.get("subscription_tier") == "premium" %}
                 <a href="/questionnaires" class="btn btn-outline" style="border-color:#f0b429; color:#f0b429;">College Prep</a>
                 {% endif %}

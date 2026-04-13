@@ -1615,6 +1615,16 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
         "active_city": city,
     })
 
+@app.get("/profile/me")
+async def profile_me(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    return RedirectResponse(f"/profile/{user.username}", status_code=302)
+
 @app.get("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
