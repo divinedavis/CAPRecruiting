@@ -314,9 +314,9 @@
       <textarea id="cd-notes" rows="5" oninput="markDirty()" placeholder="Add notes about this player..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box; font-family:inherit;"></textarea>
     </div>
 
-    <div style="display:flex; justify-content:flex-end; gap:10px;">
+    <div style="display:flex; justify-content:space-between; gap:10px;">
+      <button onclick="completeCard()" style="padding:10px 24px; background:#16a34a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Archive</button>
       <button onclick="doneCard()" style="padding:10px 24px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Close</button>
-      <button onclick="completeCard()" style="padding:10px 24px; background:#16a34a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Complete</button>
     </div>
   </div>
 </div>
@@ -657,7 +657,7 @@ function uploadCardImage() {
 
 function completeCard() {
   if (!currentCardId) return;
-  if (!confirm('Are you sure you want to complete this card? It will be moved to the archived list.')) return;
+  if (!confirm('Are you sure you want to archive this card? It will be moved to the archived list.')) return;
   function doArchive() {
     fetch('/dashboard/scout/card/' + currentCardId + '/archive', { method: 'POST' })
       .then(function(r) { return r.json(); })
