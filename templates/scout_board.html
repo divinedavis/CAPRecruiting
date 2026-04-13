@@ -10,9 +10,16 @@
     {% if not needs_college %}
     <div style="display:flex; align-items:center; gap:10px;">
       <button onclick="openAddCardModal()" class="btn btn-primary" style="padding:10px 20px; font-weight:700; border-radius:8px; border:none; cursor:pointer;">+ Add Player</button>
-      <button onclick="openArchiveDrawer()" title="View archived players" aria-label="Archived players" style="padding:10px 12px; background:#f3f4f6; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a1628" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
+      <div style="position:relative;">
+        <button onclick="toggleScoutMenu(event)" title="Menu" aria-label="Menu" style="padding:10px 12px; background:#f3f4f6; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a1628" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div id="scout-menu" style="display:none; position:absolute; top:100%; right:0; margin-top:6px; background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:200px; z-index:900; overflow:hidden;">
+          <button onclick="exportCsv()" style="display:block; width:100%; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">Export CSV</button>
+          <div style="height:1px; background:#e5e7eb;"></div>
+          <button onclick="openArchiveDrawer()" style="display:block; width:100%; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">View Archived</button>
+        </div>
+      </div>
     </div>
     {% endif %}
   </div>
@@ -514,7 +521,28 @@ function completeCard() {
   }
 }
 
+function toggleScoutMenu(e) {
+  if (e) e.stopPropagation();
+  var menu = document.getElementById('scout-menu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+function closeScoutMenu() {
+  var menu = document.getElementById('scout-menu');
+  if (menu) menu.style.display = 'none';
+}
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('scout-menu');
+  if (!menu || menu.style.display !== 'block') return;
+  if (!menu.contains(e.target)) closeScoutMenu();
+});
+
+function exportCsv() {
+  closeScoutMenu();
+  window.location.href = '/dashboard/scout/export.csv';
+}
+
 function openArchiveDrawer() {
+  closeScoutMenu();
   document.getElementById('archive-drawer').style.display = 'flex';
   var list = document.getElementById('archive-list');
   list.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center; margin-top:20px;">Loading…</p>';

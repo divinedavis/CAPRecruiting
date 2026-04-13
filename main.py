@@ -1,4 +1,6 @@
 import sqlite3
+import csv
+import io
 import boto3
 from botocore.client import Config
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
@@ -4342,6 +4344,65 @@ async def scout_restore_card(card_id: int, request: Request, db: Session = Depen
     card.sort_order = count
     db.commit()
     return JSONResponse({"ok": True})
+
+@app.get("/dashboard/scout/export.csv")
+async def scout_export_csv(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    college = _coach_college(user, db)
+    if not college:
+        return JSONResponse({"error": "No college assigned"}, status_code=400)
+    lanes = {l.id: l for l in db.query(ScoutBoardLane).filter(ScoutBoardLane.college == college).all()}
+    cards = db.query(ScoutBoardCard).filter(
+        ScoutBoardCard.college == college,
+        ScoutBoardCard.archived_at.is_(None),
+    ).order_by(ScoutBoardCard.lane_id, ScoutBoardCard.sort_order).all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "Name", "Position", "High School", "Grad Year", "Height", "Weight",
+        "Lane", "Campus Visit Date", "HS Visit Date", "Scout", "Notes", "Created At",
+    ])
+    for c in cards:
+        if c.player_user_id:
+            p_user = db.query(User).filter(User.id == c.player_user_id).first()
+            p_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == c.player_user_id).first() if p_user else None
+            name = f"{p_profile.first_name} {p_profile.last_name}".strip() if p_profile and (p_profile.first_name or p_profile.last_name) else (p_user.username if p_user else "Unknown")
+            position = p_profile.position if p_profile else ""
+            high_school = p_profile.school if p_profile else ""
+            grad_year = p_profile.year if p_profile else ""
+            height = p_profile.height if p_profile else ""
+            weight = p_profile.weight if p_profile else ""
+        else:
+            name = f"{c.custom_first_name} {c.custom_last_name}".strip()
+            position = c.custom_position
+            high_school = c.custom_high_school
+            grad_year = c.custom_grad_year
+            height = ""
+            weight = ""
+        lane = lanes.get(c.lane_id)
+        writer.writerow([
+            name or "Unnamed",
+            position or "",
+            high_school or "",
+            grad_year or "",
+            height or "",
+            weight or "",
+            lane.name if lane else "",
+            c.visit_date or "",
+            c.high_school_visit_date or "",
+            c.scout_name or "",
+            (c.notes or "").replace("\r\n", "\n"),
+            c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
+        ])
+    filename = f"scout-board-{college.replace(' ', '_')}-{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 @app.get("/dashboard/scout/archived")
 async def scout_list_archived(request: Request, db: Session = Depends(get_db)):
