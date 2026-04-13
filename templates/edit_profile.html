@@ -216,8 +216,17 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Height (e.g. 6'2")</label>
-                        <input type="text" name="height" value="{{ profile.height if profile else '' }}" placeholder="6'2&quot;">
+                        <label>Height</label>
+                        {% set _cur_h = profile.height if profile and profile.height else '' %}
+                        <select name="height">
+                            <option value="">— Select height —</option>
+                            {% for _ft in range(4, 8) %}
+                                {% for _in in range(0, 12) %}
+                                    {% set _v = _ft ~ "'" ~ _in ~ '"' %}
+                                    <option value="{{ _v }}"{% if _cur_h == _v %} selected{% endif %}>{{ _v }}</option>
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_height" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=height'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'height' in verified_stats else '' }}>
@@ -229,7 +238,13 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Weight (lbs)</label>
-                        <input type="text" name="weight" value="{{ profile.weight if profile else '' }}" placeholder="185">
+                        {% set _cur_w = profile.weight if profile and profile.weight else '' %}
+                        <select name="weight">
+                            <option value="">— Select weight —</option>
+                            {% for _w in range(100, 355, 5) %}
+                            <option value="{{ _w }}"{% if _cur_w == _w|string %} selected{% endif %}>{{ _w }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_weight" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=weight'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'weight' in verified_stats else '' }}>
@@ -239,7 +254,14 @@
                     </div>
                     <div class="form-group">
                         <label>40-Yard Dash (sec)</label>
-                        <input type="text" name="forty_yard" value="{{ profile.forty_yard if profile else '' }}" placeholder="4.65">
+                        {% set _cur_40 = profile.forty_yard if profile and profile.forty_yard else '' %}
+                        <select name="forty_yard">
+                            <option value="">— Select 40 time —</option>
+                            {% for _i in range(420, 605, 5) %}
+                                {% set _v = "%.2f"|format(_i / 100.0) %}
+                                <option value="{{ _v }}"{% if _cur_40 == _v %} selected{% endif %}>{{ _v }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_forty_yard" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=forty_yard'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'forty_yard' in verified_stats else '' }}>
@@ -251,7 +273,13 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Bench Press (lbs)</label>
-                        <input type="text" name="bench_press" value="{{ profile.bench_press if profile else '' }}" placeholder="225">
+                        {% set _cur_bp = profile.bench_press if profile and profile.bench_press else '' %}
+                        <select name="bench_press">
+                            <option value="">— Select bench press —</option>
+                            {% for _b in range(45, 505, 5) %}
+                            <option value="{{ _b }}"{% if _cur_bp == _b|string %} selected{% endif %}>{{ _b }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_bench_press" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=bench_press'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'bench_press' in verified_stats else '' }}>
@@ -265,7 +293,13 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Vertical (inches)</label>
-                        <input type="text" name="vertical" value="{{ profile.vertical if profile else '' }}" placeholder="34">
+                        {% set _cur_v = profile.vertical if profile and profile.vertical else '' %}
+                        <select name="vertical">
+                            <option value="">— Select vertical —</option>
+                            {% for _i in range(15, 51) %}
+                            <option value="{{ _i }}"{% if _cur_v == _i|string %} selected{% endif %}>{{ _i }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_vertical" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=vertical'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'vertical' in verified_stats else '' }}>
@@ -275,7 +309,13 @@
                     </div>
                     <div class="form-group">
                         <label>Squat (lbs)</label>
-                        <input type="text" name="squat" value="{{ profile.squat if profile else '' }}" placeholder="315">
+                        {% set _cur_sq = profile.squat if profile and profile.squat else '' %}
+                        <select name="squat">
+                            <option value="">— Select squat —</option>
+                            {% for _s in range(95, 705, 5) %}
+                            <option value="{{ _s }}"{% if _cur_sq == _s|string %} selected{% endif %}>{{ _s }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_squat" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=squat'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'squat' in verified_stats else '' }}>
@@ -285,7 +325,13 @@
                     </div>
                     <div class="form-group">
                         <label>Clean (lbs)</label>
-                        <input type="text" name="clean" value="{{ profile.clean if profile else '' }}" placeholder="225">
+                        {% set _cur_cl = profile.clean if profile and profile.clean else '' %}
+                        <select name="clean">
+                            <option value="">— Select clean —</option>
+                            {% for _c in range(65, 405, 5) %}
+                            <option value="{{ _c }}"{% if _cur_cl == _c|string %} selected{% endif %}>{{ _c }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_clean" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=clean'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'clean' in verified_stats else '' }}>
@@ -310,8 +356,20 @@
                             {% set _bj_in = '' %}
                         {% endif %}
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="number" name="broad_jump_feet" min="0" max="15" value="{{ _bj_ft }}" placeholder="10" style="width:80px"> <small>ft</small>
-                            <input type="number" name="broad_jump_inches" min="0" max="11" value="{{ _bj_in }}" placeholder="2" style="width:80px"> <small>in</small>
+                            <select name="broad_jump_feet" style="width:100px">
+                                <option value="">ft</option>
+                                {% for _f in range(4, 14) %}
+                                <option value="{{ _f }}"{% if _bj_ft|string == _f|string %} selected{% endif %}>{{ _f }}</option>
+                                {% endfor %}
+                            </select>
+                            <small>ft</small>
+                            <select name="broad_jump_inches" style="width:100px">
+                                <option value="">in</option>
+                                {% for _i in range(0, 12) %}
+                                <option value="{{ _i }}"{% if _bj_in|string == _i|string %} selected{% endif %}>{{ _i }}</option>
+                                {% endfor %}
+                            </select>
+                            <small>in</small>
                         </div>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
@@ -322,7 +380,14 @@
                     </div>
                     <div class="form-group">
                         <label>Pro Agility (sec)</label>
-                        <input type="text" name="pro_agility" value="{{ profile.pro_agility if profile else '' }}" placeholder="4.25">
+                        {% set _cur_pa = profile.pro_agility if profile and profile.pro_agility else '' %}
+                        <select name="pro_agility">
+                            <option value="">— Select pro agility —</option>
+                            {% for _i in range(380, 605, 5) %}
+                                {% set _v = "%.2f"|format(_i / 100.0) %}
+                                <option value="{{ _v }}"{% if _cur_pa == _v %} selected{% endif %}>{{ _v }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_pro_agility" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=pro_agility'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'pro_agility' in verified_stats else '' }}>
@@ -334,7 +399,13 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Wingspan (inches)</label>
-                        <input type="text" name="wingspan" value="{{ profile.wingspan if profile else '' }}" placeholder="78">
+                        {% set _cur_ws = profile.wingspan if profile and profile.wingspan else '' %}
+                        <select name="wingspan">
+                            <option value="">— Select wingspan —</option>
+                            {% for _i in range(58, 91) %}
+                            <option value="{{ _i }}"{% if _cur_ws == _i|string %} selected{% endif %}>{{ _i }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_wingspan" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=wingspan'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'wingspan' in verified_stats else '' }}>
@@ -344,7 +415,14 @@
                     </div>
                     <div class="form-group">
                         <label>GPA</label>
-                        <input type="text" name="gpa" value="{{ profile.gpa if profile else '' }}" placeholder="3.8">
+                        {% set _cur_gpa = profile.gpa if profile and profile.gpa else '' %}
+                        <select name="gpa">
+                            <option value="">— Select GPA —</option>
+                            {% for _i in range(0, 501, 5) %}
+                                {% set _v = "%.2f"|format(_i / 100.0) %}
+                                <option value="{{ _v }}"{% if _cur_gpa == _v %} selected{% endif %}>{{ _v }}</option>
+                            {% endfor %}
+                        </select>
                         {% if profile_form_action is defined and "/admin/" in profile_form_action %}
                         <div class="verify-checkbox-row">
                           <input type="checkbox" id="verify_gpa" onchange="fetch('/admin/users/' + '{{ user.id }}' + '/verify-stat', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':location.origin},body:'stat_field=gpa'}).then(()=>location.reload())" {{ 'checked' if verified_stats is defined and 'gpa' in verified_stats else '' }}>
