@@ -510,6 +510,27 @@
             </div>
 
             <div class="form-section">
+                <h2>Biggest Factors</h2>
+                <p class="section-hint">What matters most when choosing a college? Select all that apply.</p>
+                {% set _saved_factors = (profile.biggest_factors.split(',') if profile and profile.biggest_factors else []) %}
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">
+                    {% for _val, _label in [
+                        ('location', 'Location'),
+                        ('winning_tradition', 'Winning Tradition'),
+                        ('education', 'Education'),
+                        ('development', 'Development'),
+                        ('opportunity_to_play', 'Opportunity to Play'),
+                        ('cost', 'Cost')
+                    ] %}
+                    <label style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:1.5px solid #e5e7eb; border-radius:10px; cursor:pointer; background:#fff; font-weight:600; color:#0a1628; font-size:14px;">
+                        <input type="checkbox" name="biggest_factors" value="{{ _val }}"{% if _val in _saved_factors %} checked{% endif %} style="width:18px; height:18px; cursor:pointer;">
+                        {{ _label }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-section">
                 <h2>About Me</h2>
                 <div class="form-group">
                     <label>Bio</label>

@@ -117,6 +117,28 @@
             </div>
             {% endif %}
 
+            {% if target.role == "player" and profile and profile.biggest_factors %}
+            {% set _factor_labels = {
+                'location': 'Location',
+                'winning_tradition': 'Winning Tradition',
+                'education': 'Education',
+                'development': 'Development',
+                'opportunity_to_play': 'Opportunity to Play',
+                'cost': 'Cost'
+            } %}
+            <div class="profile-section">
+                <h2>Biggest Factors</h2>
+                <p style="color:#6b7280; font-size:13px; margin:0 0 12px 0;">What matters most when choosing a college</p>
+                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                    {% for _f in profile.biggest_factors.split(',') %}
+                    {% if _f in _factor_labels %}
+                    <span style="display:inline-block; padding:8px 14px; background:#fef3c7; color:#92400e; border:1.5px solid #f0b429; border-radius:20px; font-size:13px; font-weight:700;">{{ _factor_labels[_f] }}</span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {% if target.role == "player" and profile %}
             <div class="profile-section">
                 <h2>Player Overview</h2>

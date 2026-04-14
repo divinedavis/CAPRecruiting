@@ -270,6 +270,7 @@ class PlayerProfile(Base):
     stars = Column(Integer, default=0)
     ncaa_eligibility_num = Column(String, default="")
     intended_major = Column(String, default="")
+    biggest_factors = Column(Text, default="")
     mother_first_name = Column(String, default="")
     mother_last_name = Column(String, default="")
     mother_email = Column(String, default="")
@@ -1867,6 +1868,9 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.phone = form.get("phone", "")[:100]
         p.contact_email = form.get("contact_email", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
+        _allowed_factors = {"location", "winning_tradition", "education", "development", "opportunity_to_play", "cost"}
+        _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
+        p.biggest_factors = ",".join(_selected)
         # Sync profile changes to questionnaire if it exists
         q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
         if q:
@@ -2710,6 +2714,9 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
             setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", "")[:50])
         p.ncaa_eligibility_num = form.get("ncaa_eligibility_num", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
+        _allowed_factors = {"location", "winning_tradition", "education", "development", "opportunity_to_play", "cost"}
+        _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
+        p.biggest_factors = ",".join(_selected)
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
         c.first_name = form.get("first_name", "")[:100]
