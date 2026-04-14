@@ -5864,11 +5864,16 @@ def _analytics_parse_height_inches(s):
     except (TypeError, ValueError):
         return None
 
-def _analytics_mean(vals):
+def _analytics_median(vals):
     vals = [v for v in vals if v is not None]
     if not vals:
         return None
-    return sum(vals) / len(vals)
+    vals = sorted(vals)
+    n = len(vals)
+    mid = n // 2
+    if n % 2 == 1:
+        return vals[mid]
+    return (vals[mid - 1] + vals[mid]) / 2.0
 
 def _analytics_format_height(inches):
     if inches is None:
@@ -5929,12 +5934,12 @@ def _analytics_school_aggregates(players, min_n=3):
             "school": school,
             "state": plist[0].get("state") or "",
             "n": n,
-            "avg_gpa": _analytics_mean([p["gpa"] for p in plist]),
-            "avg_height_in": _analytics_mean([p["height_in"] for p in plist]),
-            "avg_weight": _analytics_mean([p["weight"] for p in plist]),
-            "avg_forty": _analytics_mean([p["forty"] for p in plist]),
-            "avg_bench": _analytics_mean([p["bench"] for p in plist]),
-            "avg_vertical": _analytics_mean([p["vertical"] for p in plist]),
+            "med_gpa": _analytics_median([p["gpa"] for p in plist]),
+            "med_height_in": _analytics_median([p["height_in"] for p in plist]),
+            "med_weight": _analytics_median([p["weight"] for p in plist]),
+            "med_forty": _analytics_median([p["forty"] for p in plist]),
+            "med_bench": _analytics_median([p["bench"] for p in plist]),
+            "med_vertical": _analytics_median([p["vertical"] for p in plist]),
         })
     rows.sort(key=lambda r: -r["n"])
     return rows
@@ -6055,17 +6060,17 @@ async def analytics_export_csv(request: Request, db: Session = Depends(get_db)):
     school_rows = _analytics_school_aggregates(players, min_n=3)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["School", "State", "Players", "Avg GPA", "Avg Height", "Avg Weight",
-                     "Avg 40", "Avg Bench", "Avg Vertical"])
+    writer.writerow(["School", "State", "Players", "Median GPA", "Median Height", "Median Weight",
+                     "Median 40", "Median Bench", "Median Vertical"])
     for r in school_rows:
         writer.writerow([
             r["school"], r["state"], r["n"],
-            f"{r['avg_gpa']:.2f}" if r["avg_gpa"] is not None else "",
-            _analytics_format_height(r["avg_height_in"]) if r["avg_height_in"] is not None else "",
-            f"{r['avg_weight']:.0f}" if r["avg_weight"] is not None else "",
-            f"{r['avg_forty']:.2f}" if r["avg_forty"] is not None else "",
-            f"{r['avg_bench']:.0f}" if r["avg_bench"] is not None else "",
-            f"{r['avg_vertical']:.0f}" if r["avg_vertical"] is not None else "",
+            f"{r['med_gpa']:.2f}" if r["med_gpa"] is not None else "",
+            _analytics_format_height(r["med_height_in"]) if r["med_height_in"] is not None else "",
+            f"{r['med_weight']:.0f}" if r["med_weight"] is not None else "",
+            f"{r['med_forty']:.2f}" if r["med_forty"] is not None else "",
+            f"{r['med_bench']:.0f}" if r["med_bench"] is not None else "",
+            f"{r['med_vertical']:.0f}" if r["med_vertical"] is not None else "",
         ])
     return Response(
         content=buf.getvalue(),

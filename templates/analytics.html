@@ -143,12 +143,12 @@
           <th>School</th>
           <th>State</th>
           <th class="num">Players</th>
-          <th class="num">Avg GPA</th>
-          <th class="num">Avg Height</th>
-          <th class="num">Avg Weight</th>
-          <th class="num">Avg 40</th>
-          <th class="num">Avg Bench</th>
-          <th class="num">Avg Vertical</th>
+          <th class="num">Median GPA</th>
+          <th class="num">Median Height</th>
+          <th class="num">Median Weight</th>
+          <th class="num">Median 40</th>
+          <th class="num">Median Bench</th>
+          <th class="num">Median Vertical</th>
         </tr>
       </thead>
       <tbody>
@@ -157,12 +157,12 @@
           <td style="font-weight:600;">{{ r.school }}</td>
           <td>{{ r.state }}</td>
           <td class="num">{{ r.n }}</td>
-          <td class="num">{% if r.avg_gpa is not none %}{{ "%.2f"|format(r.avg_gpa) }}{% else %}—{% endif %}</td>
-          <td class="num">{% if r.avg_height_in is not none %}{{ format_height(r.avg_height_in) }}{% else %}—{% endif %}</td>
-          <td class="num">{% if r.avg_weight is not none %}{{ "%.0f"|format(r.avg_weight) }}{% else %}—{% endif %}</td>
-          <td class="num">{% if r.avg_forty is not none %}{{ "%.2f"|format(r.avg_forty) }}{% else %}—{% endif %}</td>
-          <td class="num">{% if r.avg_bench is not none %}{{ "%.0f"|format(r.avg_bench) }}{% else %}—{% endif %}</td>
-          <td class="num">{% if r.avg_vertical is not none %}{{ "%.0f"|format(r.avg_vertical) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.med_gpa is not none %}{{ "%.2f"|format(r.med_gpa) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.med_height_in is not none %}{{ format_height(r.med_height_in) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.med_weight is not none %}{{ "%.0f"|format(r.med_weight) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.med_forty is not none %}{{ "%.2f"|format(r.med_forty) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.med_bench is not none %}{{ "%.0f"|format(r.med_bench) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.med_vertical is not none %}{{ "%.0f"|format(r.med_vertical) }}{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
