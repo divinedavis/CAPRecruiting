@@ -5989,7 +5989,10 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
     if not user_id:
         return RedirectResponse("/login", status_code=302)
     user = db.query(User).filter(User.id == user_id).first()
-    if not user or (user.role != "coach" and not user.is_admin):
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    _is_premium_player = user.role == "player" and tier_gte(user.subscription_tier, "premium")
+    if user.role != "coach" and not user.is_admin and not _is_premium_player:
         return RedirectResponse("/dashboard", status_code=302)
 
     grad_year = (request.query_params.get("grad_year") or "").strip()
@@ -6077,7 +6080,10 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
 async def analytics_export_csv(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
-    if not user or (user.role != "coach" and not user.is_admin):
+    if not user:
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    _is_premium_player = user.role == "player" and tier_gte(user.subscription_tier, "premium")
+    if user.role != "coach" and not user.is_admin and not _is_premium_player:
         return JSONResponse({"error": "Not authorized"}, status_code=403)
     grad_year = (request.query_params.get("grad_year") or "").strip()
     state = (request.query_params.get("state") or "").strip().upper()
