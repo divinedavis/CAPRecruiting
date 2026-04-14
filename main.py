@@ -1678,15 +1678,29 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
     db.commit()
     db.refresh(new_user)
 
-    # Create profile based on role
-    if is_coach:
-        db.add(CoachProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
-        # Mark invite as used
-        inv.used = True
-        inv.used_by = new_user.id
-    else:
-        db.add(PlayerProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
-    db.commit()
+    # Create profile based on role — must succeed or we roll back the user
+    try:
+        if is_coach:
+            db.add(CoachProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
+            inv.used = True
+            inv.used_by = new_user.id
+        else:
+            db.add(PlayerProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
+        db.commit()
+    except Exception as _profile_exc:
+        _logger.error("OAuth profile creation failed for user %s: %s", new_user.id, type(_profile_exc).__name__)
+        db.rollback()
+        # Retry with a bare-minimum profile so the user is never left orphaned
+        try:
+            if is_coach:
+                db.add(CoachProfile(user_id=new_user.id))
+            else:
+                db.add(PlayerProfile(user_id=new_user.id))
+            db.commit()
+        except Exception:
+            db.rollback()
+            _logger.error("OAuth profile retry also failed for user %s", new_user.id)
+            return RedirectResponse("/login?error=google_failed", status_code=302)
 
     # Log them in
     request.session.clear()
@@ -1797,8 +1811,18 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if user.role == "player":
         profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+        if not profile:
+            profile = PlayerProfile(user_id=user_id)
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
     else:
         profile = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
+        if not profile:
+            profile = CoachProfile(user_id=user_id)
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
     teams = db.query(Team).order_by(Team.name).all()
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
     transcripts = db.query(Transcript).filter(Transcript.user_id == user_id).order_by(Transcript.created_at.desc()).all() if user.role == "player" else []
@@ -1818,6 +1842,10 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
 
     if user.role == "player":
         p = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+        if not p:
+            p = PlayerProfile(user_id=user_id)
+            db.add(p)
+            db.flush()
         p.first_name = form.get("first_name", "")[:100]
         p.last_name = form.get("last_name", "")[:100]
         p.position = form.get("position", "")[:100]
@@ -1927,6 +1955,10 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
             q.updated_at = datetime.utcnow()
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
+        if not c:
+            c = CoachProfile(user_id=user_id)
+            db.add(c)
+            db.flush()
         c.first_name = form.get("first_name", "")[:100]
         c.last_name = form.get("last_name", "")[:100]
         # School/college are locked after initial set — admins must change via /admin/users/{id}/edit-profile
