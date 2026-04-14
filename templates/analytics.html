@@ -36,6 +36,8 @@
 .an-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 720px) { .an-two { grid-template-columns: 1fr; } }
 .an-empty { color: #9ca3af; font-size: 13px; padding: 16px 0; text-align: center; }
+.an-verified { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:#2563eb; color:#fff; font-size:10px; font-weight:800; margin-left:6px; vertical-align:middle; line-height:1;}
+.an-verified::before { content:'✓'; }
 </style>
 
 <div class="an-page">
@@ -91,43 +93,43 @@
       <div class="an-lb">
         <h3>Fastest 40 (top 10)</h3>
         {% for p in leaderboards.fastest_40 %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.forty) }}</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.forty) }}{% if p.v_forty %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
       <div class="an-lb">
         <h3>Bench Press (top 10)</h3>
         {% for p in leaderboards.bench %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs{% if p.v_bench %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
       <div class="an-lb">
         <h3>Vertical (top 10)</h3>
         {% for p in leaderboards.vertical %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.vertical) }}"</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.vertical) }}"{% if p.v_vertical %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
       <div class="an-lb">
         <h3>GPA (top 10)</h3>
         {% for p in leaderboards.gpa %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.gpa) }}</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.gpa) }}{% if p.v_gpa %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
       <div class="an-lb">
         <h3>Tallest (top 10)</h3>
         {% for p in leaderboards.tallest %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ format_height(p.height_in) }}</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ format_height(p.height_in) }}{% if p.v_height %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
       <div class="an-lb">
         <h3>Heaviest (top 10)</h3>
         {% for p in leaderboards.heaviest %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.weight) }} lbs</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.weight) }} lbs{% if p.v_weight %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
       <div class="an-lb">
         <h3>Wingspan (top 10)</h3>
         {% for p in leaderboards.wingspan %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.wingspan) }}"</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.wingspan) }}"{% if p.v_wingspan %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
     </div>
@@ -141,7 +143,7 @@
       <div class="an-lb">
         <h3>{{ pos }} — Fastest 40 (top 5)</h3>
         {% for p in rows %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.forty) }}</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.forty) }}{% if p.v_forty %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% endfor %}
       </div>
       {% endfor %}
@@ -159,7 +161,7 @@
       <div class="an-lb">
         <h3>{{ pos }} — Top Bench (top 5)</h3>
         {% for p in rows %}
-        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs</span></div>
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs{% if p.v_bench %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}</span></div>
         {% endfor %}
       </div>
       {% endfor %}

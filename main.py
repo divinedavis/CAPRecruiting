@@ -5891,9 +5891,16 @@ def _analytics_load_players(db: Session, grad_year: str, state: str, position: s
     if position:
         query = query.filter(PlayerProfile.position == position)
     rows = query.all()
+    user_ids = [u.id for u, _ in rows]
+    verified_by_user = {}
+    if user_ids:
+        vrows = db.query(VerifiedStat.player_id, VerifiedStat.stat_field).filter(VerifiedStat.player_id.in_(user_ids)).all()
+        for pid, field in vrows:
+            verified_by_user.setdefault(pid, set()).add(field)
     players = []
     for u, p in rows:
         name = f"{(p.first_name or '').strip()} {(p.last_name or '').strip()}".strip() or u.username
+        vset = verified_by_user.get(u.id, set())
         players.append({
             "user_id": u.id,
             "username": u.username,
@@ -5912,6 +5919,13 @@ def _analytics_load_players(db: Session, grad_year: str, state: str, position: s
             "clean": _analytics_parse_float(p.clean),
             "wingspan": _analytics_parse_float(p.wingspan),
             "biggest_factors": (p.biggest_factors or "").split(",") if p.biggest_factors else [],
+            "v_forty": "forty_yard" in vset,
+            "v_bench": "bench_press" in vset,
+            "v_vertical": "vertical" in vset,
+            "v_gpa": "gpa" in vset,
+            "v_height": "height" in vset,
+            "v_weight": "weight" in vset,
+            "v_wingspan": "wingspan" in vset,
         })
     return players
 
