@@ -1705,7 +1705,7 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
     return RedirectResponse("/profile/edit", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, state: Optional[str] = None, city: Optional[str] = None, db: Session = Depends(get_db)):
+async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, state: Optional[str] = None, city: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
 
@@ -1741,6 +1741,14 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
         query = query.filter(PlayerProfile.school == school)
     if position:
         query = query.filter(PlayerProfile.position == position)
+    q_clean = (q or "").strip()
+    if q_clean:
+        like = f"%{q_clean}%"
+        query = query.filter(
+            (PlayerProfile.first_name.ilike(like))
+            | (PlayerProfile.last_name.ilike(like))
+            | (User.username.ilike(like))
+        )
     player_users = query.all()
 
     player_data = []
@@ -1768,6 +1776,7 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
         "can_message_from_dashboard": can_message_from_dashboard,
         "active_state": state,
         "active_city": city,
+        "active_q": q_clean,
     })
 
 @app.get("/profile/me")

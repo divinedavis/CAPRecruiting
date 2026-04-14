@@ -25,6 +25,12 @@
 
     <div style="max-width:320px; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; margin-left:auto; margin-right:auto;">
         <div>
+            <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">Search by Name</label>
+            <input type="text" id="dash-name-search" value="{{ active_q or '' }}" placeholder="Type a player's name..." autocomplete="off"
+                style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; width:100%; box-sizing:border-box;"
+                onkeydown="if(event.key==='Enter'){applyNameSearch(this.value)}">
+        </div>
+        <div>
             <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">State</label>
             <select id="dash-state" onchange="dashStateChanged(this.value)" style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; cursor:pointer; width:100%;">
                 <option value="">All States</option>
@@ -346,6 +352,13 @@ function applyYearFilter(yr) {
     var url = new URL(window.location.href);
     if (yr) url.searchParams.set('year', yr);
     else url.searchParams.delete('year');
+    window.location.href = url.toString();
+}
+function applyNameSearch(q) {
+    var url = new URL(window.location.href);
+    q = (q || '').trim();
+    if (q) url.searchParams.set('q', q);
+    else url.searchParams.delete('q');
     window.location.href = url.toString();
 }
 </script>
