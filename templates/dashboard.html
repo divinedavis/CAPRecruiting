@@ -28,7 +28,7 @@
             <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">Search by Name</label>
             <input type="text" id="dash-name-search" value="{{ active_q or '' }}" placeholder="Type a player's name..." autocomplete="off"
                 style="padding:8px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--navy); background:#fff; width:100%; box-sizing:border-box;"
-                onkeydown="if(event.key==='Enter'){applyNameSearch(this.value)}">
+                oninput="filterPlayersLive(this.value)">
         </div>
         <div>
             <label style="font-size:12px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">State</label>
@@ -95,10 +95,11 @@
     <div class="player-grid">
         {% for item in player_data %}
         {% set p = item.profile %}
+        {% set _search_blob = ((p.first_name or '') ~ ' ' ~ (p.last_name or '') ~ ' ' ~ item.user.username) | lower %}
         {% if can_click_profiles %}
-        <a href="/profile/{{ item.user.username }}" class="player-card" style="position:relative; text-align:center;">
+        <a href="/profile/{{ item.user.username }}" class="player-card js-player-card" data-search="{{ _search_blob }}" style="position:relative; text-align:center;">
         {% else %}
-        <div class="player-card" style="position:relative; text-align:center; cursor:default;" onclick="showUpgradePrompt(event)">
+        <div class="player-card js-player-card" data-search="{{ _search_blob }}" style="position:relative; text-align:center; cursor:default;" onclick="showUpgradePrompt(event)">
         {% endif %}
             <!-- Avatar centered -->
             <div style="display:flex; justify-content:center; margin-bottom:12px;">
@@ -361,6 +362,33 @@ function applyNameSearch(q) {
     else url.searchParams.delete('q');
     window.location.href = url.toString();
 }
+
+function filterPlayersLive(q) {
+    q = (q || '').toLowerCase().trim();
+    var cards = document.querySelectorAll('.js-player-card');
+    var shown = 0;
+    cards.forEach(function(card) {
+        var blob = card.dataset.search || '';
+        var match = !q || blob.indexOf(q) !== -1;
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    var empty = document.getElementById('dash-empty-live');
+    if (!empty) {
+        empty = document.createElement('div');
+        empty.id = 'dash-empty-live';
+        empty.style.cssText = 'grid-column:1/-1; text-align:center; color:#9ca3af; font-size:14px; padding:32px;';
+        empty.textContent = 'No players match your search.';
+        var grid = document.querySelector('.player-grid');
+        if (grid) grid.appendChild(empty);
+    }
+    empty.style.display = (shown === 0 && cards.length > 0) ? '' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('dash-name-search');
+    if (input && input.value) filterPlayersLive(input.value);
+});
 </script>
 <script>
 function showUpgradePrompt(e) {
