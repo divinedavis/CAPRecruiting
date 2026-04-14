@@ -38,7 +38,7 @@
   <div id="board" style="display:flex; gap:20px; overflow-x:auto; padding-bottom:20px; align-items:stretch;">
     {% for lane in lanes %}
     {% if not loop.first %}
-    <div aria-hidden="true" style="flex:0 0 1px; background:#cbd5e1; align-self:stretch; margin:8px 0;"></div>
+    <div aria-hidden="true" style="flex:0 0 1px; background:#cbd5e1; align-self:stretch; margin:8px 0; pointer-events:none;"></div>
     {% endif %}
     <div class="sb-lane" data-lane-id="{{ lane.id }}" style="flex:0 0 280px; background:#f3f4f6; border-radius:12px; padding:12px; display:flex; flex-direction:column;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
@@ -878,18 +878,24 @@ document.querySelectorAll('.sb-card').forEach(function(card) {
   });
 });
 
-document.querySelectorAll('.sb-cards').forEach(function(lane) {
+document.querySelectorAll('.sb-lane').forEach(function(lane) {
+  var cardsContainer = lane.querySelector('.sb-cards');
+  if (!cardsContainer) return;
   lane.addEventListener('dragover', function(e) {
+    if (!draggedCard) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    var afterEl = getDragAfterElement(this, e.clientY);
+    var afterEl = getDragAfterElement(cardsContainer, e.clientY);
     if (afterEl == null) {
-      this.appendChild(draggedCard);
-    } else {
-      this.insertBefore(draggedCard, afterEl);
+      if (draggedCard.parentNode !== cardsContainer || cardsContainer.lastElementChild !== draggedCard) {
+        cardsContainer.appendChild(draggedCard);
+      }
+    } else if (afterEl !== draggedCard) {
+      cardsContainer.insertBefore(draggedCard, afterEl);
     }
   });
   lane.addEventListener('drop', function(e) {
+    if (!draggedCard) return;
     e.preventDefault();
     saveBoardState();
   });
