@@ -6030,20 +6030,20 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
         if p["position"]:
             pos_groups[p["position"]].append(p)
     pos_forty_lb = []
+    pos_bench_lb = []
     for pos in sorted(pos_groups.keys()):
-        top = sorted(
+        top_forty = sorted(
             [q for q in pos_groups[pos] if q["forty"] is not None],
             key=lambda q: q["forty"],
         )[:5]
-        if top:
-            pos_forty_lb.append((pos, top))
-
-    # Top bench press among Offensive Line positions
-    ol_positions = {"OL", "OT", "OG", "C"}
-    ol_bench_top = sorted(
-        [p for p in players if p["position"] in ol_positions and p["bench"] is not None],
-        key=lambda p: -p["bench"],
-    )[:10]
+        if top_forty:
+            pos_forty_lb.append((pos, top_forty))
+        top_bench = sorted(
+            [q for q in pos_groups[pos] if q["bench"] is not None],
+            key=lambda q: -q["bench"],
+        )[:5]
+        if top_bench:
+            pos_bench_lb.append((pos, top_bench))
 
     factors, factors_total = _analytics_factors_breakdown(players)
 
@@ -6057,7 +6057,7 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
         "total_players": len(players),
         "leaderboards": leaderboards,
         "pos_forty_lb": pos_forty_lb,
-        "ol_bench_top": ol_bench_top,
+        "pos_bench_lb": pos_bench_lb,
         "school_rows": school_rows,
         "gpa_hist": gpa_hist,
         "forty_hist": forty_hist,

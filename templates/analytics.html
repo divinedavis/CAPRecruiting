@@ -134,13 +134,12 @@
   </div>
 
   <div class="an-section">
-    <h2>By Position</h2>
-    <h3 style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:0 0 10px 0;">Fastest 40 by Position (top 5 each)</h3>
+    <h2>Top 40 Times by Position</h2>
     {% if pos_forty_lb %}
     <div class="an-lb-grid">
       {% for pos, rows in pos_forty_lb %}
       <div class="an-lb">
-        <h3>{{ pos }} — Fastest 40</h3>
+        <h3>{{ pos }} — Fastest 40 (top 5)</h3>
         {% for p in rows %}
         <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.forty) }}</span></div>
         {% endfor %}
@@ -150,16 +149,23 @@
     {% else %}
     <div class="an-empty">No 40-yard times recorded in the current filter set.</div>
     {% endif %}
+  </div>
 
-    <h3 style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:22px 0 10px 0;">Top Bench Press — Offensive Line (top 10)</h3>
-    {% if ol_bench_top %}
-    <div class="an-lb" style="max-width:420px;">
-      {% for p in ol_bench_top %}
-      <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs <span style="font-size:10px; color:#9ca3af; font-weight:600;">({{ p.position }})</span></span></div>
+  <div class="an-section">
+    <h2>Top Bench Press by Position</h2>
+    {% if pos_bench_lb %}
+    <div class="an-lb-grid">
+      {% for pos, rows in pos_bench_lb %}
+      <div class="an-lb">
+        <h3>{{ pos }} — Top Bench (top 5)</h3>
+        {% for p in rows %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs</span></div>
+        {% endfor %}
+      </div>
       {% endfor %}
     </div>
     {% else %}
-    <div class="an-empty">No OL bench press entries in the current filter set.</div>
+    <div class="an-empty">No bench press entries in the current filter set.</div>
     {% endif %}
   </div>
 
