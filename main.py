@@ -1868,7 +1868,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.phone = form.get("phone", "")[:100]
         p.contact_email = form.get("contact_email", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
-        _allowed_factors = {"location", "winning_tradition", "education", "development", "opportunity_to_play", "cost"}
+        _allowed_factors = {"location", "winning_tradition", "education", "player_development", "opportunity_to_play", "cost", "school_size", "job_placement", "facilities"}
         _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
         p.biggest_factors = ",".join(_selected)
         # Sync profile changes to questionnaire if it exists
@@ -2714,7 +2714,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
             setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", "")[:50])
         p.ncaa_eligibility_num = form.get("ncaa_eligibility_num", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
-        _allowed_factors = {"location", "winning_tradition", "education", "development", "opportunity_to_play", "cost"}
+        _allowed_factors = {"location", "winning_tradition", "education", "player_development", "opportunity_to_play", "cost", "school_size", "job_placement", "facilities"}
         _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
         p.biggest_factors = ",".join(_selected)
     else:
@@ -5961,9 +5961,12 @@ def _analytics_factors_breakdown(players):
         "location": "Location",
         "winning_tradition": "Winning Tradition",
         "education": "Education",
-        "development": "Development",
+        "player_development": "Player Development",
         "opportunity_to_play": "Opportunity to Play",
         "cost": "Cost",
+        "school_size": "School Size",
+        "job_placement": "Job Placement",
+        "facilities": "Facilities",
     }
     counts = {k: 0 for k in labels}
     total = 0
