@@ -6018,11 +6018,32 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
          (4.6, 4.7, "4.6–4.7"), (4.7, 4.9, "4.7–4.9"), (4.9, 10.0, "4.9+")],
     )
 
-    from collections import Counter
+    from collections import Counter, defaultdict
     position_counts = Counter(p["position"] for p in players if p["position"])
     position_breakdown = sorted(position_counts.items(), key=lambda kv: -kv[1])
     state_counts = Counter(p["state"] for p in players if p["state"])
     state_breakdown = sorted(state_counts.items(), key=lambda kv: -kv[1])[:10]
+
+    # Top 40 times broken out by position
+    pos_groups = defaultdict(list)
+    for p in players:
+        if p["position"]:
+            pos_groups[p["position"]].append(p)
+    pos_forty_lb = []
+    for pos in sorted(pos_groups.keys()):
+        top = sorted(
+            [q for q in pos_groups[pos] if q["forty"] is not None],
+            key=lambda q: q["forty"],
+        )[:5]
+        if top:
+            pos_forty_lb.append((pos, top))
+
+    # Top bench press among Offensive Line positions
+    ol_positions = {"OL", "OT", "OG", "C"}
+    ol_bench_top = sorted(
+        [p for p in players if p["position"] in ol_positions and p["bench"] is not None],
+        key=lambda p: -p["bench"],
+    )[:10]
 
     factors, factors_total = _analytics_factors_breakdown(players)
 
@@ -6035,6 +6056,8 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
         "grad_year": grad_year, "state": state, "position": position,
         "total_players": len(players),
         "leaderboards": leaderboards,
+        "pos_forty_lb": pos_forty_lb,
+        "ol_bench_top": ol_bench_top,
         "school_rows": school_rows,
         "gpa_hist": gpa_hist,
         "forty_hist": forty_hist,
