@@ -5834,6 +5834,245 @@ async def search_highschools(q: str = "", db: Session = Depends(get_db)):
     ).fetchall()
     return JSONResponse([{"name": r[0], "city": r[1], "state": r[2], "label": f"{r[0]} — {r[1]}, {r[2]}"} for r in rows])
 
+def _analytics_parse_float(s):
+    if s is None:
+        return None
+    s = str(s).strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
+def _analytics_parse_height_inches(s):
+    if s is None:
+        return None
+    s = str(s).strip()
+    if not s:
+        return None
+    if "'" in s:
+        parts = s.replace('"', '').split("'")
+        try:
+            ft = int(parts[0]) if parts[0] else 0
+            inches = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+            return ft * 12 + inches
+        except (TypeError, ValueError):
+            return None
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
+def _analytics_mean(vals):
+    vals = [v for v in vals if v is not None]
+    if not vals:
+        return None
+    return sum(vals) / len(vals)
+
+def _analytics_format_height(inches):
+    if inches is None:
+        return "—"
+    ft = int(inches) // 12
+    inch = int(round(inches)) % 12
+    return f"{ft}'{inch}\""
+
+def _analytics_load_players(db: Session, grad_year: str, state: str, position: str):
+    query = db.query(User, PlayerProfile).join(PlayerProfile, User.id == PlayerProfile.user_id).filter(User.role == "player")
+    if grad_year:
+        query = query.filter(PlayerProfile.year == grad_year)
+    if state:
+        query = query.filter(PlayerProfile.state.ilike(state))
+    if position:
+        query = query.filter(PlayerProfile.position == position)
+    rows = query.all()
+    players = []
+    for u, p in rows:
+        name = f"{(p.first_name or '').strip()} {(p.last_name or '').strip()}".strip() or u.username
+        players.append({
+            "user_id": u.id,
+            "username": u.username,
+            "name": name,
+            "school": (p.school or "").strip() or "Unknown School",
+            "state": (p.state or "").strip(),
+            "position": (p.position or "").strip(),
+            "grad_year": (p.year or "").strip(),
+            "gpa": _analytics_parse_float(p.gpa),
+            "height_in": _analytics_parse_height_inches(p.height),
+            "weight": _analytics_parse_float(p.weight),
+            "forty": _analytics_parse_float(p.forty_yard),
+            "bench": _analytics_parse_float(p.bench_press),
+            "vertical": _analytics_parse_float(p.vertical),
+            "squat": _analytics_parse_float(p.squat),
+            "clean": _analytics_parse_float(p.clean),
+            "wingspan": _analytics_parse_float(p.wingspan),
+            "biggest_factors": (p.biggest_factors or "").split(",") if p.biggest_factors else [],
+        })
+    return players
+
+def _analytics_top_n(players, key, reverse, n=10):
+    filtered = [p for p in players if p.get(key) is not None]
+    filtered.sort(key=lambda p: p[key], reverse=reverse)
+    return filtered[:n]
+
+def _analytics_school_aggregates(players, min_n=3):
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for p in players:
+        groups[p["school"]].append(p)
+    rows = []
+    for school, plist in groups.items():
+        n = len(plist)
+        if n < min_n:
+            continue
+        rows.append({
+            "school": school,
+            "state": plist[0].get("state") or "",
+            "n": n,
+            "avg_gpa": _analytics_mean([p["gpa"] for p in plist]),
+            "avg_height_in": _analytics_mean([p["height_in"] for p in plist]),
+            "avg_weight": _analytics_mean([p["weight"] for p in plist]),
+            "avg_forty": _analytics_mean([p["forty"] for p in plist]),
+            "avg_bench": _analytics_mean([p["bench"] for p in plist]),
+            "avg_vertical": _analytics_mean([p["vertical"] for p in plist]),
+        })
+    rows.sort(key=lambda r: -r["n"])
+    return rows
+
+def _analytics_histogram(values, buckets):
+    """buckets is a list of (low, high, label)."""
+    counts = [0] * len(buckets)
+    for v in values:
+        if v is None:
+            continue
+        for i, (lo, hi, _label) in enumerate(buckets):
+            if lo <= v < hi:
+                counts[i] += 1
+                break
+    return [{"label": buckets[i][2], "count": counts[i]} for i in range(len(buckets))]
+
+def _analytics_factors_breakdown(players):
+    labels = {
+        "location": "Location",
+        "winning_tradition": "Winning Tradition",
+        "education": "Education",
+        "development": "Development",
+        "opportunity_to_play": "Opportunity to Play",
+        "cost": "Cost",
+    }
+    counts = {k: 0 for k in labels}
+    total = 0
+    for p in players:
+        picked = [f for f in p["biggest_factors"] if f in labels]
+        if picked:
+            total += 1
+        for f in picked:
+            counts[f] += 1
+    out = []
+    for k, label in labels.items():
+        pct = (counts[k] / total * 100.0) if total > 0 else 0.0
+        out.append({"key": k, "label": label, "count": counts[k], "pct": pct})
+    out.sort(key=lambda r: -r["count"])
+    return out, total
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def analytics_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or (user.role != "coach" and not user.is_admin):
+        return RedirectResponse("/dashboard", status_code=302)
+
+    grad_year = (request.query_params.get("grad_year") or "").strip()
+    state = (request.query_params.get("state") or "").strip().upper()
+    position = (request.query_params.get("position") or "").strip()
+
+    players = _analytics_load_players(db, grad_year, state, position)
+
+    leaderboards = {
+        "fastest_40": _analytics_top_n(players, "forty", reverse=False),
+        "bench": _analytics_top_n(players, "bench", reverse=True),
+        "vertical": _analytics_top_n(players, "vertical", reverse=True),
+        "gpa": _analytics_top_n(players, "gpa", reverse=True),
+        "tallest": _analytics_top_n(players, "height_in", reverse=True),
+        "heaviest": _analytics_top_n(players, "weight", reverse=True),
+        "wingspan": _analytics_top_n(players, "wingspan", reverse=True),
+    }
+
+    school_rows = _analytics_school_aggregates(players, min_n=3)
+
+    gpa_hist = _analytics_histogram(
+        [p["gpa"] for p in players],
+        [(0.0, 2.0, "< 2.0"), (2.0, 2.5, "2.0–2.5"), (2.5, 3.0, "2.5–3.0"),
+         (3.0, 3.5, "3.0–3.5"), (3.5, 4.0, "3.5–4.0"), (4.0, 5.1, "4.0+")],
+    )
+    forty_hist = _analytics_histogram(
+        [p["forty"] for p in players],
+        [(0.0, 4.4, "< 4.4"), (4.4, 4.5, "4.4–4.5"), (4.5, 4.6, "4.5–4.6"),
+         (4.6, 4.7, "4.6–4.7"), (4.7, 4.9, "4.7–4.9"), (4.9, 10.0, "4.9+")],
+    )
+
+    from collections import Counter
+    position_counts = Counter(p["position"] for p in players if p["position"])
+    position_breakdown = sorted(position_counts.items(), key=lambda kv: -kv[1])
+    state_counts = Counter(p["state"] for p in players if p["state"])
+    state_breakdown = sorted(state_counts.items(), key=lambda kv: -kv[1])[:10]
+
+    factors, factors_total = _analytics_factors_breakdown(players)
+
+    # Distinct filter options (from existing data)
+    all_states = sorted({p["state"] for p in players if p["state"]})
+    all_positions = sorted({p["position"] for p in players if p["position"]})
+
+    return templates.TemplateResponse("analytics.html", {
+        "request": request, "user": user,
+        "grad_year": grad_year, "state": state, "position": position,
+        "total_players": len(players),
+        "leaderboards": leaderboards,
+        "school_rows": school_rows,
+        "gpa_hist": gpa_hist,
+        "forty_hist": forty_hist,
+        "position_breakdown": position_breakdown,
+        "state_breakdown": state_breakdown,
+        "factors": factors,
+        "factors_total": factors_total,
+        "all_states": all_states,
+        "all_positions": all_positions,
+        "format_height": _analytics_format_height,
+    })
+
+@app.get("/analytics/export.csv")
+async def analytics_export_csv(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+    if not user or (user.role != "coach" and not user.is_admin):
+        return JSONResponse({"error": "Not authorized"}, status_code=403)
+    grad_year = (request.query_params.get("grad_year") or "").strip()
+    state = (request.query_params.get("state") or "").strip().upper()
+    position = (request.query_params.get("position") or "").strip()
+    players = _analytics_load_players(db, grad_year, state, position)
+    school_rows = _analytics_school_aggregates(players, min_n=3)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["School", "State", "Players", "Avg GPA", "Avg Height", "Avg Weight",
+                     "Avg 40", "Avg Bench", "Avg Vertical"])
+    for r in school_rows:
+        writer.writerow([
+            r["school"], r["state"], r["n"],
+            f"{r['avg_gpa']:.2f}" if r["avg_gpa"] is not None else "",
+            _analytics_format_height(r["avg_height_in"]) if r["avg_height_in"] is not None else "",
+            f"{r['avg_weight']:.0f}" if r["avg_weight"] is not None else "",
+            f"{r['avg_forty']:.2f}" if r["avg_forty"] is not None else "",
+            f"{r['avg_bench']:.0f}" if r["avg_bench"] is not None else "",
+            f"{r['avg_vertical']:.0f}" if r["avg_vertical"] is not None else "",
+        ])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="analytics-schools-{datetime.utcnow().strftime("%Y%m%d")}.csv"'},
+    )
+
 @app.get("/notifications", response_class=HTMLResponse)
 async def notifications_page(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")

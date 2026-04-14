@@ -37,6 +37,7 @@
             {% if request.session.get("user_id") %}
                 {% if request.session.get("role") == "coach" or request.session.get("is_admin") %}
                 <a href="/dashboard/scout">Dashboard</a>
+                <a href="/analytics">Analytics</a>
                 {% endif %}
                 <a href="/dashboard">Players</a>
                 <a href="/messages" class="msg-link">

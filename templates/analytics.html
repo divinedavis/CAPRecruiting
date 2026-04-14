@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Analytics — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.an-page { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.an-h1 { font-size: 28px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.an-sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
+.an-filters { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+.an-filters .fg { display: flex; flex-direction: column; gap: 4px; }
+.an-filters label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.an-filters select, .an-filters input { padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; min-width: 140px; }
+.an-filters button { padding: 9px 16px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; }
+.an-filters a.reset { padding: 9px 14px; background: #f3f4f6; color: #0a1628; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; border: 1.5px solid #e5e7eb; }
+.an-section { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+.an-section h2 { font-size: 16px; font-weight: 800; color: #0a1628; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1.5px solid #e5e7eb; }
+.an-lb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.an-lb { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; }
+.an-lb h3 { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin: 0 0 8px 0; }
+.an-lb-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid #f3f4f6; font-size: 13px; }
+.an-lb-row:first-of-type { border-top: none; }
+.an-lb-row .rank { width: 22px; color: #9ca3af; font-weight: 700; text-align: right; font-size: 11px; }
+.an-lb-row .name { flex: 1; min-width: 0; color: #0a1628; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+.an-lb-row .name:hover { color: #1d4ed8; text-decoration: underline; }
+.an-lb-row .val { font-weight: 700; color: #0a1628; font-variant-numeric: tabular-nums; }
+.an-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.an-table th { text-align: left; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; padding: 8px 6px; border-bottom: 1.5px solid #e5e7eb; }
+.an-table td { padding: 10px 6px; border-bottom: 1px solid #f3f4f6; color: #0a1628; }
+.an-table tr:hover td { background: #f9fafb; }
+.an-table .num { font-variant-numeric: tabular-nums; text-align: right; }
+.an-hist { display: flex; flex-direction: column; gap: 6px; }
+.an-hist-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.an-hist-row .label { width: 70px; color: #6b7280; font-weight: 600; text-align: right; }
+.an-hist-row .bar-wrap { flex: 1; height: 18px; background: #f3f4f6; border-radius: 4px; overflow: hidden; }
+.an-hist-row .bar { height: 100%; background: #0a1628; }
+.an-hist-row .count { width: 40px; color: #0a1628; font-weight: 700; }
+.an-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .an-two { grid-template-columns: 1fr; } }
+.an-empty { color: #9ca3af; font-size: 13px; padding: 16px 0; text-align: center; }
+</style>
+
+<div class="an-page">
+  <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h1 class="an-h1">Analytics</h1>
+      <p class="an-sub">{{ total_players }} player{% if total_players != 1 %}s{% endif %} matching current filters</p>
+    </div>
+    <a href="/analytics/export.csv?grad_year={{ grad_year }}&state={{ state }}&position={{ position }}" style="padding:10px 18px; background:#0a1628; color:#fff; border:none; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px;">Export School CSV</a>
+  </div>
+
+  <form method="get" class="an-filters">
+    <div class="fg">
+      <label>Grad Year</label>
+      <select name="grad_year">
+        <option value="">All years</option>
+        {% for y in ['2025','2026','2027','2028','2029','2030'] %}
+        <option value="{{ y }}"{% if grad_year == y %} selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fg">
+      <label>State</label>
+      <select name="state">
+        <option value="">All states</option>
+        {% for s in all_states %}
+        <option value="{{ s }}"{% if state == s %} selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fg">
+      <label>Position</label>
+      <select name="position">
+        <option value="">All positions</option>
+        {% for p in all_positions %}
+        <option value="{{ p }}"{% if position == p %} selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Apply</button>
+    <a href="/analytics" class="reset">Reset</a>
+  </form>
+
+  {% if total_players == 0 %}
+  <div class="an-section">
+    <div class="an-empty">No players match your filters.</div>
+  </div>
+  {% else %}
+
+  <div class="an-section">
+    <h2>Leaderboards</h2>
+    <div class="an-lb-grid">
+      <div class="an-lb">
+        <h3>Fastest 40 (top 10)</h3>
+        {% for p in leaderboards.fastest_40 %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.forty) }}</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Bench Press (top 10)</h3>
+        {% for p in leaderboards.bench %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.bench) }} lbs</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Vertical (top 10)</h3>
+        {% for p in leaderboards.vertical %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.vertical) }}"</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>GPA (top 10)</h3>
+        {% for p in leaderboards.gpa %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.2f"|format(p.gpa) }}</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Tallest (top 10)</h3>
+        {% for p in leaderboards.tallest %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ format_height(p.height_in) }}</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Heaviest (top 10)</h3>
+        {% for p in leaderboards.heaviest %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.weight) }} lbs</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Wingspan (top 10)</h3>
+        {% for p in leaderboards.wingspan %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{{ "%.0f"|format(p.wingspan) }}"</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="an-section">
+    <h2>Schools (n ≥ 3)</h2>
+    {% if school_rows %}
+    <div style="overflow-x:auto;">
+    <table class="an-table">
+      <thead>
+        <tr>
+          <th>School</th>
+          <th>State</th>
+          <th class="num">Players</th>
+          <th class="num">Avg GPA</th>
+          <th class="num">Avg Height</th>
+          <th class="num">Avg Weight</th>
+          <th class="num">Avg 40</th>
+          <th class="num">Avg Bench</th>
+          <th class="num">Avg Vertical</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in school_rows %}
+        <tr>
+          <td style="font-weight:600;">{{ r.school }}</td>
+          <td>{{ r.state }}</td>
+          <td class="num">{{ r.n }}</td>
+          <td class="num">{% if r.avg_gpa is not none %}{{ "%.2f"|format(r.avg_gpa) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.avg_height_in is not none %}{{ format_height(r.avg_height_in) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.avg_weight is not none %}{{ "%.0f"|format(r.avg_weight) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.avg_forty is not none %}{{ "%.2f"|format(r.avg_forty) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.avg_bench is not none %}{{ "%.0f"|format(r.avg_bench) }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.avg_vertical is not none %}{{ "%.0f"|format(r.avg_vertical) }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p style="font-size:11px; color:#9ca3af; margin:10px 0 0 0;">Schools with fewer than 3 players are hidden to protect privacy.</p>
+    {% else %}
+    <div class="an-empty">No schools have 3 or more players with the current filters.</div>
+    {% endif %}
+  </div>
+
+  <div class="an-section">
+    <h2>Distributions</h2>
+    <div class="an-two">
+      <div>
+        <h3 style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:0 0 10px 0;">GPA</h3>
+        {% set max_gpa = (gpa_hist|map(attribute='count')|max) or 1 %}
+        <div class="an-hist">
+          {% for h in gpa_hist %}
+          <div class="an-hist-row">
+            <span class="label">{{ h.label }}</span>
+            <div class="bar-wrap"><div class="bar" style="width:{{ (h.count / max_gpa * 100) if max_gpa else 0 }}%;"></div></div>
+            <span class="count">{{ h.count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:0 0 10px 0;">40-Yard Dash</h3>
+        {% set max_40 = (forty_hist|map(attribute='count')|max) or 1 %}
+        <div class="an-hist">
+          {% for h in forty_hist %}
+          <div class="an-hist-row">
+            <span class="label">{{ h.label }}</span>
+            <div class="bar-wrap"><div class="bar" style="width:{{ (h.count / max_40 * 100) if max_40 else 0 }}%;"></div></div>
+            <span class="count">{{ h.count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="an-two" style="margin-top:16px;">
+      <div>
+        <h3 style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:0 0 10px 0;">Positions</h3>
+        {% set max_pos = (position_breakdown|map(attribute=1)|max) if position_breakdown else 1 %}
+        <div class="an-hist">
+          {% for pos, c in position_breakdown %}
+          <div class="an-hist-row">
+            <span class="label">{{ pos }}</span>
+            <div class="bar-wrap"><div class="bar" style="width:{{ (c / max_pos * 100) if max_pos else 0 }}%;"></div></div>
+            <span class="count">{{ c }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; margin:0 0 10px 0;">Top States</h3>
+        {% set max_st = (state_breakdown|map(attribute=1)|max) if state_breakdown else 1 %}
+        <div class="an-hist">
+          {% for st, c in state_breakdown %}
+          <div class="an-hist-row">
+            <span class="label">{{ st }}</span>
+            <div class="bar-wrap"><div class="bar" style="width:{{ (c / max_st * 100) if max_st else 0 }}%;"></div></div>
+            <span class="count">{{ c }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="an-section">
+    <h2>Biggest Factors</h2>
+    {% if factors_total > 0 %}
+    <p style="color:#6b7280; font-size:13px; margin:0 0 12px 0;">{{ factors_total }} player{% if factors_total != 1 %}s{% endif %} selected at least one factor</p>
+    {% set max_f = (factors|map(attribute='count')|max) or 1 %}
+    <div class="an-hist">
+      {% for f in factors %}
+      <div class="an-hist-row">
+        <span class="label" style="width:170px;">{{ f.label }}</span>
+        <div class="bar-wrap"><div class="bar" style="width:{{ (f.count / max_f * 100) if max_f else 0 }}%;"></div></div>
+        <span class="count">{{ f.count }} ({{ "%.0f"|format(f.pct) }}%)</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="an-empty">No players in the filter set have selected any factors yet.</div>
+    {% endif %}
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}
