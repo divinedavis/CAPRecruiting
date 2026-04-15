@@ -118,25 +118,14 @@
         {% if coach_total_pages > 1 %}
         <div style="background:#f9fafb; border:1.5px solid var(--gray-200); border-radius:10px; padding:14px; margin-top:16px; display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap;">
             <span style="font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; margin-right:8px;">Page</span>
-            {% set cqs = '?coach_q=' ~ coach_q ~ '&coach_page=' %}
             {% if coach_page > 1 %}
-            <a href="{{ cqs }}{{ coach_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
+            <a href="?coach_q={{ coach_q }}&coach_page={{ coach_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
             {% endif %}
-            {% set c_start = [1, coach_page - 2]|max %}
-            {% set c_end = [coach_total_pages, c_start + 4]|min %}
-            {% if c_start > 1 %}
-            <a href="{{ cqs }}1" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">1</a>
-            {% if c_start > 2 %}<span style="color:var(--gray-400); padding:0 4px;">…</span>{% endif %}
-            {% endif %}
-            {% for pg in range(c_start, c_end + 1) %}
-            <a href="{{ cqs }}{{ pg }}" class="btn {% if pg == coach_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
+            {% for pg in range(1, coach_total_pages + 1) %}
+            <a href="?coach_q={{ coach_q }}&coach_page={{ pg }}" class="btn {% if pg == coach_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
             {% endfor %}
-            {% if c_end < coach_total_pages %}
-            {% if c_end < coach_total_pages - 1 %}<span style="color:var(--gray-400); padding:0 4px;">…</span>{% endif %}
-            <a href="{{ cqs }}{{ coach_total_pages }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ coach_total_pages }}</a>
-            {% endif %}
             {% if coach_page < coach_total_pages %}
-            <a href="{{ cqs }}{{ coach_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
+            <a href="?coach_q={{ coach_q }}&coach_page={{ coach_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
             {% endif %}
             <span style="font-size:11px; color:var(--gray-500); margin-left:8px;">{{ coach_page }} of {{ coach_total_pages }}</span>
         </div>
@@ -204,15 +193,16 @@
                         <td style="padding:12px 16px; color:var(--gray-600); font-size:13px;">{{ p.profile.year if p.profile and p.profile.year else '—' }}</td>
                         <td style="padding:12px 16px;">
                             {% set tier = p.user.subscription_tier or 'free' %}
-                            {% if tier == 'premium' %}
-                            <span style="background:#d1fae5; color:#065f46; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Premium</span>
-                            {% elif tier == 'advanced' %}
-                            <span style="background:#e0e7ff; color:#4338ca; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Advanced</span>
-                            {% elif tier == 'essentials' %}
-                            <span style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Essentials</span>
-                            {% else %}
-                            <span style="background:#f3f4f6; color:#6b7280; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Free</span>
-                            {% endif %}
+                            <form method="post" action="/admin/users/{{ p.user.id }}/set-tier" style="margin:0;">
+                                <input type="hidden" name="return_to" value="teams">
+                                <select name="subscription_tier" onchange="this.form.submit()" class="tier-select tier-{{ tier }}" style="padding:5px 8px; border:1.5px solid var(--gray-200); border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase; cursor:pointer;">
+                                    <option value="free"{% if tier == 'free' %} selected{% endif %}>Free</option>
+                                    <option value="essentials"{% if tier == 'essentials' %} selected{% endif %}>Essentials</option>
+                                    <option value="advanced"{% if tier == 'advanced' %} selected{% endif %}>Advanced</option>
+                                    <option value="premium"{% if tier == 'premium' %} selected{% endif %}>Premium</option>
+                                </select>
+                            </form>
+                            {% if not p.user.stripe_subscription_id %}<div style="font-size:9px; color:var(--gray-400); margin-top:3px;">no stripe sub</div>{% endif %}
                         </td>
                         <td style="padding:12px 16px;">
                             <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -229,25 +219,14 @@
         {% if total_pages > 1 %}
         <div style="background:#f9fafb; border:1.5px solid var(--gray-200); border-radius:10px; padding:14px; margin-top:16px; display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap;">
             <span style="font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; margin-right:8px;">Page</span>
-            {% set qs_base = '?player_q=' ~ player_q ~ '&player_tier=' ~ player_tier ~ '&player_page=' %}
             {% if player_page > 1 %}
-            <a href="{{ qs_base }}{{ player_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
+            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ player_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
             {% endif %}
-            {% set start_page = [1, player_page - 2]|max %}
-            {% set end_page = [total_pages, start_page + 4]|min %}
-            {% if start_page > 1 %}
-            <a href="{{ qs_base }}1" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">1</a>
-            {% if start_page > 2 %}<span style="color:var(--gray-400); padding:0 4px;">…</span>{% endif %}
-            {% endif %}
-            {% for pg in range(start_page, end_page + 1) %}
-            <a href="{{ qs_base }}{{ pg }}" class="btn {% if pg == player_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
+            {% for pg in range(1, total_pages + 1) %}
+            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ pg }}" class="btn {% if pg == player_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
             {% endfor %}
-            {% if end_page < total_pages %}
-            {% if end_page < total_pages - 1 %}<span style="color:var(--gray-400); padding:0 4px;">…</span>{% endif %}
-            <a href="{{ qs_base }}{{ total_pages }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ total_pages }}</a>
-            {% endif %}
             {% if player_page < total_pages %}
-            <a href="{{ qs_base }}{{ player_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
+            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ player_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
             {% endif %}
             <span style="font-size:11px; color:var(--gray-500); margin-left:8px;">{{ player_page }} of {{ total_pages }}</span>
         </div>

@@ -242,13 +242,29 @@ function submitPotentialStatus(sel) {
       </tbody>
     </table>
     </div>
+
+    {% if leads_total_pages > 1 %}
+    {% set leads_qs = 'stage=' ~ filter_stage ~ '&source=' ~ filter_source ~ '&state=' ~ filter_state ~ '&q=' ~ filter_q ~ '&tag=' ~ filter_tag %}
+    <div class="mk-pot-pager" style="margin-top:14px;">
+      {% if leads_page > 1 %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page - 1 }}">‹ Prev</a>{% endif %}
+      {% for n in range(1, leads_total_pages + 1) %}
+        {% if n == leads_page %}
+          <span class="active">{{ n }}</span>
+        {% else %}
+          <a href="/admin/marketing?{{ leads_qs }}&leads_page={{ n }}">{{ n }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if leads_page < leads_total_pages %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page + 1 }}">Next ›</a>{% endif %}
+    </div>
+    {% endif %}
+
     {% else %}
     <p style="color:#9ca3af; font-size:13px; text-align:center; padding:32px;">No leads match your filters.</p>
     {% endif %}
   </div>
 
   <div class="mk-section" id="potentials">
-    <h2>Potentials · D2 &amp; D3 Schools Not On ArmsSoftware</h2>
+    <h2>Potentials</h2>
     <p class="mk-sub" style="margin-top:-6px;">
       {{ pot_never_total }} never contacted · {{ pot_contacted_total }} contacted · {{ pot_not_interested_total }} not interested · {{ pot_grand_total }} total
     </p>

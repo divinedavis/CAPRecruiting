@@ -3000,13 +3000,69 @@ async def admin_set_tier(target_id: int, request: Request, db: Session = Depends
     tier = form.get("subscription_tier", "free")
     if tier not in ("free", "essentials", "advanced", "premium"):
         tier = "free"
+    return_to = (form.get("return_to") or "").strip()
     target = db.query(User).filter(User.id == target_id).first()
-    if target:
-        old_tier = target.subscription_tier
+    if not target:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    old_tier = target.subscription_tier or "free"
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+
+    has_stripe_sub = bool((target.stripe_subscription_id or "").strip())
+    detail_extra = ""
+
+    if has_stripe_sub:
+        # Paying subscriber: change the Stripe subscription to the new price.
+        # Webhook will sync the DB, but we also flip the column now for instant UI.
+        if tier == "free":
+            try:
+                stripe.Subscription.delete(target.stripe_subscription_id)
+                target.subscription_tier = "free"
+                target.stripe_subscription_id = ""
+                db.commit()
+                detail_extra = " (stripe canceled)"
+            except Exception as exc:
+                _logger.warning("Stripe cancel failed for user %s: %s", target_id, type(exc).__name__)
+                detail_extra = f" (stripe cancel FAILED: {type(exc).__name__})"
+        else:
+            price_map = STRIPE_PRICES  # default to monthly; admin override doesn't expose billing toggle
+            new_price = price_map.get(tier, "")
+            if not new_price:
+                detail_extra = " (no price configured for tier; DB only)"
+                target.subscription_tier = tier
+                db.commit()
+            else:
+                try:
+                    sub = stripe.Subscription.retrieve(target.stripe_subscription_id)
+                    items = sub.get("items", {}).get("data", [])
+                    if not items:
+                        raise RuntimeError("subscription has no items")
+                    stripe.Subscription.modify(
+                        target.stripe_subscription_id,
+                        items=[{"id": items[0]["id"], "price": new_price}],
+                        proration_behavior="create_prorations",
+                        metadata={"user_id": str(target.id), "tier": tier},
+                    )
+                    target.subscription_tier = tier
+                    db.commit()
+                    detail_extra = " (stripe modified)"
+                except Exception as exc:
+                    _logger.warning("Stripe modify failed for user %s: %s", target_id, type(exc).__name__)
+                    detail_extra = f" (stripe modify FAILED: {type(exc).__name__}; DB only)"
+                    target.subscription_tier = tier
+                    db.commit()
+    else:
+        # Orphan / bypass / never-paid: direct column update only. Existing
+        # in_person_paid_until (if any) is left alone — they keep premium until
+        # whatever contract date already exists.
         target.subscription_tier = tier
         db.commit()
-        _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
-        log_admin_action(db, admin.id, "set_tier", target_id, f"old={old_tier} new={tier}", _ip)
+        detail_extra = " (no stripe sub; DB only)"
+
+    log_admin_action(db, admin.id, "set_tier", target_id, f"old={old_tier} new={tier}{detail_extra}", _ip)
+
+    if return_to == "teams":
+        return RedirectResponse("/admin/teams#players", status_code=302)
     return RedirectResponse(f"/admin/users/{target_id}/edit-profile", status_code=302)
 
 @app.get("/admin/teams", response_class=HTMLResponse)
@@ -3023,7 +3079,7 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         count = db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()
         if count > 0:
             teams.append({"id": t.id, "name": t.name, "player_count": count})
-    PER_PAGE = 10
+    PER_PAGE = 5
     COACH_PER_PAGE = 5
 
     # Coaches pagination
@@ -3383,7 +3439,22 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         )
     if tag:
         query = query.filter(MarketingLead.tags.ilike(f"%{tag}%"))
-    leads = query.order_by(MarketingLead.updated_at.desc()).limit(500).all()
+
+    LEADS_PER_PAGE = 5
+    try:
+        leads_page = max(1, int(request.query_params.get("leads_page") or "1"))
+    except ValueError:
+        leads_page = 1
+    leads_total = query.count()
+    leads_total_pages = max(1, (leads_total + LEADS_PER_PAGE - 1) // LEADS_PER_PAGE)
+    if leads_page > leads_total_pages:
+        leads_page = leads_total_pages
+    leads = (
+        query.order_by(MarketingLead.updated_at.desc())
+        .offset((leads_page - 1) * LEADS_PER_PAGE)
+        .limit(LEADS_PER_PAGE)
+        .all()
+    )
 
     all_leads = db.query(MarketingLead).all()
     stage_counts = {s: 0 for s in MARKETING_STAGES}
@@ -3437,7 +3508,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         )
 
     pot_total = pot_query.count()
-    pot_per_page = 10
+    pot_per_page = 5
     pot_total_pages = max(1, (pot_total + pot_per_page - 1) // pot_per_page)
     if pot_page > pot_total_pages:
         pot_page = pot_total_pages
@@ -3460,6 +3531,9 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "request": request,
         "user": user,
         "leads": leads,
+        "leads_page": leads_page,
+        "leads_total_pages": leads_total_pages,
+        "leads_total": leads_total,
         "total_leads": len(all_leads),
         "stage_counts": stage_counts,
         "stage_labels": MARKETING_STAGE_LABELS,
