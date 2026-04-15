@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Finish Signing Up — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.fo-wrap { max-width: 520px; margin: 40px auto; padding: 32px; background: #fff; border: 2px solid #0a1628; border-radius: 14px; }
+.fo-wrap h1 { font-size: 24px; font-weight: 800; color: #0a1628; margin: 0 0 6px 0; }
+.fo-wrap .sub { color: #6b7280; font-size: 14px; margin: 0 0 22px 0; }
+.fo-wrap label { display: block; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.fo-wrap input, .fo-wrap select { width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; margin-bottom: 14px; box-sizing: border-box; }
+.fo-wrap .tier-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.fo-wrap .tier-opt { border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 700; color: #0a1628; }
+.fo-wrap .tier-opt input { display: none; }
+.fo-wrap .tier-opt.selected { background: #0a1628; color: #fff; border-color: #0a1628; }
+.fo-wrap .billing-toggle { display: flex; gap: 8px; margin-bottom: 18px; }
+.fo-wrap .billing-toggle label { flex: 1; text-align: center; padding: 9px; border: 1.5px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.fo-wrap .billing-toggle input { display: none; }
+.fo-wrap .billing-toggle label.selected { background: #0a1628; color: #fff; border-color: #0a1628; }
+.fo-wrap button { width: 100%; padding: 14px; background: #0a1628; color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
+.fo-wrap .err { background: #fef2f2; border: 1.5px solid #f87171; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+</style>
+
+<div class="fo-wrap">
+  <h1>Finish Your Signup</h1>
+  <p class="sub">Signed in as <strong>{{ pending.email }}</strong>. Pick a plan and tell us where you play — you'll be taken to Stripe to complete payment.</p>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/signup/finish-oauth">
+    <label>Plan</label>
+    <div class="tier-grid">
+      <label class="tier-opt selected" data-tier="essentials">
+        <input type="radio" name="tier" value="essentials" checked>
+        Essentials
+      </label>
+      <label class="tier-opt" data-tier="advanced">
+        <input type="radio" name="tier" value="advanced">
+        Advanced
+      </label>
+      <label class="tier-opt" data-tier="premium">
+        <input type="radio" name="tier" value="premium">
+        Premium
+      </label>
+    </div>
+
+    <label>Billing</label>
+    <div class="billing-toggle">
+      <label class="selected" data-billing="monthly"><input type="radio" name="billing" value="monthly" checked>Monthly</label>
+      <label data-billing="yearly"><input type="radio" name="billing" value="yearly">Yearly</label>
+    </div>
+
+    <label>State</label>
+    <select name="school_state" id="school_state" required>
+      <option value="">Select state…</option>
+    </select>
+
+    <label>City</label>
+    <select name="school_city" id="school_city" required disabled>
+      <option value="">Select city…</option>
+    </select>
+
+    <label>High School</label>
+    <select name="school_name" id="school_name" required disabled>
+      <option value="">Select school…</option>
+    </select>
+    <input type="hidden" name="school_county" id="school_county">
+
+    <button type="submit">Continue to Stripe</button>
+  </form>
+</div>
+
+<script>
+// Tier/billing toggle visuals
+document.querySelectorAll('.tier-opt').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.tier-opt').forEach(x => x.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input').checked = true;
+  });
+});
+document.querySelectorAll('.billing-toggle label').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.billing-toggle label').forEach(x => x.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input').checked = true;
+  });
+});
+
+// Cascading state / city / school selects using existing /api/schools endpoints
+const stateSel = document.getElementById('school_state');
+const citySel = document.getElementById('school_city');
+const schoolSel = document.getElementById('school_name');
+const countyInput = document.getElementById('school_county');
+
+fetch('/api/schools/states').then(r => r.json()).then(states => {
+  states.forEach(s => {
+    const o = document.createElement('option'); o.value = s; o.textContent = s; stateSel.appendChild(o);
+  });
+});
+stateSel.addEventListener('change', () => {
+  citySel.innerHTML = '<option value="">Select city…</option>';
+  schoolSel.innerHTML = '<option value="">Select school…</option>';
+  schoolSel.disabled = true;
+  if (!stateSel.value) { citySel.disabled = true; return; }
+  citySel.disabled = false;
+  fetch('/api/schools/cities?state=' + encodeURIComponent(stateSel.value)).then(r => r.json()).then(cities => {
+    cities.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; citySel.appendChild(o); });
+  });
+});
+citySel.addEventListener('change', () => {
+  schoolSel.innerHTML = '<option value="">Select school…</option>';
+  if (!citySel.value) { schoolSel.disabled = true; return; }
+  schoolSel.disabled = false;
+  fetch('/api/schools/list?state=' + encodeURIComponent(stateSel.value) + '&city=' + encodeURIComponent(citySel.value)).then(r => r.json()).then(schools => {
+    schools.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; schoolSel.appendChild(o); });
+  });
+});
+schoolSel.addEventListener('change', () => {
+  if (!schoolSel.value) { countyInput.value = ''; return; }
+  fetch('/api/schools/county?state=' + encodeURIComponent(stateSel.value) + '&city=' + encodeURIComponent(citySel.value) + '&school=' + encodeURIComponent(schoolSel.value)).then(r => r.text()).then(c => { countyInput.value = c; });
+});
+</script>
+{% endblock %}

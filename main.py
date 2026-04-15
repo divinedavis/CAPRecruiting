@@ -338,6 +338,25 @@ class Transcript(Base):
     filename = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class PendingSignup(Base):
+    __tablename__ = "pending_signups"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String, unique=True, nullable=False, index=True)
+    username = Column(String, nullable=False)
+    email = Column(String, nullable=False, index=True)
+    password_hash = Column(String, default="")  # empty for oauth_google path
+    school_name = Column(String, default="")
+    school_city = Column(String, default="")
+    school_state = Column(String, default="")
+    school_county = Column(String, default="")
+    team_id = Column(Integer, nullable=True)
+    tier = Column(String, default="essentials")
+    billing = Column(String, default="monthly")
+    oauth_google = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+
+
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
     id = Column(Integer, primary_key=True)
@@ -725,6 +744,62 @@ def _check_rate_limit(key: str, max_requests: int, window_seconds: int) -> bool:
         return True
     _rate_limit_store[key].append(now)
     return False
+
+def _cleanup_expired_pending_signups(db: Session):
+    """Opportunistic garbage collection of expired pending signups."""
+    try:
+        db.query(PendingSignup).filter(PendingSignup.expires_at < datetime.utcnow()).delete()
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def _finalize_pending_signup(db: Session, pending: "PendingSignup", stripe_customer_id: str, stripe_subscription_id: str):
+    """Create the real User + PlayerProfile from a PendingSignup row and delete the pending row.
+    Idempotent: if a user with the same username/email already exists, just deletes the pending row.
+    Returns the User row (or None if skipped)."""
+    existing = db.query(User).filter(
+        (User.username == pending.username) | (User.email == pending.email)
+    ).first()
+    if existing:
+        db.delete(pending)
+        db.commit()
+        return existing
+    user = User(
+        username=pending.username,
+        email=pending.email,
+        password_hash=pending.password_hash or "",
+        role="player",
+        subscription_tier=pending.tier or "essentials",
+        stripe_customer_id=stripe_customer_id or "",
+        stripe_subscription_id=stripe_subscription_id or "",
+        public_id=_generate_public_id(),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    db.add(PlayerProfile(
+        user_id=user.id,
+        team_id=pending.team_id,
+        school=pending.school_name or "",
+        city=pending.school_city or "",
+        state=pending.school_state or "",
+        county=pending.school_county or "",
+    ))
+    db.commit()
+    try:
+        _notify_coaches_of_new_player(db, user, pending.school_name or "")
+    except Exception as _e:
+        _logger.warning("Notification fan-out failed: %s", type(_e).__name__)
+    try:
+        import asyncio as _asyncio
+        _asyncio.create_task(send_player_signup_notification(user.username, user.email, pending.school_name or ""))
+    except Exception:
+        pass
+    db.delete(pending)
+    db.commit()
+    return user
+
 
 def log_admin_action(db: Session, admin_id: int, action: str, target_id: int = None, detail: str = "", ip: str = ""):
     db.add(AdminAuditLog(admin_id=admin_id, action=action, target_id=target_id, detail=detail, ip_address=ip))
@@ -1374,83 +1449,202 @@ async def signup_post(
         elif coach_team_id and db.query(Team).filter(Team.id == coach_team_id).first():
             coach_tid = coach_team_id
 
-    user = User(username=username, email=email, password_hash=hash_password(password), role=role, public_id=_generate_public_id())
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
+    # ── PLAYER PATH ────────────────────────────────────────────────────────
     if role == "player":
-        db.add(PlayerProfile(user_id=user.id, team_id=team_id, school=school_name.strip(), city=school_city.strip(), state=school_state.strip(), county=school_county.strip()))
-    else:
-        db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
-    db.commit()
+        _cleanup_expired_pending_signups(db)
 
-    if role == "player":
-        try:
-            _notify_coaches_of_new_player(db, user, school_name.strip())
-        except Exception as _e:
-            _logger.warning("Notification fan-out failed: %s", type(_e).__name__)
+        # Block if a pending signup already exists for this username/email
+        if db.query(PendingSignup).filter(
+            (PendingSignup.username == username) | (PendingSignup.email == email),
+            PendingSignup.expires_at > datetime.utcnow(),
+        ).first():
+            return err("A signup is already in progress for this email. Check your inbox or try again in a few minutes.")
 
-    if role == "coach" and invite_token:
-        inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token).first()
-        if inv:
-            inv.used = True
-            inv.used_by = user.id
-            db.commit()
-    # Session rotation: clear old session and set fresh data to prevent fixation
-    request.session.clear()
-    request.session["user_id"] = user.id
-    request.session["is_admin"] = bool(user.is_admin)
-    request.session["role"] = user.role
-    request.session["subscription_tier"] = user.subscription_tier or "free"
-    request.session["session_version"] = user.session_version or 0
-    if role == "player":
-        import asyncio
-        asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
-
-        # Check for in-person payment bypass token (open, untied, not yet used)
+        # Bypass token path: create user immediately (off-Stripe payment)
         if bypass_token:
             brec = db.query(InPersonPaymentToken).filter(
                 InPersonPaymentToken.token == bypass_token,
                 InPersonPaymentToken.used_at == None,
                 InPersonPaymentToken.user_id == None,
             ).first()
-            if brec and brec.expires_at > datetime.utcnow():
-                user.subscription_tier = "premium"
-                user.in_person_paid_until = datetime(2027, 3, 26)
-                brec.used_at = datetime.utcnow()
-                brec.user_id = user.id
-                db.commit()
-                request.session["subscription_tier"] = "premium"
-                return RedirectResponse("/dashboard?activated=1", status_code=302)
+            if not brec or brec.expires_at <= datetime.utcnow():
+                return err("This bypass link is invalid or has expired.")
+            user = User(
+                username=username, email=email,
+                password_hash=hash_password(password),
+                role="player", public_id=_generate_public_id(),
+                subscription_tier="premium",
+                in_person_paid_until=datetime(2027, 3, 26),
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            db.add(PlayerProfile(
+                user_id=user.id, team_id=team_id,
+                school=school_name.strip(), city=school_city.strip(),
+                state=school_state.strip(), county=school_county.strip(),
+            ))
+            brec.used_at = datetime.utcnow()
+            brec.user_id = user.id
+            db.commit()
+            try:
+                _notify_coaches_of_new_player(db, user, school_name.strip())
+            except Exception as _e:
+                _logger.warning("Notification fan-out failed: %s", type(_e).__name__)
+            try:
+                import asyncio as _asyncio
+                _asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
+            except Exception:
+                pass
+            request.session.clear()
+            request.session["user_id"] = user.id
+            request.session["is_admin"] = bool(user.is_admin)
+            request.session["role"] = user.role
+            request.session["subscription_tier"] = "premium"
+            request.session["session_version"] = user.session_version or 0
+            return RedirectResponse("/dashboard?activated=1", status_code=302)
 
-        # Create Stripe customer and checkout session immediately
+        # Stripe path: stash PendingSignup, redirect to Stripe checkout.
+        # NO User row is created until the webhook (or success page) confirms payment.
         _price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
         _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
         if _tier not in _price_map or not _price_map[_tier]:
             _price_map = STRIPE_PRICES
+            _tier = "essentials"
+        import uuid as _uuid
+        pending = PendingSignup(
+            uuid=_uuid.uuid4().hex,
+            username=username,
+            email=email,
+            password_hash=hash_password(password),
+            school_name=school_name.strip(),
+            school_city=school_city.strip(),
+            school_state=school_state.strip(),
+            school_county=school_county.strip(),
+            team_id=team_id,
+            tier=_tier,
+            billing=billing,
+            oauth_google=False,
+            expires_at=datetime.utcnow() + timedelta(hours=24),
+        )
+        db.add(pending)
+        db.commit()
+        db.refresh(pending)
         try:
-            customer = stripe.Customer.create(
-                email=user.email, name=user.username,
-                metadata={"user_id": str(user.id)}
-            )
-            user.stripe_customer_id = customer.id
-            db.commit()
             site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
-            session = stripe.checkout.Session.create(
-                customer=customer.id,
+            checkout = stripe.checkout.Session.create(
+                customer_email=email,
                 payment_method_types=["card"],
                 line_items=[{"price": _price_map[_tier], "quantity": 1}],
                 mode="subscription",
+                client_reference_id=pending.uuid,
                 success_url=f"{site_url}/upgrade/success?session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{site_url}/pricing",
-                metadata={"user_id": str(user.id), "tier": _tier},
-                subscription_data={"metadata": {"user_id": str(user.id), "tier": _tier}},
+                cancel_url=f"{site_url}/signup",
+                metadata={"pending_uuid": pending.uuid, "tier": _tier},
+                subscription_data={"metadata": {"pending_uuid": pending.uuid, "tier": _tier}},
             )
-            return RedirectResponse(session.url, status_code=302)
+            return RedirectResponse(checkout.url, status_code=302)
         except Exception:
-            return RedirectResponse("/upgrade", status_code=302)
+            db.delete(pending)
+            db.commit()
+            return err("Could not start checkout. Please try again.")
+
+    # ── COACH PATH (unchanged: invite-only, no payment) ────────────────────
+    user = User(username=username, email=email, password_hash=hash_password(password), role=role, public_id=_generate_public_id())
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    db.add(CoachProfile(user_id=user.id, team_id=coach_tid, division=coach_division.strip(), conference=coach_conference.strip(), college=coach_college.strip()))
+    db.commit()
+    if invite_token:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token).first()
+        if inv:
+            inv.used = True
+            inv.used_by = user.id
+            db.commit()
+    request.session.clear()
+    request.session["user_id"] = user.id
+    request.session["is_admin"] = bool(user.is_admin)
+    request.session["role"] = user.role
+    request.session["subscription_tier"] = user.subscription_tier or "free"
+    request.session["session_version"] = user.session_version or 0
     return RedirectResponse("/profile/edit", status_code=302)
+
+
+@app.get("/signup/finish-oauth", response_class=HTMLResponse)
+async def signup_finish_oauth_get(request: Request, db: Session = Depends(get_db)):
+    pending_uuid = request.session.get("pending_oauth_uuid", "")
+    pending = db.query(PendingSignup).filter(PendingSignup.uuid == pending_uuid).first() if pending_uuid else None
+    if not pending or pending.expires_at <= datetime.utcnow():
+        request.session.pop("pending_oauth_uuid", None)
+        return RedirectResponse("/signup?error=oauth_expired", status_code=302)
+    teams = db.query(Team).order_by(Team.name).all()
+    return templates.TemplateResponse("signup_finish_oauth.html", {
+        "request": request,
+        "pending": pending,
+        "teams": teams,
+    })
+
+
+@app.post("/signup/finish-oauth")
+async def signup_finish_oauth_post(
+    request: Request,
+    tier: str = Form("essentials"),
+    billing: str = Form("monthly"),
+    school_name: str = Form(""),
+    school_city: str = Form(""),
+    school_state: str = Form(""),
+    school_county: str = Form(""),
+    team_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+):
+    pending_uuid = request.session.get("pending_oauth_uuid", "")
+    pending = db.query(PendingSignup).filter(PendingSignup.uuid == pending_uuid).first() if pending_uuid else None
+    if not pending or pending.expires_at <= datetime.utcnow():
+        request.session.pop("pending_oauth_uuid", None)
+        return RedirectResponse("/signup?error=oauth_expired", status_code=302)
+    if not school_name.strip():
+        teams = db.query(Team).order_by(Team.name).all()
+        return templates.TemplateResponse("signup_finish_oauth.html", {
+            "request": request, "pending": pending, "teams": teams,
+            "error": "Please select your high school.",
+        })
+    _price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
+    _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
+    if _tier not in _price_map or not _price_map[_tier]:
+        _price_map = STRIPE_PRICES
+        _tier = "essentials"
+
+    pending.school_name = school_name.strip()
+    pending.school_city = school_city.strip()
+    pending.school_state = school_state.strip()
+    pending.school_county = school_county.strip()
+    pending.team_id = team_id
+    pending.tier = _tier
+    pending.billing = billing
+    db.commit()
+
+    try:
+        site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+        checkout = stripe.checkout.Session.create(
+            customer_email=pending.email,
+            payment_method_types=["card"],
+            line_items=[{"price": _price_map[_tier], "quantity": 1}],
+            mode="subscription",
+            client_reference_id=pending.uuid,
+            success_url=f"{site_url}/upgrade/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{site_url}/signup/finish-oauth",
+            metadata={"pending_uuid": pending.uuid, "tier": _tier},
+            subscription_data={"metadata": {"pending_uuid": pending.uuid, "tier": _tier}},
+        )
+        return RedirectResponse(checkout.url, status_code=302)
+    except Exception:
+        teams = db.query(Team).order_by(Team.name).all()
+        return templates.TemplateResponse("signup_finish_oauth.html", {
+            "request": request, "pending": pending, "teams": teams,
+            "error": "Could not start checkout. Please try again.",
+        })
+
 
 @app.post("/coach-request")
 async def coach_request_post(request: Request, db: Session = Depends(get_db)):
@@ -1864,60 +2058,69 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
         username = f"{base_username}{suffix}"
         suffix += 1
 
-    # Create user with a random password (they'll use Google to log in)
-    random_pw = _secrets.token_urlsafe(32)
-    role = "coach" if is_coach else "player"
-    new_user = User(
-        username=username,
-        email=google_email,
-        password_hash=hash_password(random_pw),
-        role=role,
-        subscription_tier="free",
-        public_id=uuid.uuid4().hex[:12],
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    # Create profile based on role — must succeed or we roll back the user
-    try:
-        if is_coach:
+    # ── Coach path (invite-required, no payment): unchanged ────────────────
+    if is_coach:
+        random_pw = _secrets.token_urlsafe(32)
+        new_user = User(
+            username=username,
+            email=google_email,
+            password_hash=hash_password(random_pw),
+            role="coach",
+            subscription_tier="free",
+            public_id=uuid.uuid4().hex[:12],
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        try:
             db.add(CoachProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
             inv.used = True
             inv.used_by = new_user.id
-        else:
-            db.add(PlayerProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
-        db.commit()
-    except Exception as _profile_exc:
-        _logger.error("OAuth profile creation failed for user %s: %s", new_user.id, type(_profile_exc).__name__)
-        db.rollback()
-        # Retry with a bare-minimum profile so the user is never left orphaned
-        try:
-            if is_coach:
-                db.add(CoachProfile(user_id=new_user.id))
-            else:
-                db.add(PlayerProfile(user_id=new_user.id))
             db.commit()
         except Exception:
             db.rollback()
-            _logger.error("OAuth profile retry also failed for user %s", new_user.id)
-            return RedirectResponse("/login?error=google_failed", status_code=302)
+            try:
+                db.add(CoachProfile(user_id=new_user.id))
+                db.commit()
+            except Exception:
+                db.rollback()
+                return RedirectResponse("/login?error=google_failed", status_code=302)
+        request.session.clear()
+        request.session["user_id"] = new_user.id
+        request.session["is_admin"] = False
+        request.session["role"] = "coach"
+        request.session["subscription_tier"] = "free"
+        request.session["session_version"] = 0
+        return RedirectResponse("/profile/edit", status_code=302)
 
-    # Log them in
+    # ── Player path: no User row — stash pending, send to finish page ──────
+    _cleanup_expired_pending_signups(db)
+
+    # Reuse an existing in-progress pending if the same email is already mid-signup
+    pending = db.query(PendingSignup).filter(
+        PendingSignup.email == google_email,
+        PendingSignup.expires_at > datetime.utcnow(),
+    ).first()
+    if not pending:
+        pending = PendingSignup(
+            uuid=uuid.uuid4().hex,
+            username=username,
+            email=google_email,
+            password_hash="",  # OAuth users have no local password
+            oauth_google=True,
+            tier="essentials",
+            billing="monthly",
+            expires_at=datetime.utcnow() + timedelta(hours=24),
+        )
+        db.add(pending)
+        db.commit()
+        db.refresh(pending)
+
+    # Hand the user a short-lived token in their session so /signup/finish-oauth
+    # knows which pending row they own without exposing the uuid in a URL.
     request.session.clear()
-    request.session["user_id"] = new_user.id
-    request.session["is_admin"] = False
-    request.session["role"] = role
-    request.session["subscription_tier"] = "free"
-    request.session["session_version"] = 0
-
-    # Send admin notification
-    try:
-        await send_player_signup_notification(username, google_email, "")
-    except Exception:
-        pass
-
-    return RedirectResponse("/profile/edit", status_code=302)
+    request.session["pending_oauth_uuid"] = pending.uuid
+    return RedirectResponse("/signup/finish-oauth", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, state: Optional[str] = None, city: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db)):
@@ -4595,10 +4798,38 @@ async def create_checkout(request: Request, db: Session = Depends(get_db)):
 @app.get("/upgrade/success", response_class=HTMLResponse)
 async def upgrade_success(request: Request, session_id: str = "", db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
-    if not user_id:
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+
+    # Post-signup path: no session yet — finalize from the Stripe session.
+    # Works whether the webhook already created the user (pending row gone) or
+    # hasn't fired yet (pending row still there and we create the user inline).
+    if not user and session_id:
+        try:
+            s = stripe.checkout.Session.retrieve(session_id)
+        except Exception:
+            s = None
+        if s:
+            pending_uuid = (s.get("metadata") or {}).get("pending_uuid") or s.get("client_reference_id") or ""
+            customer_id = s.get("customer") or ""
+            sub_id = s.get("subscription") or ""
+            if pending_uuid:
+                pending = db.query(PendingSignup).filter(PendingSignup.uuid == pending_uuid).first()
+                if pending:
+                    user = _finalize_pending_signup(db, pending, customer_id, sub_id)
+            if not user and customer_id:
+                user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+            if user:
+                request.session.clear()
+                request.session["user_id"] = user.id
+                request.session["is_admin"] = bool(user.is_admin)
+                request.session["role"] = user.role
+                request.session["subscription_tier"] = user.subscription_tier or "free"
+                request.session["session_version"] = user.session_version or 0
+
+    if not user:
         return RedirectResponse("/login", status_code=302)
-    user = db.query(User).filter(User.id == user_id).first()
-    unread_count = unread_sender_count(db, user_id)
+
+    unread_count = unread_sender_count(db, user.id)
     request.session["subscription_tier"] = user.subscription_tier or "free"
     return templates.TemplateResponse("upgrade_success.html", {
         "request": request,
@@ -4658,10 +4889,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if etype in ("checkout.session.completed",):
         obj = event["data"]["object"]
         meta = obj.get("metadata", {})
-        user = get_user_from_meta(meta)
-        tier = meta.get("tier", "free")
+        pending_uuid = meta.get("pending_uuid") or obj.get("client_reference_id") or ""
         sub_id = obj.get("subscription", "")
-        set_tier(user, tier, sub_id)
+        if pending_uuid:
+            pending = db.query(PendingSignup).filter(PendingSignup.uuid == pending_uuid).first()
+            if pending:
+                _finalize_pending_signup(db, pending, obj.get("customer", ""), sub_id)
+        else:
+            user = get_user_from_meta(meta)
+            tier = meta.get("tier", "free")
+            set_tier(user, tier, sub_id)
 
     elif etype in ("customer.subscription.updated",):
         obj = event["data"]["object"]
