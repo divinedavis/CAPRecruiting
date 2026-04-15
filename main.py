@@ -2803,14 +2803,37 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         count = db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()
         if count > 0:
             teams.append({"id": t.id, "name": t.name, "player_count": count})
-    coaches_raw = db.query(User).filter(User.role == "coach").order_by(User.username).all()
+    PER_PAGE = 10
+
+    # Coaches pagination
+    try:
+        coach_page = max(1, int(request.query_params.get("coach_page", "1")))
+    except ValueError:
+        coach_page = 1
+    coach_q = (request.query_params.get("coach_q") or "").strip()
+    coach_query = db.query(User).filter(User.role == "coach")
+    if coach_q:
+        like = f"%{coach_q}%"
+        coach_query = coach_query.outerjoin(
+            CoachProfile, CoachProfile.user_id == User.id
+        ).filter(
+            (User.username.ilike(like))
+            | (User.email.ilike(like))
+            | (CoachProfile.first_name.ilike(like))
+            | (CoachProfile.last_name.ilike(like))
+            | (CoachProfile.school.ilike(like))
+            | (CoachProfile.college.ilike(like))
+        )
+    total_coaches = coach_query.count()
+    coach_total_pages = max(1, (total_coaches + PER_PAGE - 1) // PER_PAGE)
+    coach_page = min(coach_page, coach_total_pages)
+    coaches_raw = coach_query.order_by(User.username).offset((coach_page - 1) * PER_PAGE).limit(PER_PAGE).all()
     coaches = []
     for c in coaches_raw:
         cp = db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()
         coaches.append({"user": c, "profile": cp})
 
     # Players pagination
-    PER_PAGE = 10
     try:
         player_page = max(1, int(request.query_params.get("player_page", "1")))
     except ValueError:
@@ -2851,6 +2874,10 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         "total_pages": total_pages,
         "player_q": player_q,
         "player_tier": player_tier,
+        "total_coaches": total_coaches,
+        "coach_page": coach_page,
+        "coach_total_pages": coach_total_pages,
+        "coach_q": coach_q,
     })
 
 @app.post("/admin/teams/create", response_class=HTMLResponse)
