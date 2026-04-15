@@ -135,13 +135,13 @@
         <div style="background:#f9fafb; border:1.5px solid var(--gray-200); border-radius:10px; padding:14px; margin-top:16px; display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap;">
             <span style="font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; margin-right:8px;">Page</span>
             {% if coach_page > 1 %}
-            <a href="?coach_q={{ coach_q }}&coach_page={{ coach_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
+            <a href="?coach_q={{ coach_q }}&coach_page={{ coach_page - 1 }}" style="padding:6px 14px; font-size:12px; font-weight:700; background:#fff; color:var(--navy); border:1.5px solid var(--navy); border-radius:8px; text-decoration:none;">← Prev</a>
             {% endif %}
             {% for pg in range(1, coach_total_pages + 1) %}
-            <a href="?coach_q={{ coach_q }}&coach_page={{ pg }}" class="btn {% if pg == coach_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
+            <a href="?coach_q={{ coach_q }}&coach_page={{ pg }}" style="padding:6px 12px; font-size:12px; font-weight:700; min-width:36px; text-align:center; border-radius:8px; text-decoration:none; border:1.5px solid var(--navy); {% if pg == coach_page %}background:var(--navy); color:var(--gold);{% else %}background:#fff; color:var(--navy);{% endif %}">{{ pg }}</a>
             {% endfor %}
             {% if coach_page < coach_total_pages %}
-            <a href="?coach_q={{ coach_q }}&coach_page={{ coach_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
+            <a href="?coach_q={{ coach_q }}&coach_page={{ coach_page + 1 }}" style="padding:6px 14px; font-size:12px; font-weight:700; background:#fff; color:var(--navy); border:1.5px solid var(--navy); border-radius:8px; text-decoration:none;">Next →</a>
             {% endif %}
             <span style="font-size:11px; color:var(--gray-500); margin-left:8px;">{{ coach_page }} of {{ coach_total_pages }}</span>
         </div>
@@ -223,13 +223,13 @@
         <div style="background:#f9fafb; border:1.5px solid var(--gray-200); border-radius:10px; padding:14px; margin-top:16px; display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap;">
             <span style="font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; margin-right:8px;">Page</span>
             {% if player_page > 1 %}
-            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ player_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
+            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ player_page - 1 }}" style="padding:6px 14px; font-size:12px; font-weight:700; background:#fff; color:var(--navy); border:1.5px solid var(--navy); border-radius:8px; text-decoration:none;">← Prev</a>
             {% endif %}
             {% for pg in range(1, total_pages + 1) %}
-            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ pg }}" class="btn {% if pg == player_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
+            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ pg }}" style="padding:6px 12px; font-size:12px; font-weight:700; min-width:36px; text-align:center; border-radius:8px; text-decoration:none; border:1.5px solid var(--navy); {% if pg == player_page %}background:var(--navy); color:var(--gold);{% else %}background:#fff; color:var(--navy);{% endif %}">{{ pg }}</a>
             {% endfor %}
             {% if player_page < total_pages %}
-            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ player_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
+            <a href="?player_q={{ player_q }}&player_tier={{ player_tier }}&player_page={{ player_page + 1 }}" style="padding:6px 14px; font-size:12px; font-weight:700; background:#fff; color:var(--navy); border:1.5px solid var(--navy); border-radius:8px; text-decoration:none;">Next →</a>
             {% endif %}
             <span style="font-size:11px; color:var(--gray-500); margin-left:8px;">{{ player_page }} of {{ total_pages }}</span>
         </div>
