@@ -5958,6 +5958,8 @@ def _analytics_load_players(db: Session, grad_year: str, state: str, position: s
             "vertical": _analytics_parse_float(p.vertical),
             "squat": _analytics_parse_float(p.squat),
             "clean": _analytics_parse_float(p.clean),
+            "broad_jump_in": _analytics_parse_height_inches(p.broad_jump),
+            "pro_agility": _analytics_parse_float(p.pro_agility),
             "wingspan": _analytics_parse_float(p.wingspan),
             "biggest_factors": (p.biggest_factors or "").split(",") if p.biggest_factors else [],
             "v_forty": "forty_yard" in vset,
@@ -5967,6 +5969,10 @@ def _analytics_load_players(db: Session, grad_year: str, state: str, position: s
             "v_height": "height" in vset,
             "v_weight": "weight" in vset,
             "v_wingspan": "wingspan" in vset,
+            "v_squat": "squat" in vset,
+            "v_clean": "clean" in vset,
+            "v_broad_jump": "broad_jump" in vset,
+            "v_pro_agility": "pro_agility" in vset,
         })
     return players
 
@@ -6064,6 +6070,10 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
         "tallest": _analytics_top_n(players, "height_in", reverse=True),
         "heaviest": _analytics_top_n(players, "weight", reverse=True),
         "wingspan": _analytics_top_n(players, "wingspan", reverse=True),
+        "squat": _analytics_top_n(players, "squat", reverse=True),
+        "clean": _analytics_top_n(players, "clean", reverse=True),
+        "broad_jump": _analytics_top_n(players, "broad_jump_in", reverse=True),
+        "pro_agility": _analytics_top_n(players, "pro_agility", reverse=False),
     }
 
     school_rows = _analytics_school_aggregates(players, min_n=3)

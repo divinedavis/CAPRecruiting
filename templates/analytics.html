@@ -132,6 +132,30 @@
         <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{% if p.v_wingspan %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}{{ "%.0f"|format(p.wingspan) }}"</span></div>
         {% else %}<div class="an-empty">No data</div>{% endfor %}
       </div>
+      <div class="an-lb">
+        <h3>Squat (top 10)</h3>
+        {% for p in leaderboards.squat %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{% if p.v_squat %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}{{ "%.0f"|format(p.squat) }} lbs</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Clean (top 10)</h3>
+        {% for p in leaderboards.clean %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{% if p.v_clean %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}{{ "%.0f"|format(p.clean) }} lbs</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Broad Jump (top 10)</h3>
+        {% for p in leaderboards.broad_jump %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{% if p.v_broad_jump %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}{{ format_height(p.broad_jump_in) }}</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
+      <div class="an-lb">
+        <h3>Pro Agility (top 10)</h3>
+        {% for p in leaderboards.pro_agility %}
+        <div class="an-lb-row"><span class="rank">{{ loop.index }}</span><a class="name" href="/profile/{{ p.username }}">{{ p.name }}</a><span class="val">{% if p.v_pro_agility %}<span class="an-verified" title="CAP Recruiting verified"></span>{% endif %}{{ "%.2f"|format(p.pro_agility) }}</span></div>
+        {% else %}<div class="an-empty">No data</div>{% endfor %}
+      </div>
     </div>
   </div>
 
