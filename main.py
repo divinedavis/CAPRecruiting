@@ -628,6 +628,7 @@ class MarketingPotential(Base):
     athletic_url = Column(String, default="")
     questionnaire_url = Column(String, default="")
     source = Column(String, default="")  # QUESTIONNAIRE_DATA / ncaa_unclassified / ncaa_unreachable / manual
+    status = Column(String, default="never_contacted", index=True)  # never_contacted / contacted / not_interested
     contacted_at = Column(DateTime, nullable=True, index=True)
     contact_name = Column(String, default="")
     contact_email = Column(String, default="")
@@ -3212,17 +3213,15 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         pot_page = max(1, int(request.query_params.get("pot_page") or "1"))
     except ValueError:
         pot_page = 1
-    pot_filter = (request.query_params.get("pot_filter") or "uncontacted").lower()
-    if pot_filter not in ("uncontacted", "contacted", "all"):
-        pot_filter = "uncontacted"
+    pot_filter = (request.query_params.get("pot_filter") or "never_contacted").lower()
+    if pot_filter not in ("never_contacted", "contacted", "not_interested", "all"):
+        pot_filter = "never_contacted"
     pot_div = (request.query_params.get("pot_div") or "").strip().upper()
     pot_q = (request.query_params.get("pot_q") or "").strip()
 
     pot_query = db.query(MarketingPotential)
-    if pot_filter == "uncontacted":
-        pot_query = pot_query.filter(MarketingPotential.contacted_at == None)
-    elif pot_filter == "contacted":
-        pot_query = pot_query.filter(MarketingPotential.contacted_at != None)
+    if pot_filter in ("never_contacted", "contacted", "not_interested"):
+        pot_query = pot_query.filter(MarketingPotential.status == pot_filter)
     if pot_div in ("D2", "D3"):
         pot_query = pot_query.filter(MarketingPotential.division == pot_div)
     if pot_q:
@@ -3248,9 +3247,10 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         .limit(pot_per_page)
         .all()
     )
-    pot_uncontacted_total = db.query(MarketingPotential).filter(MarketingPotential.contacted_at == None).count()
-    pot_contacted_total = db.query(MarketingPotential).filter(MarketingPotential.contacted_at != None).count()
-    pot_grand_total = pot_uncontacted_total + pot_contacted_total
+    pot_never_total = db.query(MarketingPotential).filter(MarketingPotential.status == "never_contacted").count()
+    pot_contacted_total = db.query(MarketingPotential).filter(MarketingPotential.status == "contacted").count()
+    pot_not_interested_total = db.query(MarketingPotential).filter(MarketingPotential.status == "not_interested").count()
+    pot_grand_total = pot_never_total + pot_contacted_total + pot_not_interested_total
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3279,8 +3279,9 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "pot_filter": pot_filter,
         "pot_div": pot_div,
         "pot_q": pot_q,
-        "pot_uncontacted_total": pot_uncontacted_total,
+        "pot_never_total": pot_never_total,
         "pot_contacted_total": pot_contacted_total,
+        "pot_not_interested_total": pot_not_interested_total,
         "pot_grand_total": pot_grand_total,
     })
 
@@ -3294,14 +3295,19 @@ async def admin_marketing_potential_contact(pid: int, request: Request, db: Sess
     if not pot:
         raise HTTPException(status_code=404, detail="Potential not found")
     form = await request.form()
-    action = (form.get("action") or "contact").strip().lower()
-    if action == "uncontact":
-        pot.contacted_at = None
-    else:
-        pot.contacted_at = datetime.utcnow()
+    new_status = (form.get("status") or "").strip().lower()
+    if new_status in ("never_contacted", "contacted", "not_interested"):
+        pot.status = new_status
+        if new_status == "contacted" and pot.contacted_at is None:
+            pot.contacted_at = datetime.utcnow()
+        elif new_status == "never_contacted":
+            pot.contacted_at = None
+    if "contact_name" in form:
         pot.contact_name = (form.get("contact_name") or "").strip()[:200]
+    if "contact_email" in form:
         pot.contact_email = (form.get("contact_email") or "").strip()[:200]
-    pot.notes = (form.get("notes") or "").strip()[:1000]
+    if "notes" in form:
+        pot.notes = (form.get("notes") or "").strip()[:1000]
     db.commit()
     return_qs = (form.get("return_qs") or "").strip()
     target = "/admin/marketing"

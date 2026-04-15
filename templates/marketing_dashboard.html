@@ -47,6 +47,10 @@
 .mk-pot-row .sub { font-size: 11px; color: #9ca3af; }
 .mk-pot-row .div-pill { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 800; border-radius: 10px; background: #0a1628; color: #fff; letter-spacing: .04em; }
 .mk-pot-row .contacted { color: #166534; font-weight: 700; font-size: 11px; }
+.mk-pot-status { padding: 6px 8px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 11px; font-weight: 700; background: #fff; cursor: pointer; width: 100%; }
+.mk-pot-status.s-never_contacted { color: #6b7280; }
+.mk-pot-status.s-contacted { color: #065f46; border-color: #10b981; background: #ecfdf5; }
+.mk-pot-status.s-not_interested { color: #991b1b; border-color: #f87171; background: #fef2f2; }
 .mk-pot-btn { padding: 6px 10px; background: #0a1628; color: #fff; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
 .mk-pot-btn.secondary { background: #f3f4f6; color: #0a1628; border: 1.5px solid #e5e7eb; }
 .mk-pot-expand { display: none; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #f3f4f6; }
@@ -66,6 +70,11 @@
 function togglePotential(id) {
   var el = document.getElementById('pot-exp-' + id);
   if (el) el.classList.toggle('open');
+}
+function submitPotentialStatus(sel) {
+  var cls = sel.className.replace(/s-\w+/g, '').trim();
+  sel.className = cls + ' s-' + sel.value;
+  sel.form.submit();
 }
 </script>
 
@@ -241,7 +250,7 @@ function togglePotential(id) {
   <div class="mk-section" id="potentials">
     <h2>Potentials · D2 &amp; D3 Schools Not On ArmsSoftware</h2>
     <p class="mk-sub" style="margin-top:-6px;">
-      {{ pot_uncontacted_total }} uncontacted · {{ pot_contacted_total }} contacted · {{ pot_grand_total }} total
+      {{ pot_never_total }} never contacted · {{ pot_contacted_total }} contacted · {{ pot_not_interested_total }} not interested · {{ pot_grand_total }} total
     </p>
 
     <form method="get" action="/admin/marketing" class="mk-pot-filters">
@@ -251,8 +260,9 @@ function togglePotential(id) {
       <input type="hidden" name="q" value="{{ filter_q }}">
       <input type="hidden" name="tag" value="{{ filter_tag }}">
       <select name="pot_filter">
-        <option value="uncontacted"{% if pot_filter == "uncontacted" %} selected{% endif %}>Uncontacted</option>
+        <option value="never_contacted"{% if pot_filter == "never_contacted" %} selected{% endif %}>Never Contacted</option>
         <option value="contacted"{% if pot_filter == "contacted" %} selected{% endif %}>Contacted</option>
+        <option value="not_interested"{% if pot_filter == "not_interested" %} selected{% endif %}>Not Interested</option>
         <option value="all"{% if pot_filter == "all" %} selected{% endif %}>All</option>
       </select>
       <select name="pot_div">
@@ -288,28 +298,28 @@ function togglePotential(id) {
         <div>{{ p.conference or '—' }}</div>
         <div>{{ p.state or '—' }}</div>
         <div>
-          {% if p.contacted_at %}
-            <div class="contacted">✓ {{ p.contacted_at.strftime('%Y-%m-%d') }}</div>
-            {% if p.contact_name %}<div class="sub">{{ p.contact_name }}</div>{% endif %}
-            {% if p.contact_email %}<div class="sub">{{ p.contact_email }}</div>{% endif %}
-          {% else %}
-            <div style="color:#9ca3af; font-size:11px;">Not contacted</div>
-          {% endif %}
+          <form method="post" action="/admin/marketing/potentials/{{ p.id }}/contact" style="margin:0;">
+            <input type="hidden" name="return_qs" value="{{ return_qs }}">
+            <select name="status" class="mk-pot-status s-{{ p.status or 'never_contacted' }}" onchange="submitPotentialStatus(this)">
+              <option value="never_contacted"{% if (p.status or 'never_contacted') == 'never_contacted' %} selected{% endif %}>Never Contacted</option>
+              <option value="contacted"{% if p.status == 'contacted' %} selected{% endif %}>Contacted</option>
+              <option value="not_interested"{% if p.status == 'not_interested' %} selected{% endif %}>Not Interested</option>
+            </select>
+          </form>
+          {% if p.status == 'contacted' and p.contacted_at %}<div class="sub" style="margin-top:4px;">{{ p.contacted_at.strftime('%Y-%m-%d') }}{% if p.contact_name %} · {{ p.contact_name }}{% endif %}</div>{% endif %}
         </div>
-        <div><button type="button" class="mk-pot-btn secondary" onclick="togglePotential({{ p.id }})">{% if p.contacted_at %}Edit{% else %}Log{% endif %}</button></div>
+        <div><button type="button" class="mk-pot-btn secondary" onclick="togglePotential({{ p.id }})">Edit</button></div>
       </div>
       <div class="mk-pot-expand" id="pot-exp-{{ p.id }}">
         <form method="post" action="/admin/marketing/potentials/{{ p.id }}/contact">
           <input type="hidden" name="return_qs" value="{{ return_qs }}">
+          <input type="hidden" name="status" value="{{ p.status or 'never_contacted' }}">
           <div class="row">
             <input type="text" name="contact_name" value="{{ p.contact_name }}" placeholder="Point of contact name">
             <input type="email" name="contact_email" value="{{ p.contact_email }}" placeholder="Contact email">
           </div>
           <textarea name="notes" rows="2" placeholder="Notes (call summary, follow-up, etc.)" style="margin-bottom:8px;">{{ p.notes }}</textarea>
-          <div style="display:flex; gap:8px;">
-            <button type="submit" name="action" value="contact" class="mk-pot-btn">Mark Contacted</button>
-            {% if p.contacted_at %}<button type="submit" name="action" value="uncontact" class="mk-pot-btn secondary">Clear</button>{% endif %}
-          </div>
+          <button type="submit" class="mk-pot-btn">Save Details</button>
         </form>
       </div>
       {% endfor %}
