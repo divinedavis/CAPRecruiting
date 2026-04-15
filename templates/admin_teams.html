@@ -77,22 +77,22 @@
 
         {% if coaches %}
         <div style="background:var(--white); border:1.5px solid var(--gray-200); border-radius:var(--radius); overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <table class="admin-table">
                 <thead>
-                    <tr style="background:var(--gray-50); border-bottom:1.5px solid var(--gray-200);">
-                        <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--gray-600);">Coach</th>
-                        <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--gray-600);">Email</th>
-                        <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--gray-600);">School</th>
-                        <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--gray-600);">Division</th>
-                        <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--gray-600);">Title</th>
-                        <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--gray-600);">Actions</th>
+                    <tr>
+                        <th>Coach</th>
+                        <th>Email</th>
+                        <th>School</th>
+                        <th>Division</th>
+                        <th>Title</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for c in coaches %}
-                    <tr style="border-bottom:1px solid var(--gray-100);">
-                        <td style="padding:12px 16px;">
-                            <div style="display:flex; align-items:center; gap:10px;">
+                    <tr>
+                        <td>
+                            <a href="/admin/users/{{ c.user.id }}/edit-profile" style="text-decoration:none; display:flex; align-items:center; gap:10px;">
                                 {% if c.profile and c.profile.photo %}
                                 <img src="{{ c.profile.photo }}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                                 {% else %}
@@ -110,20 +110,18 @@
                                     </div>
                                     <div style="font-size:12px; color:var(--gray-400);">@{{ c.user.username }}</div>
                                 </div>
-                            </div>
+                            </a>
                         </td>
-                        <td style="padding:12px 16px; color:var(--gray-600);">{{ c.user.email or '—' }}</td>
-                        <td style="padding:12px 16px; color:var(--gray-700); font-weight:500;">{{ c.profile.school if c.profile and c.profile.school else '—' }}</td>
-                        <td style="padding:12px 16px;">
+                        <td data-label="Email" style="color:var(--gray-600); font-size:13px;">{{ c.user.email or '—' }}</td>
+                        <td data-label="School" style="color:var(--gray-700); font-weight:500;">{{ c.profile.school if c.profile and c.profile.school else '—' }}</td>
+                        <td data-label="Division">
                             {% if c.profile and c.profile.division %}
                             <span style="background:var(--gray-100); color:var(--navy); font-size:12px; font-weight:700; padding:3px 8px; border-radius:20px;">{{ c.profile.division }}</span>
-                            {% else %}—{% endif %}
+                            {% else %}<span style="color:var(--gray-400);">—</span>{% endif %}
                         </td>
-                        <td style="padding:12px 16px; color:var(--gray-500); font-size:13px;">{{ c.profile.title if c.profile and c.profile.title else '—' }}</td>
-                        <td style="padding:12px 16px;">
+                        <td data-label="Title" style="color:var(--gray-500); font-size:13px;">{{ c.profile.title if c.profile and c.profile.title else '—' }}</td>
+                        <td data-label="Actions" class="cell-stretch">
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                <a href="/profile/{{ c.user.username }}" class="btn btn-outline btn-sm" style="font-size:12px; padding:4px 10px;">View</a>
-                                <a href="/admin/users/{{ c.user.id }}/edit-profile" class="btn btn-outline btn-sm" style="font-size:12px; padding:4px 10px;">Edit</a>
                                 <a href="/messages/{{ c.user.username }}" class="btn btn-sm" style="font-size:12px; padding:4px 10px; background:var(--navy); color:var(--gold); border:none;">Message</a>
                             </div>
                         </td>
