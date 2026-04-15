@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Admin Overview — Collegiate Athletic Planning{% endblock %}
 {% block content %}
+<style>
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-table thead tr { background: var(--gray-50); border-bottom: 1.5px solid var(--gray-200); }
+.admin-table th { text-align: left; padding: 12px 16px; font-weight: 700; color: var(--gray-600); font-size: 11px; text-transform: uppercase; }
+.admin-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+.admin-table tr:last-child td { border-bottom: none; }
+@media (max-width: 768px) {
+  .admin-table thead { display: none; }
+  .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; box-sizing: border-box; }
+  .admin-table tr { background: #fff; border: 1.5px solid var(--gray-200); border-radius: 12px; margin-bottom: 12px; padding: 10px 14px; }
+  .admin-table td { padding: 8px 0 !important; border: none !important; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: right; }
+  .admin-table td::before { content: attr(data-label); font-size: 10px; font-weight: 800; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; text-align: left; }
+  .admin-table td:first-child { border-bottom: 1px solid var(--gray-100) !important; padding-bottom: 10px !important; margin-bottom: 4px; display: block; text-align: left; }
+  .admin-table td:first-child::before { display: none; }
+  .admin-table td.cell-stretch { flex-direction: column; align-items: stretch; gap: 4px; }
+  .admin-table td.cell-stretch::before { text-align: left; }
+}
+</style>
 <div class="container page-top">
     <div class="page-header">
         <div>
@@ -160,38 +178,31 @@
 
         {% if players %}
         <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse;">
+            <table class="admin-table">
                 <thead>
-                    <tr style="background:var(--gray-50); border-bottom:2px solid var(--gray-200);">
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Player</th>
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Email</th>
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">School</th>
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Position</th>
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Class</th>
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Tier</th>
-                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Actions</th>
+                    <tr>
+                        <th>Player</th>
+                        <th>Email</th>
+                        <th>School</th>
+                        <th>Tier</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in players %}
-                    <tr style="border-bottom:1px solid var(--gray-100);">
-                        <td style="padding:12px 16px;">
-                            <div style="font-weight:700; color:var(--navy);">
-                                {% if p.profile and (p.profile.first_name or p.profile.last_name) %}
-                                    {{ p.profile.first_name }} {{ p.profile.last_name }}
-                                {% else %}{{ p.user.username }}{% endif %}
-                            </div>
-                            <div style="font-size:12px; color:var(--gray-400);">@{{ p.user.username }}</div>
+                    <tr>
+                        <td>
+                            <a href="/admin/users/{{ p.user.id }}/edit-profile" style="text-decoration:none;">
+                                <div style="font-weight:700; color:var(--navy);">
+                                    {% if p.profile and (p.profile.first_name or p.profile.last_name) %}
+                                        {{ p.profile.first_name }} {{ p.profile.last_name }}
+                                    {% else %}{{ p.user.username }}{% endif %}
+                                </div>
+                                <div style="font-size:12px; color:var(--gray-400);">@{{ p.user.username }}</div>
+                            </a>
                         </td>
-                        <td style="padding:12px 16px; color:var(--gray-600); font-size:13px;">{{ p.user.email or '—' }}</td>
-                        <td style="padding:12px 16px; color:var(--gray-700); font-weight:500;">{{ p.profile.school if p.profile and p.profile.school else '—' }}</td>
-                        <td style="padding:12px 16px;">
-                            {% if p.profile and p.profile.position %}
-                            <span style="background:#f0b429; color:var(--navy); font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px;">{{ p.profile.position }}</span>
-                            {% else %}<span style="color:var(--gray-400);">—</span>{% endif %}
-                        </td>
-                        <td style="padding:12px 16px; color:var(--gray-600); font-size:13px;">{{ p.profile.year if p.profile and p.profile.year else '—' }}</td>
-                        <td style="padding:12px 16px;">
+                        <td data-label="Email" style="color:var(--gray-600); font-size:13px;">{{ p.user.email or '—' }}</td>
+                        <td data-label="School" style="color:var(--gray-700); font-weight:500;">{{ p.profile.school if p.profile and p.profile.school else '—' }}</td>
+                        <td data-label="Tier" class="cell-stretch">
                             {% set tier = p.user.subscription_tier or 'free' %}
                             <form method="post" action="/admin/users/{{ p.user.id }}/set-tier" style="margin:0;">
                                 <input type="hidden" name="return_to" value="teams">
@@ -203,12 +214,6 @@
                                 </select>
                             </form>
                             {% if not p.user.stripe_subscription_id %}<div style="font-size:9px; color:var(--gray-400); margin-top:3px;">no stripe sub</div>{% endif %}
-                        </td>
-                        <td style="padding:12px 16px;">
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                <a href="/profile/{{ p.user.username }}" class="btn btn-outline btn-sm" style="font-size:11px; padding:4px 10px;">View</a>
-                                <a href="/admin/users/{{ p.user.id }}/edit-profile" class="btn btn-outline btn-sm" style="font-size:11px; padding:4px 10px;">Edit</a>
-                            </div>
                         </td>
                     </tr>
                     {% endfor %}
