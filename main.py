@@ -3307,7 +3307,7 @@ async def admin_marketing_potential_contact(pid: int, request: Request, db: Sess
     if "contact_email" in form:
         pot.contact_email = (form.get("contact_email") or "").strip()[:200]
     if "notes" in form:
-        pot.notes = (form.get("notes") or "").strip()[:1000]
+        pot.notes = (form.get("notes") or "").strip()[:200]
     db.commit()
     return_qs = (form.get("return_qs") or "").strip()
     target = "/admin/marketing"

@@ -315,10 +315,10 @@ function submitPotentialStatus(sel) {
           <input type="hidden" name="return_qs" value="{{ return_qs }}">
           <input type="hidden" name="status" value="{{ p.status or 'never_contacted' }}">
           <div class="row">
-            <input type="text" name="contact_name" value="{{ p.contact_name }}" placeholder="Point of contact name">
-            <input type="email" name="contact_email" value="{{ p.contact_email }}" placeholder="Contact email">
+            <input type="email" name="contact_email" value="{{ p.contact_email or '' }}" placeholder="Contact email" maxlength="200">
+            <input type="text" name="contact_name" value="{{ p.contact_name or '' }}" placeholder="Point of contact name" maxlength="200">
           </div>
-          <textarea name="notes" rows="2" placeholder="Notes (call summary, follow-up, etc.)" style="margin-bottom:8px;">{{ p.notes }}</textarea>
+          <textarea name="notes" rows="2" placeholder="Notes (up to 200 characters)" maxlength="200" style="margin-bottom:8px;">{{ p.notes or '' }}</textarea>
           <button type="submit" class="mk-pot-btn">Save Details</button>
         </form>
       </div>
