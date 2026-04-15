@@ -3024,6 +3024,7 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         if count > 0:
             teams.append({"id": t.id, "name": t.name, "player_count": count})
     PER_PAGE = 10
+    COACH_PER_PAGE = 5
 
     # Coaches pagination
     try:
@@ -3045,9 +3046,9 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
             | (CoachProfile.college.ilike(like))
         )
     total_coaches = coach_query.count()
-    coach_total_pages = max(1, (total_coaches + PER_PAGE - 1) // PER_PAGE)
+    coach_total_pages = max(1, (total_coaches + COACH_PER_PAGE - 1) // COACH_PER_PAGE)
     coach_page = min(coach_page, coach_total_pages)
-    coaches_raw = coach_query.order_by(User.username).offset((coach_page - 1) * PER_PAGE).limit(PER_PAGE).all()
+    coaches_raw = coach_query.order_by(User.username).offset((coach_page - 1) * COACH_PER_PAGE).limit(COACH_PER_PAGE).all()
     coaches = []
     for c in coaches_raw:
         cp = db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()
