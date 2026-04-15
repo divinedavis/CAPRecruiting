@@ -597,6 +597,38 @@ class Notification(Base):
     is_read = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+class MarketingLead(Base):
+    __tablename__ = "marketing_leads"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, default="")
+    email = Column(String, default="", index=True)
+    phone = Column(String, default="")
+    role = Column(String, default="")  # coach / hs_coach / parent / player / partner / other
+    school = Column(String, default="")
+    state = Column(String, default="")
+    division = Column(String, default="")
+    conference = Column(String, default="")
+    stage = Column(String, default="new", index=True)  # new / contacted / responded / demo / onboarded / inactive
+    source = Column(String, default="")  # manual / self_request / coach_account / csv / other
+    tags = Column(String, default="")  # comma-separated
+    notes = Column(Text, default="")
+    last_contacted_at = Column(DateTime, nullable=True)
+    next_followup_at = Column(DateTime, nullable=True, index=True)
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class MarketingActivity(Base):
+    __tablename__ = "marketing_activities"
+    id = Column(Integer, primary_key=True)
+    lead_id = Column(Integer, ForeignKey("marketing_leads.id"), nullable=False, index=True)
+    type = Column(String, default="note")  # email / call / text / meeting / note
+    direction = Column(String, default="out")  # out / in
+    subject = Column(String, default="")
+    body = Column(Text, default="")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
 Base.metadata.create_all(bind=engine)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -2964,6 +2996,393 @@ async def admin_verify_stat(target_id: int, request: Request, db: Session = Depe
     _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
     log_admin_action(db, admin.id, "verify_stat", target_id, action_detail, _ip)
     return RedirectResponse(f"/admin/users/{target_id}/edit-profile", status_code=302)
+
+MARKETING_STAGES = ["new", "contacted", "responded", "demo", "onboarded", "inactive"]
+MARKETING_STAGE_LABELS = {
+    "new": "New",
+    "contacted": "Contacted",
+    "responded": "Responded",
+    "demo": "Demo Scheduled",
+    "onboarded": "Onboarded",
+    "inactive": "Inactive",
+}
+
+
+def _marketing_require_admin(request: Request, db: Session):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None, RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        return None, RedirectResponse("/dashboard", status_code=302)
+    return user, None
+
+
+def _marketing_require_admin_json(request: Request, db: Session):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None, JSONResponse({"error": "Not authorized"}, status_code=403)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        return None, JSONResponse({"error": "Not authorized"}, status_code=403)
+    return user, None
+
+
+def _marketing_bulk_ingest(db: Session):
+    """Create MarketingLead rows for every coach account and every self-request invite that isn't already in the CRM."""
+    existing_emails = {row[0].lower() for row in db.query(MarketingLead.email).all() if row[0]}
+    added = 0
+    # Coach accounts → leads with stage=onboarded
+    coaches = db.query(User).filter(User.role == "coach").all()
+    for c in coaches:
+        if not c.email or c.email.lower() in existing_emails:
+            continue
+        cp = db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()
+        lead = MarketingLead(
+            name=(f"{cp.first_name or ''} {cp.last_name or ''}".strip() if cp else c.username),
+            email=c.email.lower(),
+            phone=(cp.phone if cp else "") or "",
+            role="coach",
+            school=((cp.college or cp.school) if cp else "") or "",
+            division=(cp.division if cp else "") or "",
+            conference=(cp.conference if cp else "") or "",
+            stage="onboarded",
+            source="coach_account",
+            notes="Auto-imported from existing coach account",
+        )
+        db.add(lead)
+        existing_emails.add(c.email.lower())
+        added += 1
+    # Self-request invites → leads with stage=contacted
+    reqs = db.query(CoachInvite).filter(CoachInvite.source == "self_request").all()
+    for inv in reqs:
+        em = (inv.requested_email or "").lower().strip()
+        if not em or em in existing_emails:
+            continue
+        lead = MarketingLead(
+            name="",
+            email=em,
+            role="coach",
+            school=inv.requested_school or "",
+            division=inv.requested_division or "",
+            conference=inv.requested_conference or "",
+            stage="contacted" if inv.used else "new",
+            source="self_request",
+            notes=f"Auto-imported from coach access request (invite id {inv.id})",
+        )
+        db.add(lead)
+        existing_emails.add(em)
+        added += 1
+    if added:
+        db.commit()
+    return added
+
+
+@app.get("/admin/marketing", response_class=HTMLResponse)
+async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    _marketing_bulk_ingest(db)
+
+    stage = (request.query_params.get("stage") or "").strip().lower()
+    source = (request.query_params.get("source") or "").strip()
+    state = (request.query_params.get("state") or "").strip().upper()
+    q = (request.query_params.get("q") or "").strip()
+    tag = (request.query_params.get("tag") or "").strip().lower()
+
+    query = db.query(MarketingLead)
+    if stage and stage in MARKETING_STAGES:
+        query = query.filter(MarketingLead.stage == stage)
+    if source:
+        query = query.filter(MarketingLead.source == source)
+    if state:
+        query = query.filter(MarketingLead.state == state)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (MarketingLead.name.ilike(like))
+            | (MarketingLead.email.ilike(like))
+            | (MarketingLead.school.ilike(like))
+        )
+    if tag:
+        query = query.filter(MarketingLead.tags.ilike(f"%{tag}%"))
+    leads = query.order_by(MarketingLead.updated_at.desc()).limit(500).all()
+
+    all_leads = db.query(MarketingLead).all()
+    stage_counts = {s: 0 for s in MARKETING_STAGES}
+    for l in all_leads:
+        if l.stage in stage_counts:
+            stage_counts[l.stage] += 1
+
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    activities_this_week = db.query(MarketingActivity).filter(MarketingActivity.created_at >= week_ago).count()
+    signed_up_this_week = db.query(MarketingLead).filter(
+        MarketingLead.stage == "onboarded",
+        MarketingLead.updated_at >= week_ago,
+    ).count()
+    responded_count = stage_counts.get("responded", 0) + stage_counts.get("demo", 0) + stage_counts.get("onboarded", 0)
+    contacted_denom = responded_count + stage_counts.get("contacted", 0)
+    response_rate = (responded_count / contacted_denom * 100.0) if contacted_denom else 0.0
+
+    due_followups = db.query(MarketingLead).filter(
+        MarketingLead.next_followup_at != None,
+        MarketingLead.next_followup_at <= now,
+        MarketingLead.stage != "inactive",
+    ).order_by(MarketingLead.next_followup_at.asc()).limit(20).all()
+
+    distinct_sources = sorted({l.source for l in all_leads if l.source})
+    distinct_states = sorted({l.state for l in all_leads if l.state})
+    admin_list = db.query(User).filter(User.is_admin == True).all()
+
+    return templates.TemplateResponse("marketing_dashboard.html", {
+        "request": request,
+        "user": user,
+        "leads": leads,
+        "total_leads": len(all_leads),
+        "stage_counts": stage_counts,
+        "stage_labels": MARKETING_STAGE_LABELS,
+        "activities_this_week": activities_this_week,
+        "signed_up_this_week": signed_up_this_week,
+        "response_rate": response_rate,
+        "due_followups": due_followups,
+        "distinct_sources": distinct_sources,
+        "distinct_states": distinct_states,
+        "admin_list": admin_list,
+        "filter_stage": stage,
+        "filter_source": source,
+        "filter_state": state,
+        "filter_q": q,
+        "filter_tag": tag,
+        "stages": MARKETING_STAGES,
+    })
+
+
+@app.post("/admin/marketing/leads/create")
+async def admin_marketing_create(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    form = await request.form()
+    email = (form.get("email") or "").strip().lower()
+    if not email:
+        return RedirectResponse("/admin/marketing?error=email_required", status_code=302)
+    existing = db.query(MarketingLead).filter(MarketingLead.email == email).first()
+    if existing:
+        return RedirectResponse(f"/admin/marketing/leads/{existing.id}", status_code=302)
+    lead = MarketingLead(
+        name=(form.get("name") or "").strip()[:200],
+        email=email[:200],
+        phone=(form.get("phone") or "").strip()[:50],
+        role=(form.get("role") or "").strip()[:50],
+        school=(form.get("school") or "").strip()[:200],
+        state=(form.get("state") or "").strip().upper()[:10],
+        division=(form.get("division") or "").strip()[:50],
+        conference=(form.get("conference") or "").strip()[:100],
+        stage=(form.get("stage") or "new").strip().lower()[:20],
+        source=(form.get("source") or "manual").strip()[:50],
+        tags=(form.get("tags") or "").strip()[:500],
+        notes=(form.get("notes") or "").strip()[:5000],
+    )
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+    return RedirectResponse(f"/admin/marketing/leads/{lead.id}", status_code=302)
+
+
+@app.get("/admin/marketing/leads/{lead_id}", response_class=HTMLResponse)
+async def admin_marketing_lead_detail(lead_id: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    lead = db.query(MarketingLead).filter(MarketingLead.id == lead_id).first()
+    if not lead:
+        return RedirectResponse("/admin/marketing", status_code=302)
+    activities = db.query(MarketingActivity).filter(
+        MarketingActivity.lead_id == lead_id,
+    ).order_by(MarketingActivity.created_at.desc()).limit(200).all()
+    admin_by_id = {u.id: u.username for u in db.query(User).filter(User.is_admin == True).all()}
+    admin_list = db.query(User).filter(User.is_admin == True).all()
+    return templates.TemplateResponse("marketing_lead.html", {
+        "request": request,
+        "user": user,
+        "lead": lead,
+        "activities": activities,
+        "admin_by_id": admin_by_id,
+        "admin_list": admin_list,
+        "stages": MARKETING_STAGES,
+        "stage_labels": MARKETING_STAGE_LABELS,
+    })
+
+
+@app.post("/admin/marketing/leads/{lead_id}/update")
+async def admin_marketing_lead_update(lead_id: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    lead = db.query(MarketingLead).filter(MarketingLead.id == lead_id).first()
+    if not lead:
+        return RedirectResponse("/admin/marketing", status_code=302)
+    form = await request.form()
+    lead.name = (form.get("name") or "").strip()[:200]
+    lead.email = (form.get("email") or "").strip().lower()[:200]
+    lead.phone = (form.get("phone") or "").strip()[:50]
+    lead.role = (form.get("role") or "").strip()[:50]
+    lead.school = (form.get("school") or "").strip()[:200]
+    lead.state = (form.get("state") or "").strip().upper()[:10]
+    lead.division = (form.get("division") or "").strip()[:50]
+    lead.conference = (form.get("conference") or "").strip()[:100]
+    stage = (form.get("stage") or "new").strip().lower()[:20]
+    if stage in MARKETING_STAGES:
+        lead.stage = stage
+    lead.source = (form.get("source") or "").strip()[:50]
+    lead.tags = (form.get("tags") or "").strip()[:500]
+    lead.notes = (form.get("notes") or "").strip()[:5000]
+    assigned = (form.get("assigned_to") or "").strip()
+    lead.assigned_to = int(assigned) if assigned.isdigit() else None
+    followup = (form.get("next_followup_at") or "").strip()
+    if followup:
+        try:
+            lead.next_followup_at = datetime.strptime(followup, "%Y-%m-%d")
+        except ValueError:
+            pass
+    else:
+        lead.next_followup_at = None
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/leads/{lead_id}", status_code=302)
+
+
+@app.post("/admin/marketing/leads/{lead_id}/activity")
+async def admin_marketing_lead_activity(lead_id: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    lead = db.query(MarketingLead).filter(MarketingLead.id == lead_id).first()
+    if not lead:
+        return RedirectResponse("/admin/marketing", status_code=302)
+    form = await request.form()
+    activity = MarketingActivity(
+        lead_id=lead_id,
+        type=(form.get("type") or "note").strip().lower()[:20],
+        direction=(form.get("direction") or "out").strip().lower()[:10],
+        subject=(form.get("subject") or "").strip()[:500],
+        body=(form.get("body") or "").strip()[:10000],
+        created_by=user.id,
+    )
+    db.add(activity)
+    lead.last_contacted_at = datetime.utcnow()
+    if lead.stage == "new":
+        lead.stage = "contacted"
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/leads/{lead_id}", status_code=302)
+
+
+@app.post("/admin/marketing/leads/{lead_id}/send-email")
+async def admin_marketing_send_email(lead_id: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    lead = db.query(MarketingLead).filter(MarketingLead.id == lead_id).first()
+    if not lead or not lead.email:
+        return RedirectResponse("/admin/marketing", status_code=302)
+    form = await request.form()
+    subject = (form.get("subject") or "").strip()[:500]
+    body = (form.get("body") or "").strip()[:20000]
+    if not subject or not body:
+        return RedirectResponse(f"/admin/marketing/leads/{lead_id}?error=email_missing_fields", status_code=302)
+    # Queue send
+    async def _do_send():
+        try:
+            import aiosmtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+            msg["To"] = lead.email
+            html_body = body.replace("\n", "<br>")
+            msg.attach(MIMEText(html_body, "html"))
+            await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+        except Exception as e:
+            _logger.warning("Marketing email send failed: %s", type(e).__name__)
+    asyncio.create_task(_do_send())
+    # Log activity
+    act = MarketingActivity(
+        lead_id=lead_id,
+        type="email",
+        direction="out",
+        subject=subject,
+        body=body,
+        created_by=user.id,
+    )
+    db.add(act)
+    lead.last_contacted_at = datetime.utcnow()
+    if lead.stage == "new":
+        lead.stage = "contacted"
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/leads/{lead_id}?sent=1", status_code=302)
+
+
+@app.post("/admin/marketing/leads/{lead_id}/delete")
+async def admin_marketing_lead_delete(lead_id: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    lead = db.query(MarketingLead).filter(MarketingLead.id == lead_id).first()
+    if not lead:
+        return RedirectResponse("/admin/marketing", status_code=302)
+    db.query(MarketingActivity).filter(MarketingActivity.lead_id == lead_id).delete()
+    db.delete(lead)
+    db.commit()
+    return RedirectResponse("/admin/marketing", status_code=302)
+
+
+@app.post("/admin/marketing/leads/import")
+async def admin_marketing_import(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    form = await request.form()
+    raw = (form.get("csv") or "").strip()
+    if not raw:
+        return RedirectResponse("/admin/marketing?error=csv_empty", status_code=302)
+    reader = csv.DictReader(io.StringIO(raw))
+    added = 0
+    updated = 0
+    for row in reader:
+        email = (row.get("email") or row.get("Email") or "").strip().lower()
+        if not email:
+            continue
+        existing = db.query(MarketingLead).filter(MarketingLead.email == email).first()
+        fields = {
+            "name": (row.get("name") or row.get("Name") or "").strip()[:200],
+            "phone": (row.get("phone") or row.get("Phone") or "").strip()[:50],
+            "role": (row.get("role") or row.get("Role") or "").strip().lower()[:50],
+            "school": (row.get("school") or row.get("School") or "").strip()[:200],
+            "state": (row.get("state") or row.get("State") or "").strip().upper()[:10],
+            "division": (row.get("division") or row.get("Division") or "").strip()[:50],
+            "conference": (row.get("conference") or row.get("Conference") or "").strip()[:100],
+            "tags": (row.get("tags") or row.get("Tags") or "").strip()[:500],
+            "notes": (row.get("notes") or row.get("Notes") or "").strip()[:5000],
+        }
+        if existing:
+            for k, v in fields.items():
+                if v:
+                    setattr(existing, k, v)
+            updated += 1
+        else:
+            lead = MarketingLead(
+                email=email,
+                stage="new",
+                source="csv",
+                **fields,
+            )
+            db.add(lead)
+            added += 1
+    db.commit()
+    return RedirectResponse(f"/admin/marketing?imported={added}&updated={updated}", status_code=302)
+
 
 @app.get("/admin/invites", response_class=HTMLResponse)
 async def admin_invites_get(request: Request, db: Session = Depends(get_db)):

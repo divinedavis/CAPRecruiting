@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.name or lead.email }} — Marketing CRM{% endblock %}
+{% block content %}
+<style>
+.ml-page { max-width: 1000px; margin: 0 auto; padding: 24px; }
+.ml-h1 { font-size: 24px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.ml-sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
+.ml-section { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+.ml-section h2 { font-size: 14px; font-weight: 800; color: #0a1628; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1.5px solid #e5e7eb; }
+.ml-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.ml-field { display: flex; flex-direction: column; gap: 4px; }
+.ml-field label { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.ml-field input, .ml-field select, .ml-field textarea { padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+.ml-field textarea { font-family: inherit; resize: vertical; }
+.ml-btn { padding: 10px 20px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; }
+.ml-btn-danger { background: #dc2626; }
+.ml-btn-outline { background: #fff; color: #0a1628; border: 1.5px solid #e5e7eb; }
+.ml-timeline { border-left: 2px solid #e5e7eb; padding-left: 16px; }
+.ml-activity { position: relative; margin-bottom: 16px; padding-left: 4px; }
+.ml-activity::before { content: ''; position: absolute; left: -22px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #0a1628; }
+.ml-activity.email::before { background: #2563eb; }
+.ml-activity.call::before { background: #16a34a; }
+.ml-activity.text::before { background: #f0b429; }
+.ml-activity.meeting::before { background: #7c3aed; }
+.ml-act-type { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.ml-act-subject { font-size: 14px; font-weight: 700; color: #0a1628; margin-top: 2px; }
+.ml-act-body { font-size: 13px; color: #4b5563; margin-top: 4px; white-space: pre-wrap; }
+.ml-act-meta { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.ml-stage-pill { display: inline-block; padding: 3px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; border-radius: 12px; letter-spacing: .04em; margin-left: 8px; }
+.ml-stage-new { background: #dbeafe; color: #1d4ed8; }
+.ml-stage-contacted { background: #fef3c7; color: #92400e; }
+.ml-stage-responded { background: #e0e7ff; color: #4338ca; }
+.ml-stage-demo { background: #dcfce7; color: #166534; }
+.ml-stage-onboarded { background: #d1fae5; color: #065f46; }
+.ml-stage-inactive { background: #f3f4f6; color: #6b7280; }
+.ml-nav { display: flex; gap: 10px; margin-bottom: 16px; }
+</style>
+
+<div class="ml-page">
+  <div class="ml-nav">
+    <a href="/admin/marketing" class="ml-btn ml-btn-outline" style="text-decoration:none;">← All Leads</a>
+  </div>
+
+  <h1 class="ml-h1">
+    {{ lead.name or lead.email }}
+    <span class="ml-stage-pill ml-stage-{{ lead.stage }}">{{ stage_labels[lead.stage] if lead.stage in stage_labels else lead.stage }}</span>
+  </h1>
+  <p class="ml-sub">
+    {{ lead.email }}
+    {% if lead.phone %} · {{ lead.phone }}{% endif %}
+    {% if lead.school %} · {{ lead.school }}{% endif %}
+    · Added {{ lead.created_at.strftime('%Y-%m-%d') }}
+  </p>
+
+  {% if request.query_params.get('sent') %}
+  <div style="background:#dcfce7; border:1.5px solid #86efac; border-radius:10px; padding:12px 16px; margin-bottom:16px; color:#166534; font-weight:600; font-size:13px;">✅ Email sent and logged.</div>
+  {% endif %}
+
+  <div class="ml-section">
+    <h2>Details</h2>
+    <form method="post" action="/admin/marketing/leads/{{ lead.id }}/update">
+      <div class="ml-grid">
+        <div class="ml-field">
+          <label>Name</label>
+          <input type="text" name="name" value="{{ lead.name }}">
+        </div>
+        <div class="ml-field">
+          <label>Email</label>
+          <input type="email" name="email" value="{{ lead.email }}">
+        </div>
+        <div class="ml-field">
+          <label>Phone</label>
+          <input type="text" name="phone" value="{{ lead.phone }}">
+        </div>
+        <div class="ml-field">
+          <label>Role</label>
+          <select name="role">
+            <option value="">—</option>
+            {% for v, l in [('coach','College Coach'),('hs_coach','HS Coach'),('parent','Parent'),('player','Player'),('partner','Partner'),('other','Other')] %}
+            <option value="{{ v }}"{% if lead.role == v %} selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ml-field">
+          <label>School</label>
+          <input type="text" name="school" value="{{ lead.school }}">
+        </div>
+        <div class="ml-field">
+          <label>State</label>
+          <input type="text" name="state" value="{{ lead.state }}" maxlength="2">
+        </div>
+        <div class="ml-field">
+          <label>Division</label>
+          <input type="text" name="division" value="{{ lead.division }}">
+        </div>
+        <div class="ml-field">
+          <label>Conference</label>
+          <input type="text" name="conference" value="{{ lead.conference }}">
+        </div>
+        <div class="ml-field">
+          <label>Stage</label>
+          <select name="stage">
+            {% for s in stages %}<option value="{{ s }}"{% if lead.stage == s %} selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ml-field">
+          <label>Source</label>
+          <input type="text" name="source" value="{{ lead.source }}">
+        </div>
+        <div class="ml-field">
+          <label>Tags</label>
+          <input type="text" name="tags" value="{{ lead.tags }}" placeholder="comma,separated">
+        </div>
+        <div class="ml-field">
+          <label>Assigned To</label>
+          <select name="assigned_to">
+            <option value="">—</option>
+            {% for a in admin_list %}
+            <option value="{{ a.id }}"{% if lead.assigned_to == a.id %} selected{% endif %}>{{ a.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ml-field">
+          <label>Next Follow-up</label>
+          <input type="date" name="next_followup_at" value="{{ lead.next_followup_at.strftime('%Y-%m-%d') if lead.next_followup_at else '' }}">
+        </div>
+      </div>
+      <div class="ml-field" style="margin-top:12px;">
+        <label>Notes</label>
+        <textarea name="notes" rows="3">{{ lead.notes }}</textarea>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button type="submit" class="ml-btn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="ml-section">
+    <h2>Send Email</h2>
+    <form method="post" action="/admin/marketing/leads/{{ lead.id }}/send-email">
+      <div class="ml-field">
+        <label>To</label>
+        <input type="email" value="{{ lead.email }}" disabled>
+      </div>
+      <div class="ml-field" style="margin-top:10px;">
+        <label>Subject</label>
+        <input type="text" name="subject" placeholder="Follow-up from CAP Recruiting" required>
+      </div>
+      <div class="ml-field" style="margin-top:10px;">
+        <label>Body</label>
+        <textarea name="body" rows="8" required placeholder="Hi {{ lead.name or 'Coach' }},&#10;&#10;..."></textarea>
+      </div>
+      <button type="submit" class="ml-btn" style="margin-top:12px;">Send Email</button>
+      <span style="margin-left:10px; font-size:11px; color:#9ca3af;">Sends from notifications@caprecruiting.com and auto-logs as an activity.</span>
+    </form>
+  </div>
+
+  <div class="ml-section">
+    <h2>Log Activity</h2>
+    <form method="post" action="/admin/marketing/leads/{{ lead.id }}/activity">
+      <div class="ml-grid">
+        <div class="ml-field">
+          <label>Type</label>
+          <select name="type">
+            <option value="note">Note</option>
+            <option value="email">Email</option>
+            <option value="call">Call</option>
+            <option value="text">Text / DM</option>
+            <option value="meeting">Meeting</option>
+          </select>
+        </div>
+        <div class="ml-field">
+          <label>Direction</label>
+          <select name="direction">
+            <option value="out">Outbound</option>
+            <option value="in">Inbound</option>
+          </select>
+        </div>
+        <div class="ml-field" style="grid-column: span 2;">
+          <label>Subject</label>
+          <input type="text" name="subject" placeholder="Short description">
+        </div>
+      </div>
+      <div class="ml-field" style="margin-top:10px;">
+        <label>Notes</label>
+        <textarea name="body" rows="4" placeholder="What happened?"></textarea>
+      </div>
+      <button type="submit" class="ml-btn" style="margin-top:12px;">Log Activity</button>
+    </form>
+  </div>
+
+  <div class="ml-section">
+    <h2>Activity Timeline</h2>
+    {% if activities %}
+    <div class="ml-timeline">
+      {% for a in activities %}
+      <div class="ml-activity {{ a.type }}">
+        <div class="ml-act-type">{{ a.type }} · {{ 'outbound' if a.direction == 'out' else 'inbound' }}</div>
+        {% if a.subject %}<div class="ml-act-subject">{{ a.subject }}</div>{% endif %}
+        {% if a.body %}<div class="ml-act-body">{{ a.body }}</div>{% endif %}
+        <div class="ml-act-meta">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }} UTC{% if a.created_by and a.created_by in admin_by_id %} · by {{ admin_by_id[a.created_by] }}{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#9ca3af; font-size:13px; padding:16px 0; text-align:center;">No activities logged yet. Log your first interaction above.</p>
+    {% endif %}
+  </div>
+
+  <div class="ml-section">
+    <h2>Danger Zone</h2>
+    <form method="post" action="/admin/marketing/leads/{{ lead.id }}/delete" onsubmit="return confirm('Delete this lead and all its activities? This cannot be undone.');">
+      <button type="submit" class="ml-btn ml-btn-danger">Delete Lead</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

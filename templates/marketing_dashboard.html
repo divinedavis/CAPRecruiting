@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Marketing CRM — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.mk-page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.mk-h1 { font-size: 28px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.mk-sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
+.mk-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.mk-metric { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 14px 16px; }
+.mk-metric .lbl { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.mk-metric .val { font-size: 24px; font-weight: 800; color: #0a1628; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.mk-metric .sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.mk-section { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+.mk-section h2 { font-size: 15px; font-weight: 800; color: #0a1628; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1.5px solid #e5e7eb; }
+.mk-pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.mk-pipe a { display: block; text-decoration: none; padding: 12px 10px; border: 1.5px solid #e5e7eb; border-radius: 10px; color: #0a1628; text-align: center; }
+.mk-pipe a.active { background: #0a1628; color: #fff; border-color: #0a1628; }
+.mk-pipe .n { font-size: 20px; font-weight: 800; }
+.mk-pipe .l { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+.mk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mk-table th { text-align: left; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; padding: 8px 6px; border-bottom: 1.5px solid #e5e7eb; }
+.mk-table td { padding: 10px 6px; border-bottom: 1px solid #f3f4f6; color: #0a1628; }
+.mk-table tr:hover td { background: #f9fafb; }
+.mk-table a { color: #0a1628; font-weight: 600; text-decoration: none; }
+.mk-table a:hover { text-decoration: underline; }
+.mk-stage-pill { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; border-radius: 10px; letter-spacing: .04em; }
+.mk-stage-new { background: #dbeafe; color: #1d4ed8; }
+.mk-stage-contacted { background: #fef3c7; color: #92400e; }
+.mk-stage-responded { background: #e0e7ff; color: #4338ca; }
+.mk-stage-demo { background: #dcfce7; color: #166534; }
+.mk-stage-onboarded { background: #d1fae5; color: #065f46; }
+.mk-stage-inactive { background: #f3f4f6; color: #6b7280; }
+.mk-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+.mk-filters .fg { display: flex; flex-direction: column; gap: 4px; }
+.mk-filters label { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.mk-filters input, .mk-filters select { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; min-width: 130px; font-size: 13px; }
+.mk-filters button { padding: 8px 16px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; }
+.mk-filters a.reset { padding: 8px 14px; background: #f3f4f6; color: #0a1628; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 12px; border: 1.5px solid #e5e7eb; }
+.mk-new-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.mk-new-form input, .mk-new-form select, .mk-new-form textarea { padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+.mk-btn-primary { padding: 10px 20px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; }
+.mk-due { background: #fef3c7; border: 1.5px solid #f0b429; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+.mk-due a { color: #92400e; font-weight: 700; text-decoration: none; }
+</style>
+
+<div class="mk-page">
+  <h1 class="mk-h1">Marketing CRM</h1>
+  <p class="mk-sub">{{ total_leads }} lead{% if total_leads != 1 %}s{% endif %} · tracking every outreach touch</p>
+
+  <div class="mk-metrics">
+    <div class="mk-metric">
+      <div class="lbl">Total Leads</div>
+      <div class="val">{{ total_leads }}</div>
+    </div>
+    <div class="mk-metric">
+      <div class="lbl">Activities (7d)</div>
+      <div class="val">{{ activities_this_week }}</div>
+      <div class="sub">outbound + inbound</div>
+    </div>
+    <div class="mk-metric">
+      <div class="lbl">Onboarded (7d)</div>
+      <div class="val">{{ signed_up_this_week }}</div>
+    </div>
+    <div class="mk-metric">
+      <div class="lbl">Response Rate</div>
+      <div class="val">{{ "%.0f"|format(response_rate) }}%</div>
+      <div class="sub">responded ÷ contacted</div>
+    </div>
+    <div class="mk-metric">
+      <div class="lbl">Due Follow-ups</div>
+      <div class="val">{{ due_followups|length }}</div>
+    </div>
+  </div>
+
+  <div class="mk-section">
+    <h2>Pipeline</h2>
+    <div class="mk-pipe">
+      {% for s in stages %}
+      <a href="?stage={{ s }}" class="{% if filter_stage == s %}active{% endif %}">
+        <div class="n">{{ stage_counts[s] }}</div>
+        <div class="l">{{ stage_labels[s] }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if due_followups %}
+  <div class="mk-section">
+    <h2>Due Follow-ups</h2>
+    {% for lead in due_followups %}
+    <div class="mk-due">
+      <div>
+        <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
+        <span style="color:#6b7280; font-size:12px; margin-left:8px;">{{ lead.school or '—' }}{% if lead.role %} · {{ lead.role }}{% endif %}</span>
+      </div>
+      <div style="font-size:11px; color:#92400e; font-weight:700;">Due {{ lead.next_followup_at.strftime('%Y-%m-%d') }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="mk-section">
+    <h2>New Lead</h2>
+    <form method="post" action="/admin/marketing/leads/create">
+      <div class="mk-new-form">
+        <input type="text" name="name" placeholder="Name">
+        <input type="email" name="email" placeholder="Email (required)" required>
+        <input type="text" name="phone" placeholder="Phone">
+        <select name="role">
+          <option value="">Role</option>
+          <option value="coach">College Coach</option>
+          <option value="hs_coach">HS Coach</option>
+          <option value="parent">Parent</option>
+          <option value="player">Player</option>
+          <option value="partner">Partner</option>
+          <option value="other">Other</option>
+        </select>
+        <input type="text" name="school" placeholder="School">
+        <input type="text" name="state" placeholder="State (2-letter)" maxlength="2">
+        <input type="text" name="division" placeholder="Division">
+        <input type="text" name="conference" placeholder="Conference">
+        <select name="stage">
+          {% for s in stages %}<option value="{{ s }}">{{ stage_labels[s] }}</option>{% endfor %}
+        </select>
+        <input type="text" name="source" placeholder="Source (e.g. manual)">
+        <input type="text" name="tags" placeholder="Tags (comma-separated)">
+        <input type="text" name="notes" placeholder="Notes">
+      </div>
+      <button type="submit" class="mk-btn-primary">Add Lead</button>
+    </form>
+  </div>
+
+  <div class="mk-section">
+    <h2>Bulk Import (CSV)</h2>
+    <form method="post" action="/admin/marketing/leads/import">
+      <p style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">Paste CSV with headers. Required: <code>email</code>. Optional: name, phone, role, school, state, division, conference, tags, notes. Upserts by email.</p>
+      <textarea name="csv" rows="6" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; font-family:monospace; font-size:12px; box-sizing:border-box;" placeholder="name,email,phone,school,state,division,conference&#10;Jane Doe,jane@example.edu,555-0100,Kent State,OH,D1,MAC"></textarea>
+      <button type="submit" class="mk-btn-primary" style="margin-top:10px;">Import</button>
+    </form>
+  </div>
+
+  <div class="mk-section">
+    <h2>Leads</h2>
+    <form method="get" class="mk-filters">
+      <div class="fg">
+        <label>Search</label>
+        <input type="text" name="q" value="{{ filter_q }}" placeholder="name / email / school">
+      </div>
+      <div class="fg">
+        <label>Stage</label>
+        <select name="stage">
+          <option value="">All</option>
+          {% for s in stages %}<option value="{{ s }}"{% if filter_stage == s %} selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Source</label>
+        <select name="source">
+          <option value="">All</option>
+          {% for s in distinct_sources %}<option value="{{ s }}"{% if filter_source == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>State</label>
+        <select name="state">
+          <option value="">All</option>
+          {% for s in distinct_states %}<option value="{{ s }}"{% if filter_state == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Tag</label>
+        <input type="text" name="tag" value="{{ filter_tag }}" placeholder="tag name">
+      </div>
+      <button type="submit">Apply</button>
+      <a href="/admin/marketing" class="reset">Reset</a>
+    </form>
+
+    {% if leads %}
+    <div style="overflow-x:auto;">
+    <table class="mk-table">
+      <thead>
+        <tr>
+          <th>Name / Email</th>
+          <th>School</th>
+          <th>Role</th>
+          <th>Stage</th>
+          <th>Source</th>
+          <th>Last Contact</th>
+          <th>Follow-up</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td>
+            <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
+            {% if lead.name %}<div style="font-size:11px; color:#9ca3af;">{{ lead.email }}</div>{% endif %}
+          </td>
+          <td>{{ lead.school or '—' }}</td>
+          <td>{{ lead.role or '—' }}</td>
+          <td><span class="mk-stage-pill mk-stage-{{ lead.stage }}">{{ stage_labels[lead.stage] if lead.stage in stage_labels else lead.stage }}</span></td>
+          <td>{{ lead.source or '—' }}</td>
+          <td>{{ lead.last_contacted_at.strftime('%Y-%m-%d') if lead.last_contacted_at else '—' }}</td>
+          <td>{{ lead.next_followup_at.strftime('%Y-%m-%d') if lead.next_followup_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#9ca3af; font-size:13px; text-align:center; padding:32px;">No leads match your filters.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
