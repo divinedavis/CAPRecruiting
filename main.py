@@ -3595,6 +3595,8 @@ async def admin_generate_open_bypass(request: Request, db: Session = Depends(get
     db.commit()
     site_url = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
     link = f"{site_url}/join/{token}"
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "generate_open_bypass", None, f"token={token[:8]}...", _ip)
     return RedirectResponse(f"/admin/invites?bypass_link={link}", status_code=302)
 
 
