@@ -2808,11 +2808,49 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
     for c in coaches_raw:
         cp = db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()
         coaches.append({"user": c, "profile": cp})
+
+    # Players pagination
+    PER_PAGE = 10
+    try:
+        player_page = max(1, int(request.query_params.get("player_page", "1")))
+    except ValueError:
+        player_page = 1
+    player_q = (request.query_params.get("player_q") or "").strip()
+    player_tier = (request.query_params.get("player_tier") or "").strip().lower()
+    player_query = db.query(User).filter(User.role == "player")
+    if player_tier in ("free", "essentials", "advanced", "premium"):
+        player_query = player_query.filter(User.subscription_tier == player_tier)
+    if player_q:
+        like = f"%{player_q}%"
+        player_query = player_query.outerjoin(
+            PlayerProfile, PlayerProfile.user_id == User.id
+        ).filter(
+            (User.username.ilike(like))
+            | (User.email.ilike(like))
+            | (PlayerProfile.first_name.ilike(like))
+            | (PlayerProfile.last_name.ilike(like))
+            | (PlayerProfile.school.ilike(like))
+        )
+    total_players = player_query.count()
+    total_pages = max(1, (total_players + PER_PAGE - 1) // PER_PAGE)
+    player_page = min(player_page, total_pages)
+    player_users = player_query.order_by(User.created_at.desc()).offset((player_page - 1) * PER_PAGE).limit(PER_PAGE).all()
+    players = []
+    for p in player_users:
+        prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
+        players.append({"user": p, "profile": prof})
+
     unread_count = unread_sender_count(db, user_id)
     return templates.TemplateResponse("admin_teams.html", {
         "request": request, "user": user,
         "teams": teams, "coaches": coaches, "unread_count": unread_count,
         "success": False, "error": None,
+        "players": players,
+        "total_players": total_players,
+        "player_page": player_page,
+        "total_pages": total_pages,
+        "player_q": player_q,
+        "player_tier": player_tier,
     })
 
 @app.post("/admin/teams/create", response_class=HTMLResponse)
@@ -2826,23 +2864,13 @@ async def admin_teams_create(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     name = form.get("name", "").strip()
 
-    def render(success, error):
-        teams_raw = db.query(Team).order_by(Team.name).all()
-        teams = [{"id": t.id, "name": t.name, "player_count": db.query(PlayerProfile).filter(PlayerProfile.team_id == t.id).count()} for t in teams_raw]
-        coaches_raw = db.query(User).filter(User.role == "coach").order_by(User.username).all()
-        coaches = [{"user": c, "profile": db.query(CoachProfile).filter(CoachProfile.user_id == c.id).first()} for c in coaches_raw]
-        return templates.TemplateResponse("admin_teams.html", {
-            "request": request, "user": user, "teams": teams, "coaches": coaches,
-            "unread_count": unread_sender_count(db, user_id), "success": success, "error": error
-        })
-
     if not name:
-        return render(False, "Team name cannot be empty.")
+        return RedirectResponse("/admin/teams?error=empty_name", status_code=302)
     if db.query(Team).filter(Team.name == name).first():
-        return render(False, f'A team named "{name}" already exists.')
+        return RedirectResponse("/admin/teams?error=duplicate", status_code=302)
     db.add(Team(name=name))
     db.commit()
-    return render(True, None)
+    return RedirectResponse("/admin/teams?success=1", status_code=302)
 
 @app.get("/admin/users/{target_id}/edit-profile", response_class=HTMLResponse)
 async def admin_edit_profile_get(target_id: int, request: Request, db: Session = Depends(get_db)):

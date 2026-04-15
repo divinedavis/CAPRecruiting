@@ -108,5 +108,115 @@
         <p style="color:var(--gray-400); font-size:14px;">No coaches have signed up yet.</p>
         {% endif %}
     </div>
+
+    <div style="background:var(--white); border-radius:var(--radius-lg); padding:32px; box-shadow:var(--shadow); margin-bottom:24px;">
+        <h2 style="margin-top:0;">Players <span style="font-size:14px; font-weight:400; color:var(--gray-400); margin-left:8px;">{{ total_players }} total</span></h2>
+
+        <form method="get" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:11px; font-weight:700; color:var(--gray-400); text-transform:uppercase;">Search</label>
+                <input type="text" name="player_q" value="{{ player_q }}" placeholder="name / email / school" style="padding:8px 12px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; min-width:220px;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:11px; font-weight:700; color:var(--gray-400); text-transform:uppercase;">Tier</label>
+                <select name="player_tier" style="padding:8px 12px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px;">
+                    <option value="">All tiers</option>
+                    <option value="free"{% if player_tier == 'free' %} selected{% endif %}>Free</option>
+                    <option value="essentials"{% if player_tier == 'essentials' %} selected{% endif %}>Essentials</option>
+                    <option value="advanced"{% if player_tier == 'advanced' %} selected{% endif %}>Advanced</option>
+                    <option value="premium"{% if player_tier == 'premium' %} selected{% endif %}>Premium</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="padding:8px 18px;">Apply</button>
+            <a href="/admin/teams" class="btn btn-outline btn-sm" style="padding:8px 18px;">Reset</a>
+        </form>
+
+        {% if players %}
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:var(--gray-50); border-bottom:2px solid var(--gray-200);">
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Player</th>
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Email</th>
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">School</th>
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Position</th>
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Class</th>
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Tier</th>
+                        <th style="text-align:left; padding:12px 16px; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in players %}
+                    <tr style="border-bottom:1px solid var(--gray-100);">
+                        <td style="padding:12px 16px;">
+                            <div style="font-weight:700; color:var(--navy);">
+                                {% if p.profile and (p.profile.first_name or p.profile.last_name) %}
+                                    {{ p.profile.first_name }} {{ p.profile.last_name }}
+                                {% else %}{{ p.user.username }}{% endif %}
+                            </div>
+                            <div style="font-size:12px; color:var(--gray-400);">@{{ p.user.username }}</div>
+                        </td>
+                        <td style="padding:12px 16px; color:var(--gray-600); font-size:13px;">{{ p.user.email or '—' }}</td>
+                        <td style="padding:12px 16px; color:var(--gray-700); font-weight:500;">{{ p.profile.school if p.profile and p.profile.school else '—' }}</td>
+                        <td style="padding:12px 16px;">
+                            {% if p.profile and p.profile.position %}
+                            <span style="background:#f0b429; color:var(--navy); font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px;">{{ p.profile.position }}</span>
+                            {% else %}<span style="color:var(--gray-400);">—</span>{% endif %}
+                        </td>
+                        <td style="padding:12px 16px; color:var(--gray-600); font-size:13px;">{{ p.profile.year if p.profile and p.profile.year else '—' }}</td>
+                        <td style="padding:12px 16px;">
+                            {% set tier = p.user.subscription_tier or 'free' %}
+                            {% if tier == 'premium' %}
+                            <span style="background:#d1fae5; color:#065f46; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Premium</span>
+                            {% elif tier == 'advanced' %}
+                            <span style="background:#e0e7ff; color:#4338ca; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Advanced</span>
+                            {% elif tier == 'essentials' %}
+                            <span style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Essentials</span>
+                            {% else %}
+                            <span style="background:#f3f4f6; color:#6b7280; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px; text-transform:uppercase;">Free</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:12px 16px;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <a href="/profile/{{ p.user.username }}" class="btn btn-outline btn-sm" style="font-size:11px; padding:4px 10px;">View</a>
+                                <a href="/admin/users/{{ p.user.id }}/edit-profile" class="btn btn-outline btn-sm" style="font-size:11px; padding:4px 10px;">Edit</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div style="display:flex; gap:6px; justify-content:center; margin-top:20px; align-items:center; flex-wrap:wrap;">
+            {% set qs_base = '?player_q=' ~ player_q ~ '&player_tier=' ~ player_tier ~ '&player_page=' %}
+            {% if player_page > 1 %}
+            <a href="{{ qs_base }}{{ player_page - 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">← Prev</a>
+            {% endif %}
+            {% set start_page = [1, player_page - 2]|max %}
+            {% set end_page = [total_pages, start_page + 4]|min %}
+            {% if start_page > 1 %}
+            <a href="{{ qs_base }}1" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">1</a>
+            {% if start_page > 2 %}<span style="color:var(--gray-400);">…</span>{% endif %}
+            {% endif %}
+            {% for pg in range(start_page, end_page + 1) %}
+            <a href="{{ qs_base }}{{ pg }}" class="btn {% if pg == player_page %}btn-primary{% else %}btn-outline{% endif %} btn-sm" style="padding:6px 12px; font-size:12px; min-width:36px; text-align:center;">{{ pg }}</a>
+            {% endfor %}
+            {% if end_page < total_pages %}
+            {% if end_page < total_pages - 1 %}<span style="color:var(--gray-400);">…</span>{% endif %}
+            <a href="{{ qs_base }}{{ total_pages }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">{{ total_pages }}</a>
+            {% endif %}
+            {% if player_page < total_pages %}
+            <a href="{{ qs_base }}{{ player_page + 1 }}" class="btn btn-outline btn-sm" style="padding:6px 12px; font-size:12px;">Next →</a>
+            {% endif %}
+        </div>
+        <p style="text-align:center; font-size:12px; color:var(--gray-400); margin-top:8px;">Page {{ player_page }} of {{ total_pages }}</p>
+        {% endif %}
+
+        {% else %}
+        <p style="color:var(--gray-400); font-size:14px;">No players match your filters.</p>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
