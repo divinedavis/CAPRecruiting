@@ -247,7 +247,7 @@ function submitPotentialStatus(sel) {
     {% set leads_qs = 'stage=' ~ filter_stage ~ '&source=' ~ filter_source ~ '&state=' ~ filter_state ~ '&q=' ~ filter_q ~ '&tag=' ~ filter_tag %}
     <div class="mk-pot-pager" style="margin-top:14px;">
       {% if leads_page > 1 %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page - 1 }}">‹ Prev</a>{% endif %}
-      {% for n in range(1, leads_total_pages + 1) %}
+      {% for n in leads_pages_visible %}
         {% if n == leads_page %}
           <span class="active">{{ n }}</span>
         {% else %}
@@ -345,15 +345,11 @@ function submitPotentialStatus(sel) {
     <div class="mk-pot-pager">
       {% set base_qs = 'pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q %}
       {% if pot_page > 1 %}<a href="/admin/marketing?{{ base_qs }}&pot_page={{ pot_page - 1 }}#potentials">‹ Prev</a>{% endif %}
-      {% for n in range(1, pot_total_pages + 1) %}
+      {% for n in pot_pages_visible %}
         {% if n == pot_page %}
           <span class="active">{{ n }}</span>
-        {% elif n <= 2 or n >= pot_total_pages - 1 or (n >= pot_page - 1 and n <= pot_page + 1) %}
+        {% else %}
           <a href="/admin/marketing?{{ base_qs }}&pot_page={{ n }}#potentials">{{ n }}</a>
-        {% elif n == 3 and pot_page > 4 %}
-          <span class="gap">…</span>
-        {% elif n == pot_total_pages - 2 and pot_page < pot_total_pages - 3 %}
-          <span class="gap">…</span>
         {% endif %}
       {% endfor %}
       {% if pot_page < pot_total_pages %}<a href="/admin/marketing?{{ base_qs }}&pot_page={{ pot_page + 1 }}#potentials">Next ›</a>{% endif %}

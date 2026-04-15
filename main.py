@@ -745,6 +745,17 @@ def _check_rate_limit(key: str, max_requests: int, window_seconds: int) -> bool:
     _rate_limit_store[key].append(now)
     return False
 
+def _page_window(current: int, total: int, size: int = 3) -> list:
+    """Return up to `size` page numbers centered on `current`, sliding to keep
+    the window inside [1, total]. With size=3 and current=4 of 8: [3, 4, 5]."""
+    if total <= size:
+        return list(range(1, total + 1))
+    start = max(1, current - size // 2)
+    end = min(total, start + size - 1)
+    start = max(1, end - size + 1)
+    return list(range(start, end + 1))
+
+
 def _cleanup_expired_pending_signups(db: Session):
     """Opportunistic garbage collection of expired pending signups."""
     try:
@@ -3149,11 +3160,13 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         "total_players": total_players,
         "player_page": player_page,
         "total_pages": total_pages,
+        "player_pages_visible": _page_window(player_page, total_pages, 3),
         "player_q": player_q,
         "player_tier": player_tier,
         "total_coaches": total_coaches,
         "coach_page": coach_page,
         "coach_total_pages": coach_total_pages,
+        "coach_pages_visible": _page_window(coach_page, coach_total_pages, 3),
         "coach_q": coach_q,
     })
 
@@ -3534,6 +3547,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "leads_page": leads_page,
         "leads_total_pages": leads_total_pages,
         "leads_total": leads_total,
+        "leads_pages_visible": _page_window(leads_page, leads_total_pages, 3),
         "total_leads": len(all_leads),
         "stage_counts": stage_counts,
         "stage_labels": MARKETING_STAGE_LABELS,
@@ -3553,6 +3567,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "potentials": potentials,
         "pot_page": pot_page,
         "pot_total_pages": pot_total_pages,
+        "pot_pages_visible": _page_window(pot_page, pot_total_pages, 3),
         "pot_total": pot_total,
         "pot_filter": pot_filter,
         "pot_div": pot_div,
