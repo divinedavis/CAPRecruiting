@@ -1,0 +1,3142 @@
+[
+  {
+    "school": "Bluefield State University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "WV",
+    "athletic_url": "gobstate.com",
+    "website_url": "bluefieldstate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bowie State University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "MD",
+    "athletic_url": "www.bsubulldogs.com",
+    "website_url": "www.bowiestate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Elizabeth City State University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "NC",
+    "athletic_url": "www.ecsuvikings.com",
+    "website_url": "www.ecsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Fayetteville State University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "NC",
+    "athletic_url": "fsubroncos.com",
+    "website_url": "www.uncfsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Johnson C. Smith University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "NC",
+    "athletic_url": "www.goldenbullsports.com",
+    "website_url": "www.jcsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lincoln University (Pennsylvania)",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "PA",
+    "athletic_url": "www.lulions.com",
+    "website_url": "www.lincoln.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Livingstone College",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "NC",
+    "athletic_url": "https://bluebearathletics.com/",
+    "website_url": "www.livingstone.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Shaw University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "NC",
+    "athletic_url": "www.shawbears.com",
+    "website_url": "www.shawuniversity.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Winston-Salem State University",
+    "division": "D2",
+    "conference": "Central Intercollegiate Athletic Association",
+    "state": "NC",
+    "athletic_url": "wssurams.com",
+    "website_url": "www.wssu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Barton College",
+    "division": "D2",
+    "conference": "Conference Carolinas",
+    "state": "NC",
+    "athletic_url": "www.bartonbulldogs.com",
+    "website_url": "www.barton.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Chowan University",
+    "division": "D2",
+    "conference": "Conference Carolinas",
+    "state": "NC",
+    "athletic_url": "www.gocuhawks.com",
+    "website_url": "www.chowan.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Erskine College",
+    "division": "D2",
+    "conference": "Conference Carolinas",
+    "state": "SC",
+    "athletic_url": "www.erskinesports.com",
+    "website_url": "www.erskine.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "North Greenville University",
+    "division": "D2",
+    "conference": "Conference Carolinas",
+    "state": "SC",
+    "athletic_url": "www.nguathletics.com",
+    "website_url": "www.ngu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Shorter University",
+    "division": "D2",
+    "conference": "Conference Carolinas",
+    "state": "GA",
+    "athletic_url": "www.goshorterhawks.com",
+    "website_url": "www.shorter.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of North Carolina at Pembroke",
+    "division": "D2",
+    "conference": "Conference Carolinas",
+    "state": "NC",
+    "athletic_url": "www.uncpbraves.com",
+    "website_url": "www.uncp.edu",
+    "questionnaire_url": "https://goheels.com/form/6",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Arkansas Tech University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "AR",
+    "athletic_url": "www.arkansastechsports.com/",
+    "website_url": "www.atu.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=332&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "East Central University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "OK",
+    "athletic_url": "ecutigers.com",
+    "website_url": "www.ecok.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Harding University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "AR",
+    "athletic_url": "www.hardingsports.com",
+    "website_url": "www.harding.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Henderson State University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "AR",
+    "athletic_url": "hsusports.com",
+    "website_url": "hsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Oklahoma Baptist University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "OK",
+    "athletic_url": "www.obubison.com",
+    "website_url": "www.okbu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Ouachita Baptist University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "AR",
+    "athletic_url": "www.obutigers.com",
+    "website_url": "www.obu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Southeastern Oklahoma State University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "OK",
+    "athletic_url": "www.gosoutheastern.com",
+    "website_url": "www.se.edu",
+    "questionnaire_url": "https://docs.google.com/forms/d/e/1FAIpQLSdYlSOw96JKrfEsjd8C0LA0bT1GaYBLCKo7iBYujwXfbvmQCw/viewform",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Southern Arkansas University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "AR",
+    "athletic_url": "www.muleriderathletics.com",
+    "website_url": "www.saumag.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=332&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Southern Nazarene University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "OK",
+    "athletic_url": "snuathletics.com",
+    "website_url": "snu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Southwestern Oklahoma State University",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "OK",
+    "athletic_url": "www.swosuathletics.com",
+    "website_url": "www.swosu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Arkansas, Monticello",
+    "division": "D2",
+    "conference": "Great American Conference",
+    "state": "AR",
+    "athletic_url": "www.uamsports.com",
+    "website_url": "www.uamont.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=332&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Davenport University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "dupanthers.com",
+    "website_url": "www.davenport.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Ferris State University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "www.ferrisstatebulldogs.com",
+    "website_url": "www.ferris.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Grand Valley State University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "gvsulakers.com",
+    "website_url": "www.gvsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Michigan Technological University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "www.michigantechhuskies.com",
+    "website_url": "www.mtu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Northern Michigan University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "www.nmuwildcats.com",
+    "website_url": "www.nmu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Roosevelt University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "IL",
+    "athletic_url": "www.rooseveltlakers.com",
+    "website_url": "www.roosevelt.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Saginaw Valley State University",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "www.svsucardinals.com",
+    "website_url": "www.svsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Wayne State University (Michigan)",
+    "division": "D2",
+    "conference": "Great Lakes Intercollegiate Athletic Conference",
+    "state": "MI",
+    "athletic_url": "www.wsuathletics.com",
+    "website_url": "www.wayne.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lincoln University (Missouri)",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "MO",
+    "athletic_url": "www.lubluetigers.com",
+    "website_url": "www.lincolnu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "McKendree University",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "IL",
+    "athletic_url": "www.mckbearcats.com",
+    "website_url": "www.mckendree.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Missouri University of Science and Technology",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "MO",
+    "athletic_url": "www.minerathletics.com",
+    "website_url": "www.mst.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Southwest Baptist University",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "MO",
+    "athletic_url": "www.sbubearcats.com",
+    "website_url": "www.sbuniv.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Truman State University",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "MO",
+    "athletic_url": "www.trumanbulldogs.com",
+    "website_url": "www.truman.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Indianapolis",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "IN",
+    "athletic_url": "uindyathletics.com",
+    "website_url": "www.uindy.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unreachable"
+  },
+  {
+    "school": "Upper Iowa University",
+    "division": "D2",
+    "conference": "Great Lakes Valley Conference",
+    "state": "IA",
+    "athletic_url": "uiupeacocks.com/",
+    "website_url": "www.uiu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Ashland University",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.goashlandeagles.com",
+    "website_url": "www.ashland.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hillsdale College",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "MI",
+    "athletic_url": "www.hillsdalechargers.com",
+    "website_url": "www.hillsdale.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Kentucky Wesleyan College",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "KY",
+    "athletic_url": "kwcpanthers.com",
+    "website_url": "kwc.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lake Erie College",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.lakeeriestorm.com",
+    "website_url": "www.lec.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Northwood University",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "MI",
+    "athletic_url": "gonorthwood.com",
+    "website_url": "www.northwood.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Thomas More University",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "KY",
+    "athletic_url": "www.thomasmoresaints.com",
+    "website_url": "www.thomasmore.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Tiffin University",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.gotiffindragons.com",
+    "website_url": "tiffin.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Findlay",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "OH",
+    "athletic_url": "findlayoilers.com",
+    "website_url": "www.findlay.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Walsh University",
+    "division": "D2",
+    "conference": "Great Midwest Athletic Conference",
+    "state": "OH",
+    "athletic_url": "athletics.walsh.edu/landing/index",
+    "website_url": "https://www.walsh.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Delta State University",
+    "division": "D2",
+    "conference": "Gulf South Conference",
+    "state": "MS",
+    "athletic_url": "www.gostatesmen.com",
+    "website_url": "www.deltastate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of West Alabama",
+    "division": "D2",
+    "conference": "Gulf South Conference",
+    "state": "AL",
+    "athletic_url": "www.uwaathletics.com",
+    "website_url": "www.uwa.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of West Florida",
+    "division": "D2",
+    "conference": "Gulf South Conference",
+    "state": "FL",
+    "athletic_url": "www.goargos.com",
+    "website_url": "www.uwf.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Valdosta State University",
+    "division": "D2",
+    "conference": "Gulf South Conference",
+    "state": "GA",
+    "athletic_url": "www.vstateblazers.com",
+    "website_url": "www.valdosta.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Northeastern State University",
+    "division": "D2",
+    "conference": "Independent",
+    "state": "OK",
+    "athletic_url": "www.goriverhawksgo.com",
+    "website_url": "www.nsuok.edu",
+    "questionnaire_url": "https://docs.google.com/forms/d/e/1FAIpQLSdYlSOw96JKrfEsjd8C0LA0bT1GaYBLCKo7iBYujwXfbvmQCw/viewform",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Angelo State University",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "TX",
+    "athletic_url": "www.angelosports.com",
+    "website_url": "www.angelo.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Central Washington University",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "WA",
+    "athletic_url": "wildcatsports.com",
+    "website_url": "cwu.edu",
+    "questionnaire_url": "https://www.fieldlevel.com/washington/football/recruiting",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Midwestern State University",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "TX",
+    "athletic_url": "msumustangs.com",
+    "website_url": "www.msutexas.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Sul Ross State University",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "TX",
+    "athletic_url": "www.srlobos.com",
+    "website_url": "www.sulross.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Texas A&M University-Kingsville",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "TX",
+    "athletic_url": "www.javelinaathletics.com",
+    "website_url": "www.tamuk.edu/",
+    "questionnaire_url": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MjI3Njc=-i4vWXOVFeUA=&ptype=recruit",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "The University of Texas Permian Basin",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "TX",
+    "athletic_url": "www.utpbfalcons.com",
+    "website_url": "www.utpb.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "West Texas A&M University",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "TX",
+    "athletic_url": "www.gobuffsgo.com",
+    "website_url": "www.wtamu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Western Oregon University",
+    "division": "D2",
+    "conference": "Lone Star Conference",
+    "state": "OR",
+    "athletic_url": "www.wouwolves.com",
+    "website_url": "www.wou.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Emporia State University",
+    "division": "D2",
+    "conference": "Mid-America Intercollegiate Athletics Association",
+    "state": "KS",
+    "athletic_url": "www.esuhornets.com",
+    "website_url": "www.emporia.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Fort Hays State University",
+    "division": "D2",
+    "conference": "Mid-America Intercollegiate Athletics Association",
+    "state": "KS",
+    "athletic_url": "www.fhsuathletics.com",
+    "website_url": "www.fhsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Missouri Western State University",
+    "division": "D2",
+    "conference": "Mid-America Intercollegiate Athletics Association",
+    "state": "MO",
+    "athletic_url": "www.gogriffons.com",
+    "website_url": "www.missouriwestern.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Central Missouri",
+    "division": "D2",
+    "conference": "Mid-America Intercollegiate Athletics Association",
+    "state": "MO",
+    "athletic_url": "ucmathletics.com",
+    "website_url": "www.ucmo.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Central Oklahoma",
+    "division": "D2",
+    "conference": "Mid-America Intercollegiate Athletics Association",
+    "state": "OK",
+    "athletic_url": "www.bronchosports.com",
+    "website_url": "www.uco.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Washburn University",
+    "division": "D2",
+    "conference": "Mid-America Intercollegiate Athletics Association",
+    "state": "KS",
+    "athletic_url": "www.wusports.com",
+    "website_url": "www.washburn.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Concord University",
+    "division": "D2",
+    "conference": "Mountain East Conference",
+    "state": "WV",
+    "athletic_url": "www.cumountainlions.com",
+    "website_url": "www.concord.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Glenville State University",
+    "division": "D2",
+    "conference": "Mountain East Conference",
+    "state": "WV",
+    "athletic_url": "www.gscpioneers.com",
+    "website_url": "www.glenville.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Wheeling University",
+    "division": "D2",
+    "conference": "Mountain East Conference",
+    "state": "WV",
+    "athletic_url": "wucardinals.com/",
+    "website_url": "https://wheeling.edu/",
+    "questionnaire_url": "https://wucardinals.com/sb_output.aspx?form=3&tab=recruitme",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Post University",
+    "division": "D2",
+    "conference": "Northeast 10 Conference",
+    "state": "CT",
+    "athletic_url": "www.posteagles.com",
+    "website_url": "www.post.edu",
+    "questionnaire_url": "https://posteagles.com/sb_output.aspx?form=8&path=sprtftb",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Southern Connecticut State University",
+    "division": "D2",
+    "conference": "Northeast 10 Conference",
+    "state": "CT",
+    "athletic_url": "scsuowls.com",
+    "website_url": "southernct.edu",
+    "questionnaire_url": "https://scsuowls.com/sb_output.aspx?form=3",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Augustana University (South Dakota)",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "SD",
+    "athletic_url": "www.goaugie.com",
+    "website_url": "www.augie.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bemidji State University",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "www.bsubeavers.com/",
+    "website_url": "www.bemidjistate.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Concordia University, St. Paul",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "cspbears.com/index.aspx",
+    "website_url": "www.csp.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Minnesota State University Moorhead",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "msumdragons.com/",
+    "website_url": "www.mnstate.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Minnesota State University, Mankato",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "www.msumavericks.com",
+    "website_url": "www.mnsu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Northern State University",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "SD",
+    "athletic_url": "nsuwolves.com",
+    "website_url": "northern.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Southwest Minnesota State University",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "www.smsumustangs.com",
+    "website_url": "www.smsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Jamestown",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "ND",
+    "athletic_url": "jimmiepride.com",
+    "website_url": "uj.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Mary",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "ND",
+    "athletic_url": "www.goumary.com",
+    "website_url": "www.umary.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Minnesota Duluth",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "umdbulldogs.com/",
+    "website_url": "www.d.umn.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Sioux Falls",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "SD",
+    "athletic_url": "www.usfcougars.com",
+    "website_url": "www.usiouxfalls.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Winona State University",
+    "division": "D2",
+    "conference": "Northern Sun Intercollegiate Conference",
+    "state": "MN",
+    "athletic_url": "www.winonastatewarriors.com",
+    "website_url": "www.winona.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Indiana University of Pennsylvania",
+    "division": "D2",
+    "conference": "Pennsylvania State Athletic Conference",
+    "state": "PA",
+    "athletic_url": "iupathletics.com",
+    "website_url": "iup.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Pennsylvania Western University, California",
+    "division": "D2",
+    "conference": "Pennsylvania State Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.calvulcans.com",
+    "website_url": "www.pennwest.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=350&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Shepherd University",
+    "division": "D2",
+    "conference": "Pennsylvania State Athletic Conference",
+    "state": "WV",
+    "athletic_url": "shepherdrams.com",
+    "website_url": "shepherd.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Adams State University",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "CO",
+    "athletic_url": "www.asugrizzlies.com",
+    "website_url": "www.adams.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Black Hills State University",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "SD",
+    "athletic_url": "bhsuathletics.com",
+    "website_url": "www.bhsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Colorado Mesa University",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "CO",
+    "athletic_url": "cmumavericks.com",
+    "website_url": "coloradomesa.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=1684&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Colorado School of Mines",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "CO",
+    "athletic_url": "minesathletics.com",
+    "website_url": "mines.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=1684&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Colorado State University Pueblo",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "CO",
+    "athletic_url": "www.gothunderwolves.com",
+    "website_url": "www.csupueblo.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=1684&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Fort Lewis College",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "CO",
+    "athletic_url": "www.goskyhawks.com",
+    "website_url": "www.fortlewis.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "South Dakota School of Mines & Technology",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "SD",
+    "athletic_url": "gorockers.com",
+    "website_url": "sdmines.sdsmt.edu/sdsmt",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Western Colorado University",
+    "division": "D2",
+    "conference": "Rocky Mountain Athletic Conference",
+    "state": "CO",
+    "athletic_url": "www.gomountaineers.com",
+    "website_url": "www.western.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=1684&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Anderson University (South Carolina)",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "SC",
+    "athletic_url": "www.autrojans.com",
+    "website_url": "www.andersonuniversity.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Carson-Newman University",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "TN",
+    "athletic_url": "cneagles.com",
+    "website_url": "www.cn.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Emory & Henry University",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "VA",
+    "athletic_url": "www.gowasps.com",
+    "website_url": "www.emoryhenry.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lenoir-Rhyne University",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "NC",
+    "athletic_url": "www.lrbears.com",
+    "website_url": "www.LR.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Mars Hill University",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "NC",
+    "athletic_url": "www.marshilllions.com",
+    "website_url": "www.mhu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Newberry College",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "SC",
+    "athletic_url": "www.newberrywolves.com",
+    "website_url": "www.newberry.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Wingate University",
+    "division": "D2",
+    "conference": "South Atlantic Conference",
+    "state": "NC",
+    "athletic_url": "wingatebulldogs.com",
+    "website_url": "wingate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Albany State University (Georgia)",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "GA",
+    "athletic_url": "www.asugoldenrams.com",
+    "website_url": "www.asurams.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Benedict College",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "SC",
+    "athletic_url": "benedicttigers.com",
+    "website_url": "www.benedict.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Central State University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "OH",
+    "athletic_url": "www.maraudersports.com",
+    "website_url": "www.centralstate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Clark Atlanta University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "GA",
+    "athletic_url": "www.clarkatlantasports.com",
+    "website_url": "www.cau.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Edward Waters University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "FL",
+    "athletic_url": "www.ewutigerpride.com",
+    "website_url": "www.ewu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Fort Valley State University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "GA",
+    "athletic_url": "fvsusports.com/index.aspx",
+    "website_url": "www.fvsu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Kentucky State University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "KY",
+    "athletic_url": "ksuthorobreds.com",
+    "website_url": "www.kysu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Miles College",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "AL",
+    "athletic_url": "milesgoldenbears.com/",
+    "website_url": "www.miles.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Morehouse College",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "GA",
+    "athletic_url": "www.morehouseathletics.com",
+    "website_url": "www.morehouse.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Savannah State University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "GA",
+    "athletic_url": "ssuathletics.com/",
+    "website_url": "www.savannahstate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Tuskegee University",
+    "division": "D2",
+    "conference": "Southern Intercol. Ath. Conf.",
+    "state": "AL",
+    "athletic_url": "www.goldentigersports.com/",
+    "website_url": "www.tuskegee.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Buena Vista University",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "www.bvuathletics.com",
+    "website_url": "www.bvu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Central College (Iowa)",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "www.central.edu/athletics",
+    "website_url": "www.central.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Coe College",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "www.kohawkathletics.com",
+    "website_url": "www.coe.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Loras College",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "www.duhawks.com",
+    "website_url": "www.loras.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Luther College",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "sports.luther.edu",
+    "website_url": "www.luther.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unreachable"
+  },
+  {
+    "school": "Simpson College",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "simpsonathletics.com",
+    "website_url": "www.simpson.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Dubuque",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "www.dbq.edu/Athletics/",
+    "website_url": "www.dbq.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Wartburg College",
+    "division": "D3",
+    "conference": "American Rivers Conference",
+    "state": "IA",
+    "athletic_url": "www.go-knights.net",
+    "website_url": "www.wartburg.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "East Texas Baptist University",
+    "division": "D3",
+    "conference": "American Southwest Conference",
+    "state": "TX",
+    "athletic_url": "www.goetbutigers.com",
+    "website_url": "www.etbu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hardin-Simmons University",
+    "division": "D3",
+    "conference": "American Southwest Conference",
+    "state": "TX",
+    "athletic_url": "hsuathletics.com",
+    "website_url": "www.hsutx.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Howard Payne University",
+    "division": "D3",
+    "conference": "American Southwest Conference",
+    "state": "TX",
+    "athletic_url": "www.hpusports.com",
+    "website_url": "www.hputx.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Carnegie Mellon University",
+    "division": "D3",
+    "conference": "Centennial Conference",
+    "state": "PA",
+    "athletic_url": "athletics.cmu.edu",
+    "website_url": "www.cmu.edu/",
+    "questionnaire_url": "https://athletics.cmu.edu/sports/fball/recruitQ",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Dickinson College",
+    "division": "D3",
+    "conference": "Centennial Conference",
+    "state": "PA",
+    "athletic_url": "www.dickinsonathletics.com",
+    "website_url": "www.dickinson.edu",
+    "questionnaire_url": "https://dickinsonathletics.com/sports/2022/8/2/football-recruit-questionnaire.aspx",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Gettysburg College",
+    "division": "D3",
+    "conference": "Centennial Conference",
+    "state": "PA",
+    "athletic_url": "www.gettysburgsports.com",
+    "website_url": "www.gettysburg.edu",
+    "questionnaire_url": "https://gettysburgsports.com/sports/2015/10/12/FB_1012154923.aspx",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "McDaniel College",
+    "division": "D3",
+    "conference": "Centennial Conference",
+    "state": "MD",
+    "athletic_url": "www.mcdaniel.edu/athletics",
+    "website_url": "www.mcdaniel.edu/",
+    "questionnaire_url": "https://mcdanielathletics.com/sports/2022/4/29/recruits-football",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Ursinus College",
+    "division": "D3",
+    "conference": "Centennial Conference",
+    "state": "PA",
+    "athletic_url": "www.ursinusathletics.com",
+    "website_url": "www.ursinus.edu/",
+    "questionnaire_url": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MTE2Nzc=-QVSswpzoAIc=&ptype=recruit",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Augustana College (Illinois)",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "www.athletics.augustana.edu/",
+    "website_url": "www.augustana.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Carthage College",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "WI",
+    "athletic_url": "athletics.carthage.edu",
+    "website_url": "www.carthage.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Elmhurst University",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "elmhurstbluejays.com/",
+    "website_url": "public.elmhurst.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Illinois Wesleyan University",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "www.iwusports.com",
+    "website_url": "www.iwu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Millikin University",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "athletics.millikin.edu",
+    "website_url": "www.millikin.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "North Central College",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "northcentralcardinals.com",
+    "website_url": "noctrl.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "North Park University",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "www.northpark.edu/athletics/",
+    "website_url": "www.northpark.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Washington University in St. Louis",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "MO",
+    "athletic_url": "washubears.com",
+    "website_url": "www.washu.edu",
+    "questionnaire_url": "https://www.fieldlevel.com/washington/football/recruiting",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Wheaton College (Illinois)",
+    "division": "D3",
+    "conference": "College Conference of Illinois & Wisconsin",
+    "state": "IL",
+    "athletic_url": "athletics.wheaton.edu",
+    "website_url": "www.wheaton.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Curry College",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "MA",
+    "athletic_url": "www.curryathletics.com",
+    "website_url": "www.curry.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Endicott College",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "MA",
+    "athletic_url": "www.ecgulls.com",
+    "website_url": "www.endicott.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Husson University",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "ME",
+    "athletic_url": "www.hussoneagles.com",
+    "website_url": "www.husson.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Maine Maritime Academy",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "ME",
+    "athletic_url": "www.marinersports.org",
+    "website_url": "www.mainemaritime.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "New England College",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "NH",
+    "athletic_url": "athletics.nec.edu/",
+    "website_url": "www.nec.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Nichols College",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "MA",
+    "athletic_url": "www.nicholsathletics.com",
+    "website_url": "www.nichols.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of New England",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "ME",
+    "athletic_url": "athletics.une.edu",
+    "website_url": "www.une.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Western New England University",
+    "division": "D3",
+    "conference": "Conference of New England",
+    "state": "MA",
+    "athletic_url": "www.wnegoldenbears.com",
+    "website_url": "www.wne.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Alfred State College",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "www.alfredstateathletics.com",
+    "website_url": "www.alfredstate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Alfred University",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "www.gosaxons.com",
+    "website_url": "www.alfred.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hartwick College",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "www.hartwickhawks.com",
+    "website_url": "www.hartwick.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "St. John Fisher University",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "www.sjfathletics.com",
+    "website_url": "www.sjf.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "State University of New York at Brockport",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "gobrockport.com",
+    "website_url": "www.brockport.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "State University of New York at Cortland",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "www.cortland.edu/athletics",
+    "website_url": "www.cortland.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "State University of New York at Morrisville",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "morrisvillemustangs.com/",
+    "website_url": "www.morrisville.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Utica University",
+    "division": "D3",
+    "conference": "Empire 8",
+    "state": "NY",
+    "athletic_url": "www.uticapioneers.com",
+    "website_url": "www.utica.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Anderson University (Indiana)",
+    "division": "D3",
+    "conference": "Heartland Collegiate Athletic Conference",
+    "state": "IN",
+    "athletic_url": "athletics.anderson.edu",
+    "website_url": "www.anderson.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bluffton University",
+    "division": "D3",
+    "conference": "Heartland Collegiate Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.blufftonbeavers.com",
+    "website_url": "www.bluffton.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hanover College",
+    "division": "D3",
+    "conference": "Heartland Collegiate Athletic Conference",
+    "state": "IN",
+    "athletic_url": "https://athletics.hanover.edu/landing/index",
+    "website_url": "www.hanover.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Manchester University",
+    "division": "D3",
+    "conference": "Heartland Collegiate Athletic Conference",
+    "state": "IN",
+    "athletic_url": "www.muspartans.com",
+    "website_url": "www.manchester.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Mount St. Joseph University",
+    "division": "D3",
+    "conference": "Heartland Collegiate Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.msjlions.com",
+    "website_url": "www.msj.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Rose-Hulman Institute of Technology",
+    "division": "D3",
+    "conference": "Heartland Collegiate Athletic Conference",
+    "state": "IN",
+    "athletic_url": "www.rose-hulman.edu/athletics",
+    "website_url": "www.rose-hulman.edu/",
+    "questionnaire_url": "https://ulmwarhawks.com/sb_output.aspx?form=7",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Catholic University",
+    "division": "D3",
+    "conference": "Landmark Conference",
+    "state": "DC",
+    "athletic_url": "www.catholicathletics.com/",
+    "website_url": "www.catholic.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lycoming College",
+    "division": "D3",
+    "conference": "Landmark Conference",
+    "state": "PA",
+    "athletic_url": "lycomingathletics.com",
+    "website_url": "www.lycoming.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Moravian University",
+    "division": "D3",
+    "conference": "Landmark Conference",
+    "state": "PA",
+    "athletic_url": "moraviansports.com/landing/index",
+    "website_url": "www.moravian.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Susquehanna University",
+    "division": "D3",
+    "conference": "Landmark Conference",
+    "state": "PA",
+    "athletic_url": "www.gosusqu.com",
+    "website_url": "www.susqu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unreachable"
+  },
+  {
+    "school": "Western Connecticut State University",
+    "division": "D3",
+    "conference": "Landmark Conference",
+    "state": "CT",
+    "athletic_url": "www.westconnathletics.com",
+    "website_url": "www.wcsu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hilbert College",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "www.hilberthawks.com",
+    "website_url": "www.hilbert.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hobart and William Smith Colleges",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "www.hwsathletics.com",
+    "website_url": "www.hws.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Ithaca College",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "athletics.ithaca.edu",
+    "website_url": "www.ithaca.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Rensselaer Polytechnic Institute",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "www.rpiathletics.com",
+    "website_url": "www.rpi.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "St. Lawrence University",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "www.saintsathletics.com",
+    "website_url": "www.stlawu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Union College (New York)",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "www.unionathletics.com/",
+    "website_url": "www.union.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Rochester",
+    "division": "D3",
+    "conference": "Liberty League",
+    "state": "NY",
+    "athletic_url": "www.rochester.edu/athletics",
+    "website_url": "www.rochester.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Anna Maria College",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "goamcats.com/landing/index",
+    "website_url": "www.annamaria.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bridgewater State University",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.bsubears.com",
+    "website_url": "www.bridgew.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Dean College",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.deanbulldogs.com/landing/index",
+    "website_url": "https://www.dean.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Fitchburg State University",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.fitchburgfalcons.com",
+    "website_url": "www.fitchburgstate.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Framingham State University",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.fsurams.com",
+    "website_url": "www.framingham.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Massachusetts Maritime Academy",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.mmabucs.com",
+    "website_url": "www.maritime.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Plymouth State University",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "NH",
+    "athletic_url": "athletics.plymouth.edu/",
+    "website_url": "www.plymouth.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Massachusetts, Dartmouth",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.corsairathletics.com",
+    "website_url": "www.umassd.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Westfield State University",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.WestfieldStateOwls.com",
+    "website_url": "www.westfield.ma.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Worcester State University",
+    "division": "D3",
+    "conference": "Massachusetts State Collegiate Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.wsulancers.com",
+    "website_url": "www.worcester.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Adrian College",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "www.adrianbulldogs.com",
+    "website_url": "www.adrian.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Albion College",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "www.gobrits.com",
+    "website_url": "www.albion.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Alma College",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "www.almascots.com",
+    "website_url": "www.alma.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Calvin University",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "calvinknights.com",
+    "website_url": "www.calvin.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hope College",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "athletics.hope.edu",
+    "website_url": "www.hope.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Kalamazoo College",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "hornets.kzoo.edu/landing/index/",
+    "website_url": "www.kzoo.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "The University of Olivet ",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "MI",
+    "athletic_url": "www.olivetcomets.com",
+    "website_url": "www.uolivet.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Trine University",
+    "division": "D3",
+    "conference": "Michigan Intercollegiate Athletic Association",
+    "state": "IN",
+    "athletic_url": "www.trinethunder.com",
+    "website_url": "www.trine.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Fairleigh Dickinson University, Florham",
+    "division": "D3",
+    "conference": "Middle Atlantic Conference Freedom",
+    "state": "NJ",
+    "athletic_url": "www.fdudevils.com",
+    "website_url": "www.fdu.edu",
+    "questionnaire_url": "https://dickinsonathletics.com/sports/2022/8/2/football-recruit-questionnaire.aspx",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Albright College",
+    "division": "D3",
+    "conference": "Middle Atlantic Conferences",
+    "state": "PA",
+    "athletic_url": "www.albrightathletics.com",
+    "website_url": "www.albright.edu",
+    "questionnaire_url": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MTMzNjY=-BjIqwRbsEzs=&ptype=recruit",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Alvernia University",
+    "division": "D3",
+    "conference": "Middle Atlantic Conferences",
+    "state": "PA",
+    "athletic_url": "athletics.alvernia.edu",
+    "website_url": "www.alvernia.edu",
+    "questionnaire_url": "https://auwolves.com/sb_output.aspx?frform=11&path=football",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Delaware Valley University",
+    "division": "D3",
+    "conference": "Middle Atlantic Conferences",
+    "state": "PA",
+    "athletic_url": "www.delval.edu/athletics",
+    "website_url": "www.delval.edu",
+    "questionnaire_url": "https://athletics.delval.edu/sb_output.aspx?form=9",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "King's College (Pennsylvania)",
+    "division": "D3",
+    "conference": "Middle Atlantic Conferences",
+    "state": "PA",
+    "athletic_url": "www.kings.edu/athletics",
+    "website_url": "www.kings.edu/",
+    "questionnaire_url": "https://www.frontrush.com/FR_Web_App/Player/PlayerSubmit.aspx?sid=MjI3Njc=-i4vWXOVFeUA=&ptype=recruit",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Misericordia University",
+    "division": "D3",
+    "conference": "Middle Atlantic Conferences",
+    "state": "PA",
+    "athletic_url": "www.misericordia.edu/athletics",
+    "website_url": "www.misericordia.edu/",
+    "questionnaire_url": "https://athletics.misericordia.edu/sb_output.aspx?frform=16",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Widener University",
+    "division": "D3",
+    "conference": "Middle Atlantic Conferences",
+    "state": "PA",
+    "athletic_url": "www.widenerpride.com",
+    "website_url": "www.widener.edu/",
+    "questionnaire_url": "https://docs.google.com/forms/u/1/d/e/1FAIpQLSfU6rF5jlQfZkE1WjO6cmRoXUNEgfWSHPBCxk_sNC0FvXowNw/viewform",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Beloit College",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "WI",
+    "athletic_url": "www.beloit.edu/bucs/",
+    "website_url": "www.beloit.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Cornell College",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "IA",
+    "athletic_url": "www.cornellrams.com",
+    "website_url": "www.cornellcollege.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Knox College",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "IL",
+    "athletic_url": "prairiefire.knox.edu",
+    "website_url": "www.knox.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lake Forest College",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "IL",
+    "athletic_url": "www.goforesters.com",
+    "website_url": "www.lakeforest.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lawrence University",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "WI",
+    "athletic_url": "vikings.lawrence.edu/index.aspx",
+    "website_url": "www.lawrence.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Monmouth College (Illinois)",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "IL",
+    "athletic_url": "monmouthscots.com",
+    "website_url": "www.monmouthcollege.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Ripon College",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "WI",
+    "athletic_url": "riponredhawks.com/",
+    "website_url": "www.ripon.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Chicago",
+    "division": "D3",
+    "conference": "Midwest Conference",
+    "state": "IL",
+    "athletic_url": "athletics.uchicago.edu/landing/index",
+    "website_url": "www.uchicago.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Augsburg University",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "athletics.augsburg.edu",
+    "website_url": "www.augsburg.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bethel University (Minnesota)",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "athletics.bethel.edu/",
+    "website_url": "www.bethel.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Carleton College",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "apps.carleton.edu/athletics/",
+    "website_url": "www.carleton.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Concordia College, Moorhead",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.gocobbers.com",
+    "website_url": "www.concordiacollege.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Gustavus Adolphus College",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.gustavus.edu/athletics/",
+    "website_url": "www.gustavus.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hamline University",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.hamlineathletics.com",
+    "website_url": "www.hamline.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Macalester College",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.macalester.edu/athletics",
+    "website_url": "www.macalester.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Saint John's University (Minnesota)",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.gojohnnies.com",
+    "website_url": "www.csbsju.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "St. Olaf College",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "athletics.stolaf.edu",
+    "website_url": "www.stolaf.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "The College of St. Scholastica",
+    "division": "D3",
+    "conference": "Minnesota Intercollegiate Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.csssaints.com",
+    "website_url": "www.css.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Amherst College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "MA",
+    "athletic_url": "athletics.amherst.edu/landing/index",
+    "website_url": "www.amherst.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bates College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "ME",
+    "athletic_url": "www.gobatesbobcats.com",
+    "website_url": "www.bates.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Bowdoin College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "ME",
+    "athletic_url": "www.bowdoin.edu/athletics/",
+    "website_url": "www.bowdoin.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Colby College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "ME",
+    "athletic_url": "www.colby.edu/athletics",
+    "website_url": "www.colby.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hamilton College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "NY",
+    "athletic_url": "www.hamilton.edu/athletics",
+    "website_url": "www.hamilton.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Middlebury College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "VT",
+    "athletic_url": "www.middlebury.edu/athletics",
+    "website_url": "www.middlebury.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Trinity College (Connecticut)",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "CT",
+    "athletic_url": "www.bantamsports.com",
+    "website_url": "www.trincoll.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Tufts University",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.gotuftsjumbos.com/landing/index",
+    "website_url": "www.tufts.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Wesleyan University (Connecticut)",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "CT",
+    "athletic_url": "www.wesleyan.edu/athletics",
+    "website_url": "www.wesleyan.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Williams College",
+    "division": "D3",
+    "conference": "New England Small College Athletic Conference",
+    "state": "MA",
+    "athletic_url": "ephsports.williams.edu/",
+    "website_url": "www.williams.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Massachusetts Institute of Technology",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "MA",
+    "athletic_url": "www.mitathletics.com",
+    "website_url": "web.mit.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Norwich University",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "VT",
+    "athletic_url": "www.norwichathletics.com",
+    "website_url": "www.norwich.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Salve Regina University",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "RI",
+    "athletic_url": "www.salveathletics.com",
+    "website_url": "www.salve.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Springfield College",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "MA",
+    "athletic_url": "springfield.edu/directory/athletics",
+    "website_url": "www.springfieldcollege.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "State University of New York Maritime College",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "NY",
+    "athletic_url": "www.maritimeathletics.com",
+    "website_url": "www.sunymaritime.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "U.S. Coast Guard Academy",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "CT",
+    "athletic_url": "https://coastguardathletics.com/index.aspx",
+    "website_url": "www.uscga.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "U.S. Merchant Marine Academy",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "NY",
+    "athletic_url": "usmmasports.com",
+    "website_url": "usmma.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Worcester Polytechnic Institute",
+    "division": "D3",
+    "conference": "New England Women's and Men's Athletic Conference",
+    "state": "MA",
+    "athletic_url": "athletics.wpi.edu",
+    "website_url": "www.wpi.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Christopher Newport University",
+    "division": "D3",
+    "conference": "New Jersey Athletic Conference",
+    "state": "VA",
+    "athletic_url": "CNUsports.com",
+    "website_url": "www.cnu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Montclair State University",
+    "division": "D3",
+    "conference": "New Jersey Athletic Conference",
+    "state": "NJ",
+    "athletic_url": "www.montclairathletics.com",
+    "website_url": "www.montclair.edu/",
+    "questionnaire_url": "https://montclairathletics.com/sb_output.aspx?form=3",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "The College of New Jersey",
+    "division": "D3",
+    "conference": "New Jersey Athletic Conference",
+    "state": "NJ",
+    "athletic_url": "www.tcnjathletics.com",
+    "website_url": "www.tcnj.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Vermont State University Castleton",
+    "division": "D3",
+    "conference": "New Jersey Athletic Conference",
+    "state": "VT",
+    "athletic_url": "www.castletonsports.com/landing/index",
+    "website_url": "www.castleton.edu",
+    "questionnaire_url": "https://castletonsports.com/sports/2020/8/31/football-recruit.aspx",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "William Paterson University of New Jersey",
+    "division": "D3",
+    "conference": "New Jersey Athletic Conference",
+    "state": "NJ",
+    "athletic_url": "www.wpupioneers.com",
+    "website_url": "www.wpunj.edu",
+    "questionnaire_url": "https://www.wpupioneers.com/sb_output.aspx?form=20",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Denison University",
+    "division": "D3",
+    "conference": "North Coast Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.denisonbigred.com",
+    "website_url": "www.denison.edu",
+    "questionnaire_url": "https://denisonbigred.com/sports/2020/6/15/football_recruit_questionnaire.aspx",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "John Carroll University",
+    "division": "D3",
+    "conference": "North Coast Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.jcusports.com",
+    "website_url": "www.jcu.edu",
+    "questionnaire_url": "https://admission.jcu.edu/register/?id=645ec1ea-84e4-4435-a94a-45fca721e70e",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Kenyon College",
+    "division": "D3",
+    "conference": "North Coast Athletic Conference",
+    "state": "OH",
+    "athletic_url": "athletics.kenyon.edu",
+    "website_url": "www.kenyon.edu",
+    "questionnaire_url": "https://forms.arirecruiting.com/kenyon_football/recruitquestionnaire",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "The College of Wooster",
+    "division": "D3",
+    "conference": "North Coast Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.woosterathletics.com",
+    "website_url": "www.wooster.edu",
+    "questionnaire_url": "https://woosterathletics.com/sports/2025/6/25/football-prospective-scot-recruiting-form.aspx",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Wabash College",
+    "division": "D3",
+    "conference": "North Coast Athletic Conference",
+    "state": "IN",
+    "athletic_url": "sports.wabash.edu",
+    "website_url": "www.wabash.edu",
+    "questionnaire_url": "https://apply.wabash.edu/register/?id=27592af4-acd2-4ebc-bc27-f739c0c72d66&sys:field:athletic_interest=2c825de6-ae6b-446b-8059-d25608073589",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Wittenberg University",
+    "division": "D3",
+    "conference": "North Coast Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.wittenbergtigers.com",
+    "website_url": "www.wittenberg.edu",
+    "questionnaire_url": "https://wittenbergtigers.com/recruiting/forms/fball",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Aurora University",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "IL",
+    "athletic_url": "athletics.aurora.edu",
+    "website_url": "www.aurora.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Benedictine University (Illinois)",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "IL",
+    "athletic_url": "www.benueagles.com",
+    "website_url": "www.ben.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Concordia University Chicago",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "IL",
+    "athletic_url": "www.CUCougars.com",
+    "website_url": "www.cuchicago.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Eureka College",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "IL",
+    "athletic_url": "www.eurekareddevils.com",
+    "website_url": "www.eureka.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lakeland University",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "WI",
+    "athletic_url": "lakelandmuskies.com/",
+    "website_url": "www.lakeland.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Rockford University",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "IL",
+    "athletic_url": "www.rockfordregents.com",
+    "website_url": "www.rockford.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "St. Norbert College",
+    "division": "D3",
+    "conference": "Northern Athletics Collegiate Conference",
+    "state": "WI",
+    "athletic_url": "athletics.snc.edu",
+    "website_url": "www.snc.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unreachable"
+  },
+  {
+    "school": "George Fox University",
+    "division": "D3",
+    "conference": "Northwest Conference",
+    "state": "OR",
+    "athletic_url": "www.gfubruins.com",
+    "website_url": "www.georgefox.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lewis & Clark College",
+    "division": "D3",
+    "conference": "Northwest Conference",
+    "state": "OR",
+    "athletic_url": "www.lcpioneers.com",
+    "website_url": "www.lclark.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Linfield University",
+    "division": "D3",
+    "conference": "Northwest Conference",
+    "state": "OR",
+    "athletic_url": "golinfieldwildcats.com/",
+    "website_url": "www.linfield.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Pacific University (Oregon)",
+    "division": "D3",
+    "conference": "Northwest Conference",
+    "state": "OR",
+    "athletic_url": "www.goboxers.com",
+    "website_url": "www.pacificu.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Puget Sound",
+    "division": "D3",
+    "conference": "Northwest Conference",
+    "state": "WA",
+    "athletic_url": "www.loggerathletics.com",
+    "website_url": "www.pugetsound.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Willamette University",
+    "division": "D3",
+    "conference": "Northwest Conference",
+    "state": "OR",
+    "athletic_url": "willamette.prestosports.com/landing/index",
+    "website_url": "www.willamette.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Baldwin Wallace University",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.bwyellowjackets.com/landing/index",
+    "website_url": "www.bw.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Capital University",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.capital.edu/athletics",
+    "website_url": "www.capital.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Heidelberg University",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "bergathletics.com",
+    "website_url": "www.heidelberg.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Marietta College",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "pioneers.marietta.edu/",
+    "website_url": "www.marietta.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Muskingum University",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.fightingmuskies.com/landing/index",
+    "website_url": "www.muskingum.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Otterbein University",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.otterbeincardinals.com",
+    "website_url": "www.otterbein.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Mount Union",
+    "division": "D3",
+    "conference": "Ohio Athletic Conference",
+    "state": "OH",
+    "athletic_url": "athletics.mountunion.edu",
+    "website_url": "www.mountunion.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Averett University",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "VA",
+    "athletic_url": "www.averettcougars.com",
+    "website_url": "www.averett.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Gallaudet University",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "DC",
+    "athletic_url": "www.gallaudetbison.com",
+    "website_url": "www.gallaudet.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Guilford College",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "NC",
+    "athletic_url": "www.guilford.edu/athletics",
+    "website_url": "www.guilford.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hampden-Sydney College",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "VA",
+    "athletic_url": "www.hscathletics.com",
+    "website_url": "www.hsc.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Randolph-Macon College",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "VA",
+    "athletic_url": "www.rmcathletics.com",
+    "website_url": "www.rmc.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Roanoke College",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "VA",
+    "athletic_url": "maroons.roanoke.edu/",
+    "website_url": "www.roanoke.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Shenandoah University",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "VA",
+    "athletic_url": "www.suhornets.com",
+    "website_url": "www.su.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Washington and Lee University",
+    "division": "D3",
+    "conference": "Old Dominion Athletic Conf.",
+    "state": "VA",
+    "athletic_url": "generalssports.com",
+    "website_url": "www.wlu.edu",
+    "questionnaire_url": "https://www.fieldlevel.com/washington/football/recruiting",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Allegheny College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.alleghenygators.com",
+    "website_url": "www.allegheny.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Case Western Reserve University",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "OH",
+    "athletic_url": "athletics.case.edu",
+    "website_url": "www.case.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Geneva College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "athletics.geneva.edu",
+    "website_url": "www.geneva.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Grove City College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "athletics.gcc.edu",
+    "website_url": "www.gcc.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hiram College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "OH",
+    "athletic_url": "www.hiramterriers.com",
+    "website_url": "www.hiram.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Saint Vincent College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.athletics.stvincent.edu",
+    "website_url": "www.stvincent.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unreachable"
+  },
+  {
+    "school": "Thiel College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.thielathletics.com",
+    "website_url": "www.thiel.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Washington and Jefferson College",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.gopresidents.com",
+    "website_url": "www.washjeff.edu",
+    "questionnaire_url": "https://www.fieldlevel.com/washington/football/recruiting",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Waynesburg University",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.waynesburgsports.com",
+    "website_url": "www.waynesburg.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Westminster College (Pennsylvania)",
+    "division": "D3",
+    "conference": "Presidents' Athletic Conference",
+    "state": "PA",
+    "athletic_url": "www.westminster.edu/athletics/",
+    "website_url": "www.westminster.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Berry College",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "GA",
+    "athletic_url": "www.berryvikings.com",
+    "website_url": "www.berry.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Centre College",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "KY",
+    "athletic_url": "www.centrecolonels.com",
+    "website_url": "www.centre.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Maryville College (Tennessee)",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "TN",
+    "athletic_url": "www.mcscots.com/landing/index",
+    "website_url": "www.maryvillecollege.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Millsaps College",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "MS",
+    "athletic_url": "www.gomajors.com",
+    "website_url": "www.millsaps.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Rhodes College",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "TN",
+    "athletic_url": "www.rhodeslynx.com",
+    "website_url": "www.rhodes.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Trinity University (Texas)",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "TX",
+    "athletic_url": "www.trinitytigers.com",
+    "website_url": "www.trinity.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of the South",
+    "division": "D3",
+    "conference": "Southern Athletic Association",
+    "state": "TN",
+    "athletic_url": "sewaneetigers.com/",
+    "website_url": "www.sewanee.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "California Lutheran University",
+    "division": "D3",
+    "conference": "Southern California Intercollegiate Athletic Conf.",
+    "state": "CA",
+    "athletic_url": "www.clusports.com",
+    "website_url": "www.callutheran.edu",
+    "questionnaire_url": "https://college.jumpforward.com/questionnaire.aspx?iid=350&sportid=18",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Chapman University",
+    "division": "D3",
+    "conference": "Southern California Intercollegiate Athletic Conf.",
+    "state": "CA",
+    "athletic_url": "www.chapmanathletics.com",
+    "website_url": "www.chapman.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Claremont McKenna-Harvey Mudd-Scripps Colleges",
+    "division": "D3",
+    "conference": "Southern California Intercollegiate Athletic Conf.",
+    "state": "CA",
+    "athletic_url": "www.cmsathletics.org",
+    "website_url": "www.claremontmckenna.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Pomona-Pitzer Colleges",
+    "division": "D3",
+    "conference": "Southern California Intercollegiate Athletic Conf.",
+    "state": "CA",
+    "athletic_url": "www.sagehens.com",
+    "website_url": "www.pomona.edu; www.pitzer.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of La Verne",
+    "division": "D3",
+    "conference": "Southern California Intercollegiate Athletic Conf.",
+    "state": "CA",
+    "athletic_url": "www.leopardathletics.com",
+    "website_url": "www.laverne.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Redlands",
+    "division": "D3",
+    "conference": "Southern California Intercollegiate Athletic Conf.",
+    "state": "CA",
+    "athletic_url": "www.goredlands.com",
+    "website_url": "www.redlands.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Austin College",
+    "division": "D3",
+    "conference": "Southern Collegiate Athletic Conference",
+    "state": "TX",
+    "athletic_url": "www.acroos.com",
+    "website_url": "www.austincollege.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Centenary College (Louisiana)",
+    "division": "D3",
+    "conference": "Southern Collegiate Athletic Conference",
+    "state": "LA",
+    "athletic_url": "www.GoCentenary.com",
+    "website_url": "www.centenary.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Hendrix College",
+    "division": "D3",
+    "conference": "Southern Collegiate Athletic Conference",
+    "state": "AR",
+    "athletic_url": "www.hendrixwarriors.com",
+    "website_url": "www.hendrix.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Lyon College",
+    "division": "D3",
+    "conference": "Southern Collegiate Athletic Conference",
+    "state": "AR",
+    "athletic_url": "lyonscots.com/",
+    "website_url": "www.lyon.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "McMurry University",
+    "division": "D3",
+    "conference": "Southern Collegiate Athletic Conference",
+    "state": "TX",
+    "athletic_url": "www.mcmurrysports.com",
+    "website_url": "www.mcm.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Texas Lutheran University",
+    "division": "D3",
+    "conference": "Southern Collegiate Athletic Conference",
+    "state": "TX",
+    "athletic_url": "tlubulldogs.com",
+    "website_url": "tlu.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Belhaven University",
+    "division": "D3",
+    "conference": "USA South Athletic Conference",
+    "state": "MS",
+    "athletic_url": "blazers.belhaven.edu",
+    "website_url": "www.belhaven.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Brevard College",
+    "division": "D3",
+    "conference": "USA South Athletic Conference",
+    "state": "NC",
+    "athletic_url": "www.bctornados.com",
+    "website_url": "www.brevard.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Huntingdon College",
+    "division": "D3",
+    "conference": "USA South Athletic Conference",
+    "state": "AL",
+    "athletic_url": "www.huntingdonhawks.com",
+    "website_url": "www.huntingdon.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "LaGrange College",
+    "division": "D3",
+    "conference": "USA South Athletic Conference",
+    "state": "GA",
+    "athletic_url": "www.lagrangepanthers.com",
+    "website_url": "www.lagrange.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Methodist University",
+    "division": "D3",
+    "conference": "USA South Athletic Conference",
+    "state": "NC",
+    "athletic_url": "www.mumonarchs.com",
+    "website_url": "www.methodist.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "North Carolina Wesleyan University",
+    "division": "D3",
+    "conference": "USA South Athletic Conference",
+    "state": "NC",
+    "athletic_url": "https://ncwsports.com/",
+    "website_url": "https://ncwu.edu/",
+    "questionnaire_url": "https://goheels.com/form/6",
+    "source": "QUESTIONNAIRE_DATA"
+  },
+  {
+    "school": "Crown College (Minnesota)",
+    "division": "D3",
+    "conference": "Upper Midwest Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.athletics.crown.edu",
+    "website_url": "www.crown.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unreachable"
+  },
+  {
+    "school": "Greenville University",
+    "division": "D3",
+    "conference": "Upper Midwest Athletic Conference",
+    "state": "IL",
+    "athletic_url": "www.greenville.edu/athletics",
+    "website_url": "www.greenville.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Martin Luther College",
+    "division": "D3",
+    "conference": "Upper Midwest Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.mlcknights.com",
+    "website_url": "www.mlc-wels.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "University of Minnesota, Morris",
+    "division": "D3",
+    "conference": "Upper Midwest Athletic Conference",
+    "state": "MN",
+    "athletic_url": "www.morriscougars.com",
+    "website_url": "www.morris.umn.edu",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  },
+  {
+    "school": "Westminster College (Missouri)",
+    "division": "D3",
+    "conference": "Upper Midwest Athletic Conference",
+    "state": "MO",
+    "athletic_url": "www.wcbluejays.com/landing/index",
+    "website_url": "www.wcmo.edu/",
+    "questionnaire_url": "",
+    "source": "ncaa_unclassified"
+  }
+]

@@ -618,6 +618,22 @@ class MarketingLead(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class MarketingPotential(Base):
+    __tablename__ = "marketing_potentials"
+    id = Column(Integer, primary_key=True)
+    school = Column(String, nullable=False, index=True)
+    division = Column(String, default="", index=True)  # "D2" or "D3"
+    conference = Column(String, default="")
+    state = Column(String, default="", index=True)
+    athletic_url = Column(String, default="")
+    questionnaire_url = Column(String, default="")
+    source = Column(String, default="")  # QUESTIONNAIRE_DATA / ncaa_unclassified / ncaa_unreachable / manual
+    contacted_at = Column(DateTime, nullable=True, index=True)
+    contact_name = Column(String, default="")
+    contact_email = Column(String, default="")
+    notes = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class MarketingActivity(Base):
     __tablename__ = "marketing_activities"
     id = Column(Integer, primary_key=True)
@@ -3191,6 +3207,51 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
     distinct_states = sorted({l.state for l in all_leads if l.state})
     admin_list = db.query(User).filter(User.is_admin == True).all()
 
+    # ── Potentials widget (D2/D3 schools not on ArmsSoftware) ────────────────
+    try:
+        pot_page = max(1, int(request.query_params.get("pot_page") or "1"))
+    except ValueError:
+        pot_page = 1
+    pot_filter = (request.query_params.get("pot_filter") or "uncontacted").lower()
+    if pot_filter not in ("uncontacted", "contacted", "all"):
+        pot_filter = "uncontacted"
+    pot_div = (request.query_params.get("pot_div") or "").strip().upper()
+    pot_q = (request.query_params.get("pot_q") or "").strip()
+
+    pot_query = db.query(MarketingPotential)
+    if pot_filter == "uncontacted":
+        pot_query = pot_query.filter(MarketingPotential.contacted_at == None)
+    elif pot_filter == "contacted":
+        pot_query = pot_query.filter(MarketingPotential.contacted_at != None)
+    if pot_div in ("D2", "D3"):
+        pot_query = pot_query.filter(MarketingPotential.division == pot_div)
+    if pot_q:
+        plike = f"%{pot_q}%"
+        pot_query = pot_query.filter(
+            (MarketingPotential.school.ilike(plike))
+            | (MarketingPotential.conference.ilike(plike))
+            | (MarketingPotential.state.ilike(plike))
+        )
+
+    pot_total = pot_query.count()
+    pot_per_page = 10
+    pot_total_pages = max(1, (pot_total + pot_per_page - 1) // pot_per_page)
+    if pot_page > pot_total_pages:
+        pot_page = pot_total_pages
+    pot_offset = (pot_page - 1) * pot_per_page
+    potentials = (
+        pot_query.order_by(
+            MarketingPotential.division.asc(),
+            MarketingPotential.school.asc(),
+        )
+        .offset(pot_offset)
+        .limit(pot_per_page)
+        .all()
+    )
+    pot_uncontacted_total = db.query(MarketingPotential).filter(MarketingPotential.contacted_at == None).count()
+    pot_contacted_total = db.query(MarketingPotential).filter(MarketingPotential.contacted_at != None).count()
+    pot_grand_total = pot_uncontacted_total + pot_contacted_total
+
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
         "user": user,
@@ -3211,7 +3272,42 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "filter_q": q,
         "filter_tag": tag,
         "stages": MARKETING_STAGES,
+        "potentials": potentials,
+        "pot_page": pot_page,
+        "pot_total_pages": pot_total_pages,
+        "pot_total": pot_total,
+        "pot_filter": pot_filter,
+        "pot_div": pot_div,
+        "pot_q": pot_q,
+        "pot_uncontacted_total": pot_uncontacted_total,
+        "pot_contacted_total": pot_contacted_total,
+        "pot_grand_total": pot_grand_total,
     })
+
+
+@app.post("/admin/marketing/potentials/{pid}/contact")
+async def admin_marketing_potential_contact(pid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    pot = db.query(MarketingPotential).filter(MarketingPotential.id == pid).first()
+    if not pot:
+        raise HTTPException(status_code=404, detail="Potential not found")
+    form = await request.form()
+    action = (form.get("action") or "contact").strip().lower()
+    if action == "uncontact":
+        pot.contacted_at = None
+    else:
+        pot.contacted_at = datetime.utcnow()
+        pot.contact_name = (form.get("contact_name") or "").strip()[:200]
+        pot.contact_email = (form.get("contact_email") or "").strip()[:200]
+    pot.notes = (form.get("notes") or "").strip()[:1000]
+    db.commit()
+    return_qs = (form.get("return_qs") or "").strip()
+    target = "/admin/marketing"
+    if return_qs:
+        target = f"{target}?{return_qs}"
+    return RedirectResponse(f"{target}#potentials", status_code=302)
 
 
 @app.post("/admin/marketing/leads/create")

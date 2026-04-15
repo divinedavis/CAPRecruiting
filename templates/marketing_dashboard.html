@@ -41,7 +41,33 @@
 .mk-btn-primary { padding: 10px 20px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; }
 .mk-due { background: #fef3c7; border: 1.5px solid #f0b429; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
 .mk-due a { color: #92400e; font-weight: 700; text-decoration: none; }
+.mk-pot-row { display: grid; grid-template-columns: 1.6fr 0.6fr 1fr 0.6fr 1fr 80px; gap: 10px; align-items: center; padding: 10px 6px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+.mk-pot-row:hover { background: #f9fafb; }
+.mk-pot-row .school { font-weight: 700; color: #0a1628; }
+.mk-pot-row .sub { font-size: 11px; color: #9ca3af; }
+.mk-pot-row .div-pill { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 800; border-radius: 10px; background: #0a1628; color: #fff; letter-spacing: .04em; }
+.mk-pot-row .contacted { color: #166534; font-weight: 700; font-size: 11px; }
+.mk-pot-btn { padding: 6px 10px; background: #0a1628; color: #fff; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
+.mk-pot-btn.secondary { background: #f3f4f6; color: #0a1628; border: 1.5px solid #e5e7eb; }
+.mk-pot-expand { display: none; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #f3f4f6; }
+.mk-pot-expand.open { display: block; }
+.mk-pot-expand input, .mk-pot-expand textarea { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 12px; width: 100%; box-sizing: border-box; }
+.mk-pot-expand .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.mk-pot-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
+.mk-pot-filters select, .mk-pot-filters input { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 12px; }
+.mk-pot-pager { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 16px; flex-wrap: wrap; }
+.mk-pot-pager a, .mk-pot-pager span { padding: 6px 11px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 700; color: #0a1628; border: 1.5px solid #e5e7eb; }
+.mk-pot-pager a:hover { background: #f3f4f6; }
+.mk-pot-pager .active { background: #0a1628; color: #fff; border-color: #0a1628; }
+.mk-pot-pager .gap { border: none; color: #9ca3af; }
+@media (max-width: 900px) { .mk-pot-row { grid-template-columns: 1fr; } }
 </style>
+<script>
+function togglePotential(id) {
+  var el = document.getElementById('pot-exp-' + id);
+  if (el) el.classList.toggle('open');
+}
+</script>
 
 <div class="mk-page">
   <h1 class="mk-h1">Marketing CRM</h1>
@@ -209,6 +235,106 @@
     </div>
     {% else %}
     <p style="color:#9ca3af; font-size:13px; text-align:center; padding:32px;">No leads match your filters.</p>
+    {% endif %}
+  </div>
+
+  <div class="mk-section" id="potentials">
+    <h2>Potentials · D2 &amp; D3 Schools Not On ArmsSoftware</h2>
+    <p class="mk-sub" style="margin-top:-6px;">
+      {{ pot_uncontacted_total }} uncontacted · {{ pot_contacted_total }} contacted · {{ pot_grand_total }} total
+    </p>
+
+    <form method="get" action="/admin/marketing" class="mk-pot-filters">
+      <input type="hidden" name="stage" value="{{ filter_stage }}">
+      <input type="hidden" name="source" value="{{ filter_source }}">
+      <input type="hidden" name="state" value="{{ filter_state }}">
+      <input type="hidden" name="q" value="{{ filter_q }}">
+      <input type="hidden" name="tag" value="{{ filter_tag }}">
+      <select name="pot_filter">
+        <option value="uncontacted"{% if pot_filter == "uncontacted" %} selected{% endif %}>Uncontacted</option>
+        <option value="contacted"{% if pot_filter == "contacted" %} selected{% endif %}>Contacted</option>
+        <option value="all"{% if pot_filter == "all" %} selected{% endif %}>All</option>
+      </select>
+      <select name="pot_div">
+        <option value=""{% if not pot_div %} selected{% endif %}>All Divisions</option>
+        <option value="D2"{% if pot_div == "D2" %} selected{% endif %}>D2</option>
+        <option value="D3"{% if pot_div == "D3" %} selected{% endif %}>D3</option>
+      </select>
+      <input type="text" name="pot_q" value="{{ pot_q }}" placeholder="school / conf / state">
+      <button type="submit" class="mk-pot-btn">Apply</button>
+      <a href="/admin/marketing#potentials" class="mk-pot-btn secondary" style="text-decoration:none;">Reset</a>
+    </form>
+
+    {% if potentials %}
+    {% set return_qs = 'pot_page=' ~ pot_page ~ '&pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q %}
+    <div style="border-top:1.5px solid #e5e7eb;">
+      <div class="mk-pot-row" style="background:#f9fafb; font-size:11px; text-transform:uppercase; color:#6b7280; font-weight:700; letter-spacing:.04em;">
+        <div>School</div>
+        <div>Div</div>
+        <div>Conference</div>
+        <div>State</div>
+        <div>Status</div>
+        <div></div>
+      </div>
+      {% for p in potentials %}
+      <div class="mk-pot-row">
+        <div>
+          <div class="school">
+            {% if p.athletic_url %}<a href="{% if not p.athletic_url.startswith('http') %}https://{% endif %}{{ p.athletic_url }}" target="_blank" rel="noopener" style="color:#0a1628; text-decoration:none;">{{ p.school }}</a>{% else %}{{ p.school }}{% endif %}
+          </div>
+          {% if p.questionnaire_url %}<div class="sub"><a href="{{ p.questionnaire_url }}" target="_blank" rel="noopener" style="color:#6b7280;">Questionnaire ↗</a></div>{% endif %}
+        </div>
+        <div><span class="div-pill">{{ p.division }}</span></div>
+        <div>{{ p.conference or '—' }}</div>
+        <div>{{ p.state or '—' }}</div>
+        <div>
+          {% if p.contacted_at %}
+            <div class="contacted">✓ {{ p.contacted_at.strftime('%Y-%m-%d') }}</div>
+            {% if p.contact_name %}<div class="sub">{{ p.contact_name }}</div>{% endif %}
+            {% if p.contact_email %}<div class="sub">{{ p.contact_email }}</div>{% endif %}
+          {% else %}
+            <div style="color:#9ca3af; font-size:11px;">Not contacted</div>
+          {% endif %}
+        </div>
+        <div><button type="button" class="mk-pot-btn secondary" onclick="togglePotential({{ p.id }})">{% if p.contacted_at %}Edit{% else %}Log{% endif %}</button></div>
+      </div>
+      <div class="mk-pot-expand" id="pot-exp-{{ p.id }}">
+        <form method="post" action="/admin/marketing/potentials/{{ p.id }}/contact">
+          <input type="hidden" name="return_qs" value="{{ return_qs }}">
+          <div class="row">
+            <input type="text" name="contact_name" value="{{ p.contact_name }}" placeholder="Point of contact name">
+            <input type="email" name="contact_email" value="{{ p.contact_email }}" placeholder="Contact email">
+          </div>
+          <textarea name="notes" rows="2" placeholder="Notes (call summary, follow-up, etc.)" style="margin-bottom:8px;">{{ p.notes }}</textarea>
+          <div style="display:flex; gap:8px;">
+            <button type="submit" name="action" value="contact" class="mk-pot-btn">Mark Contacted</button>
+            {% if p.contacted_at %}<button type="submit" name="action" value="uncontact" class="mk-pot-btn secondary">Clear</button>{% endif %}
+          </div>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if pot_total_pages > 1 %}
+    <div class="mk-pot-pager">
+      {% set base_qs = 'pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q %}
+      {% if pot_page > 1 %}<a href="/admin/marketing?{{ base_qs }}&pot_page={{ pot_page - 1 }}#potentials">‹ Prev</a>{% endif %}
+      {% for n in range(1, pot_total_pages + 1) %}
+        {% if n == pot_page %}
+          <span class="active">{{ n }}</span>
+        {% elif n <= 2 or n >= pot_total_pages - 1 or (n >= pot_page - 1 and n <= pot_page + 1) %}
+          <a href="/admin/marketing?{{ base_qs }}&pot_page={{ n }}#potentials">{{ n }}</a>
+        {% elif n == 3 and pot_page > 4 %}
+          <span class="gap">…</span>
+        {% elif n == pot_total_pages - 2 and pot_page < pot_total_pages - 3 %}
+          <span class="gap">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if pot_page < pot_total_pages %}<a href="/admin/marketing?{{ base_qs }}&pot_page={{ pot_page + 1 }}#potentials">Next ›</a>{% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p style="color:#9ca3af; font-size:13px; text-align:center; padding:32px;">No potentials match your filters.</p>
     {% endif %}
   </div>
 </div>
