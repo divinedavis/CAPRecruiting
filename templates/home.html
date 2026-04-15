@@ -24,6 +24,45 @@
     </div>
 </section>
 
+<section class="partners" style="padding:48px 0 32px; background:#0a1628; color:#fff; overflow:hidden;">
+    <div style="text-align:center; margin-bottom:24px;">
+        <h2 style="font-size:26px; font-weight:800; color:#fff; margin:0 0 4px 0;">Schools We Work With</h2>
+        <p style="color:#9ca3af; font-size:14px; margin:0;">From D1 through D3, NAIA, and JUCO</p>
+    </div>
+    <div class="partner-marquee">
+      <div class="partner-track">
+        {% for _pass in [1, 2] %}
+          {% for slug, name, has_logo in partner_schools %}
+          <div class="partner-item" title="{{ name }}">
+            {% if has_logo %}
+            <img src="/static/logos/{{ slug }}.png" alt="{{ name }}" loading="lazy">
+            {% else %}
+            <span class="partner-fallback">{{ name }}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+</section>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+.partner-marquee { width:100%; overflow:hidden; position:relative; mask-image:linear-gradient(to right, transparent, #000 10%, #000 90%, transparent); -webkit-mask-image:linear-gradient(to right, transparent, #000 10%, #000 90%, transparent); }
+.partner-track { display:flex; gap:56px; align-items:center; width:max-content; animation:partner-scroll 240s linear infinite; will-change:transform; }
+.partner-track:hover { animation-play-state:paused; }
+.partner-item { flex:0 0 auto; height:64px; display:flex; align-items:center; justify-content:center; padding:0 8px; }
+.partner-item img { max-height:64px; max-width:160px; width:auto; height:auto; object-fit:contain; filter:brightness(0) invert(1) opacity(0.85); transition:filter .2s ease; }
+.partner-item img:hover { filter:none; }
+.partner-fallback { font-family:'Bebas Neue', 'Oswald', 'Arial Narrow', sans-serif; font-size:30px; letter-spacing:.06em; color:#f0b429; white-space:nowrap; text-transform:uppercase; font-weight:400; }
+@keyframes partner-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+@media (max-width: 720px) {
+  .partner-item { height:48px; }
+  .partner-item img { max-height:48px; max-width:120px; }
+  .partner-fallback { font-size:22px; }
+  .partner-track { gap:36px; animation-duration:200s; }
+}
+</style>
+
 <section class="features">
     <div class="container">
         <h2 class="section-title">Everything You Need to Get Recruited</h2>
