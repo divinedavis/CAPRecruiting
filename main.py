@@ -1841,8 +1841,8 @@ async def send_reset_email(to_email: str, reset_url: str):
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Reset your Bearcats Recruiting password"
-    msg["From"] = f"Bearcats Recruiting <{SMTP_USER}>"
+    msg["Subject"] = "Reset your CAP Recruiting password"
+    msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
     msg["To"] = to_email
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
