@@ -637,6 +637,38 @@ class MarketingLead(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class EmailCampaign(Base):
+    __tablename__ = "email_campaigns"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, default="")
+    subject = Column(String, default="")
+    body_html = Column(Text, default="")
+    status = Column(String, default="draft", index=True)  # draft / sending / sent
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    sent_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, nullable=True)
+
+
+class TrackedEmail(Base):
+    __tablename__ = "tracked_emails"
+    id = Column(Integer, primary_key=True)
+    campaign_id = Column(Integer, ForeignKey("email_campaigns.id"), nullable=False, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    staff_id = Column(Integer, ForeignKey("potential_staff.id"), nullable=True)
+    potential_id = Column(Integer, ForeignKey("marketing_potentials.id"), nullable=True)
+    recipient_email = Column(String, default="")
+    recipient_name = Column(String, default="")
+    school = Column(String, default="")
+    invite_token = Column(String, default="")  # coach invite token embedded in signup link
+    opened_at = Column(DateTime, nullable=True)
+    open_count = Column(Integer, default=0)
+    clicked_at = Column(DateTime, nullable=True)
+    click_count = Column(Integer, default=0)
+    signed_up = Column(Boolean, default=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+
+
 class PotentialStaff(Base):
     __tablename__ = "potential_staff"
     id = Column(Integer, primary_key=True)
@@ -1862,6 +1894,43 @@ async def send_player_signup_notification(player_username: str, player_email: st
             await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
     except Exception:
         pass  # Don't fail signup if email fails
+
+
+# ── Email Tracking (public, no auth) ──────────────────────────────────────────
+
+# 1x1 transparent PNG
+_PIXEL_PNG = (
+    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+    b'\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89'
+    b'\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01'
+    b'\r\n\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
+)
+
+@app.get("/track/pixel/{token}.png")
+async def track_pixel(token: str, db: Session = Depends(get_db)):
+    te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
+    if te:
+        if not te.opened_at:
+            te.opened_at = datetime.utcnow()
+        te.open_count = (te.open_count or 0) + 1
+        db.commit()
+    return Response(content=_PIXEL_PNG, media_type="image/png",
+                    headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+
+@app.get("/track/{token}")
+async def track_click(token: str, db: Session = Depends(get_db)):
+    te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
+    if te:
+        if not te.clicked_at:
+            te.clicked_at = datetime.utcnow()
+        te.click_count = (te.click_count or 0) + 1
+        db.commit()
+        site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+        if te.invite_token:
+            return RedirectResponse(f"{site_url}/signup?invite={te.invite_token}", status_code=302)
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    return RedirectResponse(f"{site_url}/", status_code=302)
 
 
 @app.get("/forgot-password", response_class=HTMLResponse)
@@ -3637,6 +3706,192 @@ async def admin_marketing_potential_staff(pid: int, request: Request, db: Sessio
         "staff": staff,
         "unread_count": unread_count,
     })
+
+
+# ── Email Campaigns (admin) ───────────────────────────────────────────────────
+
+@app.get("/admin/marketing/campaigns", response_class=HTMLResponse)
+async def admin_campaigns_list(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    campaigns = db.query(EmailCampaign).order_by(EmailCampaign.created_at.desc()).all()
+    unread_count = unread_sender_count(db, user.id)
+    return templates.TemplateResponse("campaigns.html", {
+        "request": request, "user": user, "campaigns": campaigns, "unread_count": unread_count,
+    })
+
+
+@app.post("/admin/marketing/campaigns/create")
+async def admin_campaign_create(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    form = await request.form()
+    name = (form.get("name") or "").strip()[:200] or "Untitled Campaign"
+    campaign = EmailCampaign(name=name, created_by=user.id)
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    return RedirectResponse(f"/admin/marketing/campaigns/{campaign.id}", status_code=302)
+
+
+@app.get("/admin/marketing/campaigns/{cid}", response_class=HTMLResponse)
+async def admin_campaign_detail(cid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    campaign = db.query(EmailCampaign).filter(EmailCampaign.id == cid).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    tracked = db.query(TrackedEmail).filter(TrackedEmail.campaign_id == cid).order_by(TrackedEmail.sent_at).all()
+    total = len(tracked)
+    opened = sum(1 for t in tracked if t.opened_at)
+    clicked = sum(1 for t in tracked if t.clicked_at)
+    signed = sum(1 for t in tracked if t.signed_up)
+    unread_count = unread_sender_count(db, user.id)
+    return templates.TemplateResponse("campaign_detail.html", {
+        "request": request, "user": user, "campaign": campaign,
+        "tracked": tracked, "total": total, "opened": opened,
+        "clicked": clicked, "signed": signed, "unread_count": unread_count,
+    })
+
+
+@app.post("/admin/marketing/campaigns/{cid}/save")
+async def admin_campaign_save(cid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    campaign = db.query(EmailCampaign).filter(EmailCampaign.id == cid).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    form = await request.form()
+    campaign.name = (form.get("name") or "").strip()[:200] or campaign.name
+    campaign.subject = (form.get("subject") or "").strip()[:500]
+    campaign.body_html = (form.get("body_html") or "").strip()[:50000]
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/campaigns/{cid}?saved=1", status_code=302)
+
+
+@app.post("/admin/marketing/campaigns/{cid}/send")
+async def admin_campaign_send(cid: int, request: Request, db: Session = Depends(get_db)):
+    """Send the campaign to all potential staff with emails. Creates tracked emails with
+    unique tokens, embeds tracking pixel + tracked signup link, and sends via SMTP."""
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    campaign = db.query(EmailCampaign).filter(EmailCampaign.id == cid).first()
+    if not campaign or campaign.status == "sent":
+        return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=already_sent", status_code=302)
+    if not campaign.subject or not campaign.body_html:
+        return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=empty", status_code=302)
+
+    campaign.status = "sending"
+    db.commit()
+
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    import secrets as _sec
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    # Get all staff with emails (deduplicated by email)
+    staff_rows = (
+        db.query(PotentialStaff, MarketingPotential)
+        .join(MarketingPotential, PotentialStaff.potential_id == MarketingPotential.id)
+        .filter(PotentialStaff.email != "")
+        .all()
+    )
+    seen_emails = set()
+    recipients = []
+    for staff, pot in staff_rows:
+        email_lower = staff.email.strip().lower()
+        if email_lower in seen_emails:
+            continue
+        seen_emails.add(email_lower)
+        recipients.append((staff, pot))
+
+    sent = 0
+    errors = 0
+    try:
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+
+        for staff, pot in recipients:
+            token = _sec.token_urlsafe(24)
+            invite = _sec.token_urlsafe(16)
+            # Create a CoachInvite for this recipient
+            coach_inv = CoachInvite(
+                token=invite,
+                created_by=user.id,
+                expires_at=datetime.utcnow() + timedelta(days=30),
+                note=f"Campaign: {campaign.name} → {staff.email}",
+                source="campaign",
+            )
+            db.add(coach_inv)
+            # Create tracked email record
+            te = TrackedEmail(
+                campaign_id=cid,
+                token=token,
+                staff_id=staff.id,
+                potential_id=pot.id,
+                recipient_email=staff.email,
+                recipient_name=staff.name,
+                school=pot.school,
+                invite_token=invite,
+            )
+            db.add(te)
+            db.commit()
+
+            # Build personalized email
+            signup_link = f"{site_url}/track/{token}"
+            pixel_url = f"{site_url}/track/pixel/{token}.png"
+            body = campaign.body_html
+            body = body.replace("{{coach_name}}", staff.name or "Coach")
+            body = body.replace("{{school}}", pot.school or "")
+            body = body.replace("{{division}}", pot.division or "")
+            body = body.replace("{{conference}}", pot.conference or "")
+            body = body.replace("{{signup_link}}", signup_link)
+            body = body.replace("{{signup_button}}", (
+                f'<a href="{signup_link}" style="display:inline-block;padding:14px 32px;'
+                f'background:#0a1628;color:#f0b429;border-radius:8px;text-decoration:none;'
+                f'font-weight:800;font-size:15px;">Sign Up as a Coach</a>'
+            ))
+            # Append tracking pixel
+            body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="">'
+
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = campaign.subject.replace("{{school}}", pot.school or "").replace("{{coach_name}}", staff.name or "Coach")
+            msg["From"] = f"Collegiate Athletic Planning <{SMTP_USER}>"
+            msg["To"] = staff.email
+            msg["List-Unsubscribe"] = f"<mailto:{SMTP_USER}?subject=unsubscribe>"
+            msg.attach(MIMEText(body, "html"))
+
+            try:
+                server.sendmail(SMTP_USER, staff.email, msg.as_string())
+                sent += 1
+            except Exception as exc:
+                _logger.warning("Campaign %s: send to %s failed: %s", cid, staff.email, type(exc).__name__)
+                errors += 1
+
+            # Throttle: ~2 per second to avoid Gmail rate limits
+            import time as _time
+            _time.sleep(0.5)
+
+        server.quit()
+    except Exception as exc:
+        _logger.error("Campaign %s SMTP failure: %s", cid, exc)
+
+    campaign.status = "sent"
+    campaign.sent_count = sent
+    campaign.sent_at = datetime.utcnow()
+    db.commit()
+
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, user.id, "send_campaign", cid, f"sent={sent} errors={errors}", _ip)
+
+    return RedirectResponse(f"/admin/marketing/campaigns/{cid}?sent={sent}&errors={errors}", status_code=302)
 
 
 @app.post("/admin/marketing/leads/create")

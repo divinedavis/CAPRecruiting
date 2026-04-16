@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.name }} — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.cd-page { max-width: 1000px; margin: 0 auto; padding: 24px; }
+.cd-page h1 { font-size: 22px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.cd-page .sub { color: #6b7280; font-size: 13px; margin: 0 0 20px 0; }
+.cd-back { display: inline-block; margin-bottom: 16px; color: #0a1628; font-weight: 700; font-size: 13px; text-decoration: none; }
+.cd-section { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+.cd-section h2 { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #0a1628; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1.5px solid #e5e7eb; }
+.cd-form label { display: block; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; letter-spacing: .04em; }
+.cd-form input, .cd-form textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; margin-bottom: 14px; box-sizing: border-box; font-family: monospace; }
+.cd-form textarea { min-height: 300px; }
+.cd-btn { padding: 10px 20px; background: #0a1628; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
+.cd-btn.danger { background: #dc2626; }
+.cd-btn.secondary { background: #f3f4f6; color: #0a1628; border: 1.5px solid #e5e7eb; }
+.cd-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.cd-metric { background: #fff; border: 1.5px solid #0a1628; border-radius: 10px; padding: 12px 14px; text-align: center; }
+.cd-metric .val { font-size: 22px; font-weight: 800; color: #0a1628; }
+.cd-metric .lbl { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+.cd-merge { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 12px; color: #6b7280; }
+.cd-merge code { background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; color: #0a1628; }
+.cd-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cd-table th { text-align: left; padding: 8px 6px; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; border-bottom: 1.5px solid #e5e7eb; }
+.cd-table td { padding: 8px 6px; border-bottom: 1px solid #f3f4f6; }
+.cd-table tr:hover td { background: #f9fafb; }
+.cd-pill { display: inline-block; padding: 2px 8px; font-size: 9px; font-weight: 800; border-radius: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.cd-pill.opened { background: #dbeafe; color: #1d4ed8; }
+.cd-pill.clicked { background: #d1fae5; color: #065f46; }
+.cd-pill.signed { background: #f0b429; color: #0a1628; }
+.cd-pill.none { background: #f3f4f6; color: #9ca3af; }
+.cd-alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+.cd-alert.success { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+.cd-alert.error { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; }
+</style>
+
+<div class="cd-page">
+  <a href="/admin/marketing/campaigns" class="cd-back">← Back to Campaigns</a>
+  <h1>{{ campaign.name }}</h1>
+  <p class="sub">
+    Status: <strong>{{ campaign.status | upper }}</strong>
+    {% if campaign.sent_at %} · Sent {{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+  </p>
+
+  {% set saved = request.query_params.get('saved') %}
+  {% set sent_msg = request.query_params.get('sent') %}
+  {% set err_msg = request.query_params.get('error') %}
+  {% if saved %}<div class="cd-alert success">Template saved.</div>{% endif %}
+  {% if sent_msg %}<div class="cd-alert success">Campaign sent! {{ sent_msg }} emails delivered.</div>{% endif %}
+  {% if err_msg == 'already_sent' %}<div class="cd-alert error">This campaign has already been sent.</div>{% endif %}
+  {% if err_msg == 'empty' %}<div class="cd-alert error">Subject and body are required before sending.</div>{% endif %}
+
+  {% if campaign.status == 'sent' %}
+  <div class="cd-metrics">
+    <div class="cd-metric"><div class="val">{{ total }}</div><div class="lbl">Sent</div></div>
+    <div class="cd-metric"><div class="val">{{ opened }}</div><div class="lbl">Opened</div></div>
+    <div class="cd-metric"><div class="val">{{ clicked }}</div><div class="lbl">Clicked</div></div>
+    <div class="cd-metric"><div class="val">{{ signed }}</div><div class="lbl">Signed Up</div></div>
+    <div class="cd-metric"><div class="val">{% if total > 0 %}{{ (opened / total * 100)|round(1) }}%{% else %}0%{% endif %}</div><div class="lbl">Open Rate</div></div>
+    <div class="cd-metric"><div class="val">{% if total > 0 %}{{ (clicked / total * 100)|round(1) }}%{% else %}0%{% endif %}</div><div class="lbl">Click Rate</div></div>
+  </div>
+  {% endif %}
+
+  <div class="cd-section">
+    <h2>Email Template</h2>
+    <div class="cd-merge">
+      <strong>Merge fields:</strong>
+      <code>{{ '{{coach_name}}' }}</code>
+      <code>{{ '{{school}}' }}</code>
+      <code>{{ '{{division}}' }}</code>
+      <code>{{ '{{conference}}' }}</code>
+      <code>{{ '{{signup_link}}' }}</code>
+      <code>{{ '{{signup_button}}' }}</code>
+    </div>
+    <form method="post" action="/admin/marketing/campaigns/{{ campaign.id }}/save" class="cd-form">
+      <label>Campaign Name</label>
+      <input type="text" name="name" value="{{ campaign.name }}" required>
+      <label>Subject Line</label>
+      <input type="text" name="subject" value="{{ campaign.subject }}" placeholder="e.g. Coach, connect with top recruits at {{school}}">
+      <label>Body (HTML)</label>
+      <textarea name="body_html" placeholder="Write your email HTML here. Use merge fields above. Include {{signup_button}} where you want the signup CTA.">{{ campaign.body_html }}</textarea>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="submit" class="cd-btn">Save Template</button>
+        {% if campaign.status == 'draft' %}
+        <button type="button" class="cd-btn danger" onclick="if(confirm('Send this campaign to ALL potential coaching staff with emails (~2,000 recipients)? This cannot be undone.')) document.getElementById('send-form').submit();">Send Campaign</button>
+        {% endif %}
+      </div>
+    </form>
+    {% if campaign.status == 'draft' %}
+    <form id="send-form" method="post" action="/admin/marketing/campaigns/{{ campaign.id }}/send" style="display:none;"></form>
+    {% endif %}
+  </div>
+
+  {% if tracked %}
+  <div class="cd-section">
+    <h2>Recipients ({{ tracked|length }})</h2>
+    <div style="overflow-x:auto;">
+      <table class="cd-table">
+        <thead>
+          <tr>
+            <th>Coach</th>
+            <th>Email</th>
+            <th>School</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tracked %}
+          <tr>
+            <td style="font-weight:700; color:#0a1628;">{{ t.recipient_name }}</td>
+            <td>{{ t.recipient_email }}</td>
+            <td>{{ t.school }}</td>
+            <td>
+              {% if t.signed_up %}
+                <span class="cd-pill signed">Signed Up</span>
+              {% elif t.clicked_at %}
+                <span class="cd-pill clicked">Clicked {{ t.clicked_at.strftime('%m/%d') }}</span>
+              {% elif t.opened_at %}
+                <span class="cd-pill opened">Opened {{ t.opened_at.strftime('%m/%d') }}</span>
+              {% else %}
+                <span class="cd-pill none">No Activity</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -79,8 +79,13 @@ function submitPotentialStatus(sel) {
 </script>
 
 <div class="mk-page">
-  <h1 class="mk-h1">Marketing CRM</h1>
-  <p class="mk-sub">{{ total_leads }} lead{% if total_leads != 1 %}s{% endif %} · tracking every outreach touch</p>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h1 class="mk-h1">Marketing CRM</h1>
+      <p class="mk-sub" style="margin-bottom:0;">{{ total_leads }} lead{% if total_leads != 1 %}s{% endif %} · tracking every outreach touch</p>
+    </div>
+    <a href="/admin/marketing/campaigns" style="display:inline-block; padding:10px 20px; background:#0a1628; color:#f0b429; border-radius:8px; text-decoration:none; font-weight:800; font-size:13px;">Email Campaigns</a>
+  </div>
 
   <div class="mk-metrics">
     <div class="mk-metric">

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Email Campaigns — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.cp-page { max-width: 900px; margin: 0 auto; padding: 24px; }
+.cp-page h1 { font-size: 24px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.cp-page .sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
+.cp-card { display: flex; justify-content: space-between; align-items: center; padding: 16px; border: 1.5px solid #e5e7eb; border-radius: 10px; margin-bottom: 8px; background: #fff; gap: 12px; flex-wrap: wrap; }
+.cp-card .name { font-weight: 800; color: #0a1628; font-size: 15px; }
+.cp-card .meta { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.cp-status { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; letter-spacing: .04em; }
+.cp-status.draft { background: #fef3c7; color: #92400e; }
+.cp-status.sending { background: #dbeafe; color: #1d4ed8; }
+.cp-status.sent { background: #d1fae5; color: #065f46; }
+.cp-btn { padding: 8px 16px; background: #0a1628; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: none; }
+.cp-new { display: flex; gap: 8px; margin-bottom: 20px; align-items: end; }
+.cp-new input { padding: 8px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 250px; }
+.cp-back { display: inline-block; margin-bottom: 16px; color: #0a1628; font-weight: 700; font-size: 13px; text-decoration: none; }
+</style>
+
+<div class="cp-page">
+  <a href="/admin/marketing" class="cp-back">← Back to Marketing</a>
+  <h1>Email Campaigns</h1>
+  <p class="sub">Create and send tracked email campaigns to coaching staff</p>
+
+  <form method="post" action="/admin/marketing/campaigns/create" class="cp-new">
+    <input type="text" name="name" placeholder="Campaign name (e.g. Spring 2026 D2 Outreach)" required>
+    <button type="submit" class="cp-btn">New Campaign</button>
+  </form>
+
+  {% if campaigns %}
+  {% for c in campaigns %}
+  <a href="/admin/marketing/campaigns/{{ c.id }}" style="text-decoration:none;">
+    <div class="cp-card">
+      <div>
+        <div class="name">{{ c.name }}</div>
+        <div class="meta">
+          Created {{ c.created_at.strftime('%Y-%m-%d') }}
+          {% if c.sent_at %} · Sent {{ c.sent_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+          {% if c.sent_count %} · {{ c.sent_count }} emails{% endif %}
+        </div>
+      </div>
+      <span class="cp-status {{ c.status }}">{{ c.status }}</span>
+    </div>
+  </a>
+  {% endfor %}
+  {% else %}
+  <p style="color:#9ca3af; font-size:14px; text-align:center; padding:32px;">No campaigns yet. Create one above to get started.</p>
+  {% endif %}
+</div>
+{% endblock %}
