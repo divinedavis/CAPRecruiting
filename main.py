@@ -677,6 +677,8 @@ class PotentialStaff(Base):
     title = Column(String, default="")
     email = Column(String, default="")
     image_url = Column(String, default="")
+    status = Column(String, default="never_contacted", index=True)
+    notes = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -3698,14 +3700,49 @@ async def admin_marketing_potential_staff(pid: int, request: Request, db: Sessio
     if not pot:
         raise HTTPException(status_code=404, detail="Potential not found")
     staff = db.query(PotentialStaff).filter(PotentialStaff.potential_id == pid).order_by(PotentialStaff.id).all()
+    # Build email tracking lookup: staff email → latest TrackedEmail status
+    email_tracking = {}
+    for s in staff:
+        if s.email:
+            te = db.query(TrackedEmail).filter(
+                TrackedEmail.recipient_email == s.email
+            ).order_by(TrackedEmail.sent_at.desc()).first()
+            if te:
+                if te.signed_up:
+                    email_tracking[s.email] = "signed_up"
+                elif te.clicked_at:
+                    email_tracking[s.email] = "clicked"
+                elif te.opened_at:
+                    email_tracking[s.email] = "opened"
+                else:
+                    email_tracking[s.email] = "sent"
     unread_count = unread_sender_count(db, user.id)
     return templates.TemplateResponse("potential_staff.html", {
         "request": request,
         "user": user,
         "pot": pot,
         "staff": staff,
+        "email_tracking": email_tracking,
         "unread_count": unread_count,
     })
+
+
+@app.post("/admin/marketing/potentials/staff/{sid}/update")
+async def admin_potential_staff_update(sid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    staff = db.query(PotentialStaff).filter(PotentialStaff.id == sid).first()
+    if not staff:
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    new_status = (form.get("status") or "").strip().lower()
+    if new_status in ("never_contacted", "contacted", "not_interested"):
+        staff.status = new_status
+    if "notes" in form:
+        staff.notes = (form.get("notes") or "").strip()[:100]
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/potentials/{staff.potential_id}/staff", status_code=302)
 
 
 # ── Email Campaigns (admin) ───────────────────────────────────────────────────

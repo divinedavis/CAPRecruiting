@@ -2,27 +2,42 @@
 {% block title %}{{ pot.school }} Staff — CAP Recruiting{% endblock %}
 {% block content %}
 <style>
-.staff-page { max-width: 900px; margin: 0 auto; padding: 24px; }
+.staff-page { max-width: 960px; margin: 0 auto; padding: 24px; }
 .staff-page h1 { font-size: 24px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
 .staff-page .sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
 .staff-back { display: inline-block; margin-bottom: 16px; color: #0a1628; font-weight: 700; font-size: 13px; text-decoration: none; }
 .staff-back:hover { text-decoration: underline; }
-.staff-card { display: flex; gap: 16px; align-items: center; padding: 16px; border: 1.5px solid #e5e7eb; border-radius: 12px; margin-bottom: 10px; background: #fff; }
-.staff-card img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #f3f4f6; }
-.staff-card .placeholder { width: 64px; height: 64px; border-radius: 50%; background: #0a1628; color: #f0b429; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; flex-shrink: 0; }
-.staff-card .info { flex: 1; min-width: 0; }
-.staff-card .name { font-weight: 800; color: #0a1628; font-size: 15px; }
-.staff-card .title { color: #6b7280; font-size: 13px; margin-top: 2px; }
-.staff-card .email { margin-top: 4px; }
-.staff-card .email a { color: #0a1628; font-weight: 600; font-size: 13px; text-decoration: none; }
-.staff-card .email a:hover { text-decoration: underline; }
+.staff-card { display: grid; grid-template-columns: 64px 1fr; gap: 14px; padding: 16px; border: 1.5px solid #e5e7eb; border-radius: 12px; margin-bottom: 10px; background: #fff; align-items: start; }
+.staff-avatar { position: relative; width: 64px; height: 64px; }
+.staff-avatar img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #f3f4f6; }
+.staff-avatar .fallback { width: 64px; height: 64px; border-radius: 50%; background: #0a1628; color: #f0b429; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; }
+.staff-info { min-width: 0; }
+.staff-name { font-weight: 800; color: #0a1628; font-size: 15px; }
+.staff-title { color: #6b7280; font-size: 13px; margin-top: 2px; }
+.staff-email a { color: #0a1628; font-weight: 600; font-size: 13px; text-decoration: none; }
+.staff-email a:hover { text-decoration: underline; }
+.staff-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.staff-select { padding: 5px 8px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
+.staff-select.s-never_contacted { color: #6b7280; }
+.staff-select.s-contacted { color: #065f46; border-color: #10b981; background: #ecfdf5; }
+.staff-select.s-not_interested { color: #991b1b; border-color: #f87171; background: #fef2f2; }
+.staff-notes { padding: 5px 8px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 12px; width: 220px; }
+.staff-save { padding: 5px 12px; background: #0a1628; color: #fff; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.staff-pill { display: inline-block; padding: 2px 8px; font-size: 9px; font-weight: 800; border-radius: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.staff-pill.sent { background: #f3f4f6; color: #6b7280; }
+.staff-pill.opened { background: #dbeafe; color: #1d4ed8; }
+.staff-pill.clicked { background: #d1fae5; color: #065f46; }
+.staff-pill.signed_up { background: #f0b429; color: #0a1628; }
+.staff-pill.none { background: #f9fafb; color: #d1d5db; }
 .staff-empty { text-align: center; color: #9ca3af; padding: 40px; font-size: 14px; }
 .staff-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; font-size: 13px; color: #6b7280; }
 .staff-meta a { color: #0a1628; font-weight: 700; text-decoration: none; }
 .staff-meta a:hover { text-decoration: underline; }
 @media (max-width: 600px) {
-  .staff-card { flex-direction: column; text-align: center; }
-  .staff-card img, .staff-card .placeholder { margin: 0 auto; }
+  .staff-card { grid-template-columns: 1fr; text-align: center; }
+  .staff-avatar { margin: 0 auto; }
+  .staff-row { justify-content: center; }
+  .staff-notes { width: 100%; }
 }
 </style>
 
@@ -44,19 +59,48 @@
   {% if staff %}
   {% for s in staff %}
   <div class="staff-card">
-    {% if s.image_url %}
-    <img src="{{ s.image_url }}" alt="{{ s.name }}">
-    {% else %}
-    <div class="placeholder">{{ s.name[0] | upper if s.name else '?' }}</div>
-    {% endif %}
-    <div class="info">
-      <div class="name">{{ s.name or 'Unknown' }}</div>
-      {% if s.title %}<div class="title">{{ s.title }}</div>{% endif %}
-      {% if s.email %}
-      <div class="email"><a href="mailto:{{ s.email }}">{{ s.email }}</a></div>
+    <div class="staff-avatar">
+      {% if s.image_url %}
+      <img src="{{ s.image_url }}" alt="{{ s.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="fallback" style="display:none;">{{ s.name[0] | upper if s.name else '?' }}</div>
       {% else %}
-      <div class="title" style="color:#d1d5db; font-style:italic;">No email found</div>
+      <div class="fallback">{{ s.name[0] | upper if s.name else '?' }}</div>
       {% endif %}
+    </div>
+    <div class="staff-info">
+      <div class="staff-name">{{ s.name or 'Unknown' }}</div>
+      {% if s.title %}<div class="staff-title">{{ s.title }}</div>{% endif %}
+      {% if s.email %}
+      <div class="staff-email" style="margin-top:3px;"><a href="mailto:{{ s.email }}">{{ s.email }}</a></div>
+      {% else %}
+      <div class="staff-title" style="color:#d1d5db; font-style:italic;">No email found</div>
+      {% endif %}
+
+      {# Email campaign tracking status #}
+      {% set email_status = email_tracking.get(s.email, '') %}
+      {% if email_status %}
+      <div style="margin-top:5px;">
+        <span class="staff-pill {{ email_status }}">
+          {% if email_status == 'signed_up' %}Signed Up
+          {% elif email_status == 'clicked' %}Email Clicked
+          {% elif email_status == 'opened' %}Email Opened
+          {% elif email_status == 'sent' %}Email Sent
+          {% endif %}
+        </span>
+      </div>
+      {% elif s.email %}
+      <div style="margin-top:5px;"><span class="staff-pill none">Not emailed</span></div>
+      {% endif %}
+
+      <form method="post" action="/admin/marketing/potentials/staff/{{ s.id }}/update" class="staff-row">
+        <select name="status" class="staff-select s-{{ s.status or 'never_contacted' }}" onchange="this.className='staff-select s-'+this.value;">
+          <option value="never_contacted"{% if (s.status or 'never_contacted') == 'never_contacted' %} selected{% endif %}>Never Contacted</option>
+          <option value="contacted"{% if s.status == 'contacted' %} selected{% endif %}>Contacted</option>
+          <option value="not_interested"{% if s.status == 'not_interested' %} selected{% endif %}>Not Interested</option>
+        </select>
+        <input type="text" name="notes" class="staff-notes" value="{{ s.notes or '' }}" placeholder="Notes (100 chars)" maxlength="100">
+        <button type="submit" class="staff-save">Save</button>
+      </form>
     </div>
   </div>
   {% endfor %}
