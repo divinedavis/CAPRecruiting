@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ pot.school }} Staff — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.staff-page { max-width: 900px; margin: 0 auto; padding: 24px; }
+.staff-page h1 { font-size: 24px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.staff-page .sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
+.staff-back { display: inline-block; margin-bottom: 16px; color: #0a1628; font-weight: 700; font-size: 13px; text-decoration: none; }
+.staff-back:hover { text-decoration: underline; }
+.staff-card { display: flex; gap: 16px; align-items: center; padding: 16px; border: 1.5px solid #e5e7eb; border-radius: 12px; margin-bottom: 10px; background: #fff; }
+.staff-card img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #f3f4f6; }
+.staff-card .placeholder { width: 64px; height: 64px; border-radius: 50%; background: #0a1628; color: #f0b429; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; flex-shrink: 0; }
+.staff-card .info { flex: 1; min-width: 0; }
+.staff-card .name { font-weight: 800; color: #0a1628; font-size: 15px; }
+.staff-card .title { color: #6b7280; font-size: 13px; margin-top: 2px; }
+.staff-card .email { margin-top: 4px; }
+.staff-card .email a { color: #0a1628; font-weight: 600; font-size: 13px; text-decoration: none; }
+.staff-card .email a:hover { text-decoration: underline; }
+.staff-empty { text-align: center; color: #9ca3af; padding: 40px; font-size: 14px; }
+.staff-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; font-size: 13px; color: #6b7280; }
+.staff-meta a { color: #0a1628; font-weight: 700; text-decoration: none; }
+.staff-meta a:hover { text-decoration: underline; }
+@media (max-width: 600px) {
+  .staff-card { flex-direction: column; text-align: center; }
+  .staff-card img, .staff-card .placeholder { margin: 0 auto; }
+}
+</style>
+
+<div class="staff-page">
+  <a href="/admin/marketing#potentials" class="staff-back">← Back to Potentials</a>
+  <h1>{{ pot.school }}</h1>
+  <p class="sub">{{ pot.division }} · {{ pot.conference or 'Independent' }} · {{ pot.state or '—' }}</p>
+
+  <div class="staff-meta">
+    {% if pot.athletic_url %}
+    <a href="{% if not pot.athletic_url.startswith('http') %}https://{% endif %}{{ pot.athletic_url }}" target="_blank" rel="noopener">Athletics Site ↗</a>
+    {% endif %}
+    {% if pot.questionnaire_url %}
+    <a href="{{ pot.questionnaire_url }}" target="_blank" rel="noopener">Questionnaire ↗</a>
+    {% endif %}
+    <span>{{ staff|length }} staff member{% if staff|length != 1 %}s{% endif %} found</span>
+  </div>
+
+  {% if staff %}
+  {% for s in staff %}
+  <div class="staff-card">
+    {% if s.image_url %}
+    <img src="{{ s.image_url }}" alt="{{ s.name }}">
+    {% else %}
+    <div class="placeholder">{{ s.name[0] | upper if s.name else '?' }}</div>
+    {% endif %}
+    <div class="info">
+      <div class="name">{{ s.name or 'Unknown' }}</div>
+      {% if s.title %}<div class="title">{{ s.title }}</div>{% endif %}
+      {% if s.email %}
+      <div class="email"><a href="mailto:{{ s.email }}">{{ s.email }}</a></div>
+      {% else %}
+      <div class="title" style="color:#d1d5db; font-style:italic;">No email found</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="staff-empty">
+    No football staff found for this school. The athletic site may use a format we couldn't parse automatically.
+    {% if pot.athletic_url %}
+    <br><a href="{% if not pot.athletic_url.startswith('http') %}https://{% endif %}{{ pot.athletic_url }}" target="_blank" rel="noopener" style="color:#0a1628; font-weight:700;">Visit their site manually ↗</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

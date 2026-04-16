@@ -637,6 +637,17 @@ class MarketingLead(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class PotentialStaff(Base):
+    __tablename__ = "potential_staff"
+    id = Column(Integer, primary_key=True)
+    potential_id = Column(Integer, ForeignKey("marketing_potentials.id"), nullable=False, index=True)
+    name = Column(String, default="")
+    title = Column(String, default="")
+    email = Column(String, default="")
+    image_url = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class MarketingPotential(Base):
     __tablename__ = "marketing_potentials"
     id = Column(Integer, primary_key=True)
@@ -3607,6 +3618,25 @@ async def admin_marketing_potential_contact(pid: int, request: Request, db: Sess
     if return_qs:
         target = f"{target}?{return_qs}"
     return RedirectResponse(f"{target}#potentials", status_code=302)
+
+
+@app.get("/admin/marketing/potentials/{pid}/staff", response_class=HTMLResponse)
+async def admin_marketing_potential_staff(pid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    pot = db.query(MarketingPotential).filter(MarketingPotential.id == pid).first()
+    if not pot:
+        raise HTTPException(status_code=404, detail="Potential not found")
+    staff = db.query(PotentialStaff).filter(PotentialStaff.potential_id == pid).order_by(PotentialStaff.id).all()
+    unread_count = unread_sender_count(db, user.id)
+    return templates.TemplateResponse("potential_staff.html", {
+        "request": request,
+        "user": user,
+        "pot": pot,
+        "staff": staff,
+        "unread_count": unread_count,
+    })
 
 
 @app.post("/admin/marketing/leads/create")

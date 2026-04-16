@@ -324,7 +324,9 @@ function submitPotentialStatus(sel) {
           </form>
           {% if p.status == 'contacted' and p.contacted_at %}<div class="sub" style="margin-top:4px;">{{ p.contacted_at.strftime('%Y-%m-%d') }}{% if p.contact_name %} · {{ p.contact_name }}{% endif %}</div>{% endif %}
         </div>
-        <div><button type="button" class="mk-pot-btn secondary" onclick="togglePotential({{ p.id }})">Edit</button></div>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <a href="/admin/marketing/potentials/{{ p.id }}/staff" class="mk-pot-btn secondary" style="text-decoration:none; text-align:center;">More</a>
+        </div>
       </div>
       <div class="mk-pot-expand" id="pot-exp-{{ p.id }}">
         <form method="post" action="/admin/marketing/potentials/{{ p.id }}/contact">
