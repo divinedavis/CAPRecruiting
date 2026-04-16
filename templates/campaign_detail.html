@@ -81,8 +81,71 @@
       <textarea name="body_html" placeholder="Write your email HTML here. Use merge fields above. Include {{signup_button}} where you want the signup CTA.">{{ campaign.body_html }}</textarea>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="submit" class="cd-btn">Save Template</button>
+        <button type="button" class="cd-btn secondary" onclick="showPreview('desktop')">Preview Desktop</button>
+        <button type="button" class="cd-btn secondary" onclick="showPreview('mobile')">Preview Mobile</button>
       </div>
     </form>
+
+    <div id="preview-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9999; display:none; align-items:center; justify-content:center;" onclick="if(event.target===this)closePreview();">
+      <div id="preview-frame-wrap" style="background:#fff; border-radius:14px; overflow:hidden; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.3);">
+        <div style="background:#0a1628; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center;">
+          <span id="preview-label" style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;">Desktop Preview</span>
+          <div style="display:flex; gap:8px;">
+            <button onclick="switchPreview('desktop')" id="btn-desktop" style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; background:#f0b429; color:#0a1628; border:none;">Desktop</button>
+            <button onclick="switchPreview('mobile')" id="btn-mobile" style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; background:transparent; color:#fff; border:1px solid #fff;">Mobile</button>
+            <button onclick="closePreview()" style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; background:#dc2626; color:#fff; border:none;">Close</button>
+          </div>
+        </div>
+        <iframe id="preview-iframe" style="border:none; display:block;" srcdoc=""></iframe>
+      </div>
+    </div>
+
+    <script>
+    function getPreviewHtml() {
+      var body = document.querySelector('textarea[name="body_html"]').value;
+      var subject = document.querySelector('input[name="subject"]').value;
+      body = body.replace(/\{\{coach_name\}\}/g, 'Coach Smith');
+      body = body.replace(/\{\{school\}\}/g, 'Example University');
+      body = body.replace(/\{\{division\}\}/g, 'D2');
+      body = body.replace(/\{\{conference\}\}/g, 'Example Conference');
+      body = body.replace(/\{\{signup_link\}\}/g, '#');
+      body = body.replace(/\{\{signup_button\}\}/g,
+        '<a href="#" style="display:inline-block;padding:14px 32px;background:#0a1628;color:#f0b429;border-radius:8px;text-decoration:none;font-weight:800;font-size:15px;">Sign Up as a Coach</a>');
+      return '<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f3f4f6;">' +
+        '<div style="padding:16px 0;"><div style="background:#0a1628;color:#fff;text-align:center;padding:12px;font-size:12px;font-weight:700;">Subject: ' +
+        subject.replace(/\{\{coach_name\}\}/g,'Coach Smith').replace(/\{\{school\}\}/g,'Example University') +
+        '</div>' + body + '</div></body></html>';
+    }
+    function showPreview(mode) {
+      var overlay = document.getElementById('preview-overlay');
+      overlay.style.display = 'flex';
+      switchPreview(mode);
+    }
+    function switchPreview(mode) {
+      var wrap = document.getElementById('preview-frame-wrap');
+      var iframe = document.getElementById('preview-iframe');
+      var label = document.getElementById('preview-label');
+      var btnD = document.getElementById('btn-desktop');
+      var btnM = document.getElementById('btn-mobile');
+      if (mode === 'mobile') {
+        wrap.style.width = '375px'; wrap.style.maxWidth = '95vw'; wrap.style.height = '80vh';
+        iframe.style.width = '375px'; iframe.style.height = 'calc(80vh - 44px)';
+        label.textContent = 'Mobile Preview (375px)';
+        btnM.style.background = '#f0b429'; btnM.style.color = '#0a1628'; btnM.style.border = 'none';
+        btnD.style.background = 'transparent'; btnD.style.color = '#fff'; btnD.style.border = '1px solid #fff';
+      } else {
+        wrap.style.width = '700px'; wrap.style.maxWidth = '95vw'; wrap.style.height = '80vh';
+        iframe.style.width = '700px'; iframe.style.maxWidth = '95vw'; iframe.style.height = 'calc(80vh - 44px)';
+        label.textContent = 'Desktop Preview (700px)';
+        btnD.style.background = '#f0b429'; btnD.style.color = '#0a1628'; btnD.style.border = 'none';
+        btnM.style.background = 'transparent'; btnM.style.color = '#fff'; btnM.style.border = '1px solid #fff';
+      }
+      iframe.srcdoc = getPreviewHtml();
+    }
+    function closePreview() {
+      document.getElementById('preview-overlay').style.display = 'none';
+    }
+    </script>
   </div>
 
   {% if tracked %}
