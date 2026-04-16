@@ -95,28 +95,14 @@
 
             <!-- Coach college picker -->
             <div id="coach-team-group" style="display:none;">
-                <div class="form-group">
-                    <label>Division <span class="field-hint">Optional</span></label>
-                    <select name="coach_division" id="coach-division">
-                        <option value="">— Select division (optional) —</option>
-                        <option value="D1">NCAA Division I</option>
-                        <option value="D2">NCAA Division II</option>
-                        <option value="D3">NCAA Division III</option>
-                        <option value="NAIA">NAIA</option>
-                        <option value="JUCO">Junior College (JUCO)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Conference</label>
-                    <select name="coach_conference" id="coach-conference" disabled>
-                        <option value="">— Select conference —</option>
-                    </select>
-                </div>
-                <div class="form-group">
+                <div class="form-group" style="position:relative;">
                     <label>College / University</label>
-                    <select name="coach_college" id="coach-college" disabled>
-                        <option value="">— Select college —</option>
-                    </select>
+                    <input type="text" id="coach-college-search" placeholder="Start typing to search..." autocomplete="off" style="width:100%; box-sizing:border-box;">
+                    <input type="hidden" name="coach_college" id="coach-college" value="">
+                    <input type="hidden" name="coach_division" id="coach-division" value="">
+                    <input type="hidden" name="coach_conference" id="coach-conference" value="">
+                    <div id="coach-college-results" style="display:none; position:absolute; left:0; right:0; top:100%; background:#fff; border:1.5px solid #0a1628; border-radius:0 0 10px 10px; max-height:220px; overflow-y:auto; z-index:100; box-shadow:0 8px 24px rgba(0,0,0,.12);"></div>
+                    <span class="field-error" id="college-error"></span>
                 </div>
             </div>
 
@@ -269,38 +255,50 @@ window.COLLEGE_DATA = {
 };
 const COLLEGE_DATA = window.COLLEGE_DATA;
 
-const coachDivision   = document.getElementById('coach-division');
-const coachConference = document.getElementById('coach-conference');
-const coachCollege    = document.getElementById('coach-college');
-
-coachDivision.addEventListener('change', function() {
-    var div = this.value;
-    coachConference.innerHTML = '<option value="">— Select conference —</option>';
-    coachCollege.innerHTML    = '<option value="">— Select college —</option>';
-    coachConference.disabled  = true;
-    coachCollege.disabled     = true;
-    if (!div || !COLLEGE_DATA[div]) return;
-    Object.keys(COLLEGE_DATA[div]).sort().forEach(function(conf) {
-        var opt = document.createElement('option');
-        opt.value = conf; opt.textContent = conf;
-        coachConference.appendChild(opt);
+// Flatten into searchable array
+var _allColleges = [];
+Object.keys(COLLEGE_DATA).forEach(function(div) {
+    Object.keys(COLLEGE_DATA[div]).forEach(function(conf) {
+        COLLEGE_DATA[div][conf].forEach(function(name) {
+            _allColleges.push({name: name, division: div, conference: conf, search: name.toLowerCase()});
+        });
     });
-    coachConference.disabled = false;
+});
+_allColleges.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+var _searchInput = document.getElementById('coach-college-search');
+var _resultsBox  = document.getElementById('coach-college-results');
+var _hiddenCol   = document.getElementById('coach-college');
+var _hiddenDiv   = document.getElementById('coach-division');
+var _hiddenConf  = document.getElementById('coach-conference');
+
+function _selectCollege(c) {
+    _searchInput.value = c.name + ' (' + c.division + ' — ' + c.conference + ')';
+    _hiddenCol.value  = c.name;
+    _hiddenDiv.value  = c.division;
+    _hiddenConf.value = c.conference;
+    _resultsBox.style.display = 'none';
+}
+
+_searchInput.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    _hiddenCol.value = ''; _hiddenDiv.value = ''; _hiddenConf.value = '';
+    if (q.length < 2) { _resultsBox.style.display = 'none'; return; }
+    var matches = _allColleges.filter(function(c) { return c.search.indexOf(q) !== -1; }).slice(0, 15);
+    if (!matches.length) { _resultsBox.innerHTML = '<div style="padding:12px;color:#9ca3af;font-size:13px;">No matches found</div>'; _resultsBox.style.display = 'block'; return; }
+    _resultsBox.innerHTML = '';
+    matches.forEach(function(c) {
+        var row = document.createElement('div');
+        row.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:14px;';
+        row.innerHTML = '<strong style="color:#0a1628;">' + c.name + '</strong><span style="color:#6b7280;font-size:12px;margin-left:8px;">' + c.division + ' — ' + c.conference + '</span>';
+        row.addEventListener('mousedown', function(e) { e.preventDefault(); _selectCollege(c); });
+        _resultsBox.appendChild(row);
+    });
+    _resultsBox.style.display = 'block';
 });
 
-coachConference.addEventListener('change', function() {
-    var div  = coachDivision.value;
-    var conf = this.value;
-    coachCollege.innerHTML = '<option value="">— Select college —</option>';
-    coachCollege.disabled  = true;
-    if (!conf || !COLLEGE_DATA[div] || !COLLEGE_DATA[div][conf]) return;
-    COLLEGE_DATA[div][conf].sort().forEach(function(col) {
-        var opt = document.createElement('option');
-        opt.value = col; opt.textContent = col;
-        coachCollege.appendChild(opt);
-    });
-    coachCollege.disabled = false;
-});
+_searchInput.addEventListener('blur', function() { setTimeout(function() { _resultsBox.style.display = 'none'; }, 200); });
+_searchInput.addEventListener('focus', function() { if (this.value.length >= 2) this.dispatchEvent(new Event('input')); });
 
 // Show/hide sections based on role
 document.querySelectorAll('input[name="role"]').forEach(function(radio) {
@@ -309,11 +307,7 @@ document.querySelectorAll('input[name="role"]').forEach(function(radio) {
             playerTeamGroup.style.display = 'block';
             coachTeamGroup.style.display  = 'none';
             teamSelect.required = false;
-            coachDivision.value = '';
-            coachConference.innerHTML = '<option value="">— Select conference —</option>';
-            coachConference.disabled = true;
-            coachCollege.innerHTML = '<option value="">— Select college —</option>';
-            coachCollege.disabled = true;
+            _searchInput.value = ''; _hiddenCol.value = ''; _hiddenDiv.value = ''; _hiddenConf.value = '';
         } else {
             playerTeamGroup.style.display = 'none';
             coachTeamGroup.style.display  = 'block';
