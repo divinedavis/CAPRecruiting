@@ -3727,6 +3727,128 @@ async def admin_marketing_potential_staff(pid: int, request: Request, db: Sessio
     })
 
 
+def _send_staff_email(db, admin_user, campaign, staff_member, potential):
+    """Send a tracked campaign email to a single staff member. Returns True on success."""
+    import secrets as _sec
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    if not staff_member.email:
+        return False
+    # Skip if already sent this campaign to this email
+    existing = db.query(TrackedEmail).filter(
+        TrackedEmail.campaign_id == campaign.id,
+        TrackedEmail.recipient_email == staff_member.email,
+    ).first()
+    if existing:
+        return False
+
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    token = _sec.token_urlsafe(24)
+    invite = _sec.token_urlsafe(16)
+
+    coach_inv = CoachInvite(
+        token=invite, created_by=admin_user.id,
+        expires_at=datetime.utcnow() + timedelta(days=30),
+        note=f"Staff email: {staff_member.email} ({potential.school})",
+        source="campaign",
+    )
+    db.add(coach_inv)
+    te = TrackedEmail(
+        campaign_id=campaign.id, token=token,
+        staff_id=staff_member.id, potential_id=potential.id,
+        recipient_email=staff_member.email,
+        recipient_name=staff_member.name,
+        school=potential.school, invite_token=invite,
+    )
+    db.add(te)
+    db.commit()
+
+    signup_link = f"{site_url}/track/{token}"
+    pixel_url = f"{site_url}/track/pixel/{token}.png"
+    body = campaign.body_html
+    body = body.replace("{{coach_name}}", staff_member.name or "Coach")
+    body = body.replace("{{school}}", potential.school or "")
+    body = body.replace("{{division}}", potential.division or "")
+    body = body.replace("{{conference}}", potential.conference or "")
+    body = body.replace("{{signup_link}}", signup_link)
+    body = body.replace("{{signup_button}}", (
+        f'<a href="{signup_link}" style="display:inline-block;padding:14px 32px;'
+        f'background:#0a1628;color:#f0b429;border-radius:8px;text-decoration:none;'
+        f'font-weight:800;font-size:15px;">Sign Up as a Coach</a>'
+    ))
+    body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="">'
+
+    subject = campaign.subject.replace("{{school}}", potential.school or "").replace("{{coach_name}}", staff_member.name or "Coach")
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"Collegiate Athletic Planning <{SMTP_USER}>"
+    msg["To"] = staff_member.email
+    msg["List-Unsubscribe"] = f"<mailto:{SMTP_USER}?subject=unsubscribe>"
+    msg.attach(MIMEText(body, "html"))
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, staff_member.email, msg.as_string())
+        return True
+    except Exception as exc:
+        _logger.warning("Staff email to %s failed: %s", staff_member.email, type(exc).__name__)
+        return False
+
+
+@app.post("/admin/marketing/potentials/{pid}/staff/send-one")
+async def admin_staff_send_one(pid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    form = await request.form()
+    sid = int(form.get("staff_id", 0))
+    staff = db.query(PotentialStaff).filter(PotentialStaff.id == sid).first()
+    pot = db.query(MarketingPotential).filter(MarketingPotential.id == pid).first()
+    if not staff or not pot:
+        raise HTTPException(status_code=404)
+    campaign = db.query(EmailCampaign).filter(
+        EmailCampaign.body_html != "", EmailCampaign.subject != ""
+    ).order_by(EmailCampaign.created_at.desc()).first()
+    if not campaign:
+        return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
+    ok = _send_staff_email(db, user, campaign, staff, pot)
+    return RedirectResponse(
+        f"/admin/marketing/potentials/{pid}/staff?sent={'1' if ok else 'dup'}", status_code=302
+    )
+
+
+@app.post("/admin/marketing/potentials/{pid}/staff/send-all")
+async def admin_staff_send_all(pid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    pot = db.query(MarketingPotential).filter(MarketingPotential.id == pid).first()
+    if not pot:
+        raise HTTPException(status_code=404)
+    campaign = db.query(EmailCampaign).filter(
+        EmailCampaign.body_html != "", EmailCampaign.subject != ""
+    ).order_by(EmailCampaign.created_at.desc()).first()
+    if not campaign:
+        return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
+    staff_list = db.query(PotentialStaff).filter(
+        PotentialStaff.potential_id == pid, PotentialStaff.email != ""
+    ).all()
+    sent = 0
+    import time as _time
+    for s in staff_list:
+        if _send_staff_email(db, user, campaign, s, pot):
+            sent += 1
+            _time.sleep(0.5)
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, user.id, "send_staff_emails", pid, f"school={pot.school} sent={sent}", _ip)
+    return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?sent={sent}", status_code=302)
+
+
 @app.post("/admin/marketing/potentials/staff/{sid}/update")
 async def admin_potential_staff_update(sid: int, request: Request, db: Session = Depends(get_db)):
     user, err = _marketing_require_admin(request, db)

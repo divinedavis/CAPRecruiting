@@ -56,6 +56,24 @@
     <span>{{ staff|length }} staff member{% if staff|length != 1 %}s{% endif %} found</span>
   </div>
 
+  {% set sent_msg = request.query_params.get('sent') %}
+  {% set err_msg = request.query_params.get('error') %}
+  {% if sent_msg == 'dup' %}
+  <div style="background:#fef3c7; border:1px solid #f0b429; color:#92400e; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">Already sent to this coach from the current template.</div>
+  {% elif sent_msg %}
+  <div style="background:#d1fae5; border:1px solid #10b981; color:#065f46; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">{{ sent_msg }} email{% if sent_msg != '1' %}s{% endif %} sent.</div>
+  {% endif %}
+  {% if err_msg == 'no_template' %}
+  <div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">No email template found. <a href="/admin/marketing/campaigns" style="color:#991b1b; font-weight:700;">Create a campaign first.</a></div>
+  {% endif %}
+
+  {% if staff %}
+  <div style="margin-bottom:14px;">
+    <form method="post" action="/admin/marketing/potentials/{{ pot.id }}/staff/send-all" style="display:inline;">
+      <button type="submit" onclick="return confirm('Send the campaign email individually to all {{ staff|length }} staff members at {{ pot.school }}? Each coach receives their own personalized copy with unique tracking.');" style="padding:10px 20px; background:#0a1628; color:#f0b429; border:none; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">Send Email to All Staff</button>
+    </form>
+  </div>
+
   {% if staff %}
   {% for s in staff %}
   <div class="staff-card">
@@ -101,6 +119,12 @@
         <input type="text" name="notes" class="staff-notes" value="{{ s.notes or '' }}" placeholder="Notes (100 chars)" maxlength="100">
         <button type="submit" class="staff-save">Save</button>
       </form>
+      {% if s.email %}
+      <form method="post" action="/admin/marketing/potentials/{{ pot.id }}/staff/send-one" style="margin-top:6px;">
+        <input type="hidden" name="staff_id" value="{{ s.id }}">
+        <button type="submit" style="padding:6px 14px; background:#0a1628; color:#f0b429; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" {% if email_status == 'sent' or email_status == 'opened' or email_status == 'clicked' or email_status == 'signed_up' %}title="Already emailed"{% endif %}>Send Email</button>
+      </form>
+      {% endif %}
     </div>
   </div>
   {% endfor %}
