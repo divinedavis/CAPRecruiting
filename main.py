@@ -1617,6 +1617,9 @@ async def signup_post(
         if inv:
             inv.used = True
             inv.used_by = user.id
+            te = db.query(TrackedEmail).filter(TrackedEmail.invite_token == invite_token).first()
+            if te:
+                te.signed_up = True
             db.commit()
     request.session.clear()
     request.session["user_id"] = user.id
@@ -2169,6 +2172,9 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
             db.add(CoachProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
             inv.used = True
             inv.used_by = new_user.id
+            te = db.query(TrackedEmail).filter(TrackedEmail.invite_token == invite_token).first()
+            if te:
+                te.signed_up = True
             db.commit()
         except Exception:
             db.rollback()
