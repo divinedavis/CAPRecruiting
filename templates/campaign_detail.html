@@ -150,7 +150,7 @@
 
   {% if tracked %}
   <div class="cd-section">
-    <h2>Recipients ({{ tracked|length }})</h2>
+    <h2>Recipients ({{ total }})</h2>
     <div style="overflow-x:auto;">
       <table class="cd-table">
         <thead>
@@ -183,7 +183,26 @@
         </tbody>
       </table>
     </div>
+    {% if recip_total_pages > 1 %}
+    <div class="mk-pot-pager" style="margin-top:14px;">
+      {% if recip_page > 1 %}<a href="?rp={{ recip_page - 1 }}">‹ Prev</a>{% endif %}
+      {% for n in recip_pages_visible %}
+        {% if n == recip_page %}
+          <span class="active">{{ n }}</span>
+        {% else %}
+          <a href="?rp={{ n }}">{{ n }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if recip_page < recip_total_pages %}<a href="?rp={{ recip_page + 1 }}">Next ›</a>{% endif %}
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 </div>
+<style>
+.mk-pot-pager { display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: wrap; }
+.mk-pot-pager a, .mk-pot-pager span { padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700; color: #0a1628; border: 1.5px solid #0a1628; background: #fff; min-width: 36px; text-align: center; }
+.mk-pot-pager a:hover { background: #f3f4f6; }
+.mk-pot-pager .active { background: #0a1628; color: #f0b429; border-color: #0a1628; }
+</style>
 {% endblock %}

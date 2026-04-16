@@ -3909,16 +3909,28 @@ async def admin_campaign_detail(cid: int, request: Request, db: Session = Depend
     campaign = db.query(EmailCampaign).filter(EmailCampaign.id == cid).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-    tracked = db.query(TrackedEmail).filter(TrackedEmail.campaign_id == cid).order_by(TrackedEmail.sent_at).all()
-    total = len(tracked)
-    opened = sum(1 for t in tracked if t.opened_at)
-    clicked = sum(1 for t in tracked if t.clicked_at)
-    signed = sum(1 for t in tracked if t.signed_up)
+    all_tracked = db.query(TrackedEmail).filter(TrackedEmail.campaign_id == cid).order_by(TrackedEmail.sent_at).all()
+    total = len(all_tracked)
+    opened = sum(1 for t in all_tracked if t.opened_at)
+    clicked = sum(1 for t in all_tracked if t.clicked_at)
+    signed = sum(1 for t in all_tracked if t.signed_up)
+
+    RECIP_PER_PAGE = 5
+    try:
+        recip_page = max(1, int(request.query_params.get("rp") or "1"))
+    except ValueError:
+        recip_page = 1
+    recip_total_pages = max(1, (total + RECIP_PER_PAGE - 1) // RECIP_PER_PAGE)
+    recip_page = min(recip_page, recip_total_pages)
+    tracked = all_tracked[(recip_page - 1) * RECIP_PER_PAGE : recip_page * RECIP_PER_PAGE]
+
     unread_count = unread_sender_count(db, user.id)
     return templates.TemplateResponse("campaign_detail.html", {
         "request": request, "user": user, "campaign": campaign,
         "tracked": tracked, "total": total, "opened": opened,
         "clicked": clicked, "signed": signed, "unread_count": unread_count,
+        "recip_page": recip_page, "recip_total_pages": recip_total_pages,
+        "recip_pages_visible": _page_window(recip_page, recip_total_pages, 3),
     })
 
 
