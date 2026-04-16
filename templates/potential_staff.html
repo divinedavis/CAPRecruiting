@@ -73,8 +73,6 @@
       <button type="submit" onclick="return confirm('Send the campaign email individually to all {{ staff|length }} staff members at {{ pot.school }}? Each coach receives their own personalized copy with unique tracking.');" style="padding:10px 20px; background:#0a1628; color:#f0b429; border:none; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">Send Email to All Staff</button>
     </form>
   </div>
-
-  {% if staff %}
   {% for s in staff %}
   <div class="staff-card">
     <div class="staff-avatar">
