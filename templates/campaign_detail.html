@@ -81,14 +81,8 @@
       <textarea name="body_html" placeholder="Write your email HTML here. Use merge fields above. Include {{signup_button}} where you want the signup CTA.">{{ campaign.body_html }}</textarea>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="submit" class="cd-btn">Save Template</button>
-        {% if campaign.status == 'draft' %}
-        <button type="button" class="cd-btn danger" onclick="if(confirm('Send this campaign to ALL potential coaching staff with emails (~2,000 recipients)? This cannot be undone.')) document.getElementById('send-form').submit();">Send Campaign</button>
-        {% endif %}
       </div>
     </form>
-    {% if campaign.status == 'draft' %}
-    <form id="send-form" method="post" action="/admin/marketing/campaigns/{{ campaign.id }}/send" style="display:none;"></form>
-    {% endif %}
   </div>
 
   {% if tracked %}
