@@ -2557,8 +2557,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
                 if current_user:
                     date_str = getattr(profile, f"visit{i}_date", "") or ""
                     try:
-                        from datetime import datetime, timedelta as _dt
-                        fmt_date = _dt.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y") if date_str else ""
+                        fmt_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y") if date_str else ""
                     except Exception:
                         fmt_date = date_str
                     visit_list.append({"school": school, "date": fmt_date})
