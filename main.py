@@ -2586,6 +2586,29 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         videos = []
         has_more_videos = False
         total_video_count = 0
+
+    # Notify premium players when a coach views their profile
+    if (is_coach_viewer and not is_owner and target.role == "player"
+            and tier_gte(pt, "premium")):
+        # Throttle: max 1 profile-view notification per viewer per player per 24h
+        _cutoff = datetime.utcnow() - timedelta(hours=24)
+        _recent = db.query(Notification).filter(
+            Notification.user_id == target.id,
+            Notification.type == "profile_view",
+            Notification.actor_user_id == current_user.id,
+            Notification.created_at > _cutoff,
+        ).first()
+        if not _recent:
+            db.add(Notification(
+                user_id=target.id,
+                type="profile_view",
+                title="A coach viewed your profile",
+                body="A college coach just looked at your recruiting profile.",
+                link=f"/profile/{target.username}",
+                actor_user_id=current_user.id,
+            ))
+            db.commit()
+
     return templates.TemplateResponse("profile.html", {
         "request": request,
         "target": target,
@@ -2614,6 +2637,8 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "can_view_contact": can_view_contact,
         "can_message": can_message,
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target.id).all()} if target.role == "player" else set(),
+        "scout_board_count": db.query(func.count(ScoutBoardCard.id)).filter(ScoutBoardCard.player_user_id == target.id, ScoutBoardCard.archived_at == None).scalar() if target.role == "player" else 0,
+        "monthly_profile_views": db.query(func.count(Notification.id)).filter(Notification.user_id == target.id, Notification.type == "profile_view", Notification.created_at >= datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)).scalar() if (target.role == "player" and tier_gte(pt, "premium")) else 0,
     })
 
 @app.get("/videos/{username}", response_class=HTMLResponse)

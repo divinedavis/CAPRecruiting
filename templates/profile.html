@@ -62,6 +62,25 @@
                     {% elif target.role == "coach" and profile and profile.school %}
                         <p class="profile-school">{{ profile.school }}{% if profile.division %} | {{ profile.division }}{% endif %}{% if profile.conference %} | {{ profile.conference }}{% endif %}</p>
                     {% endif %}
+                    {% if target.role == "player" and is_owner and viewer_tier == "premium" %}
+                    <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+                        {% if scout_board_count > 0 %}
+                        <div style="background:#dbeafe; color:#1d4ed8; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700;">
+                            On {{ scout_board_count }} coach scouting board{% if scout_board_count != 1 %}s{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if monthly_profile_views > 0 %}
+                        <div style="background:#d1fae5; color:#065f46; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700;">
+                            {{ monthly_profile_views }} profile view{% if monthly_profile_views != 1 %}s{% endif %} this month
+                        </div>
+                        {% endif %}
+                        {% if scout_board_count == 0 and monthly_profile_views == 0 %}
+                        <div style="background:#f3f4f6; color:#6b7280; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700;">
+                            No coach activity on your profile yet this month
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     {% if profile and (profile.x_url or profile.instagram_url or profile.hudl_url) %}
                     <div style="display:flex; gap:10px; margin-top:8px; align-items:center;">
                         {% if profile.x_url %}
