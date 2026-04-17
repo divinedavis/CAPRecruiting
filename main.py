@@ -852,9 +852,52 @@ def _finalize_pending_signup(db: Session, pending: "PendingSignup", stripe_custo
         _asyncio.create_task(send_player_signup_notification(user.username, user.email, pending.school_name or ""))
     except Exception:
         pass
+    _create_and_send_contract(db, user)
     db.delete(pending)
     db.commit()
     return user
+
+
+def _create_and_send_contract(db: Session, user):
+    """Auto-create a LegalContract for a new player and email them the signing link."""
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    token = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    contract = LegalContract(
+        token=token,
+        player_name=user.username,
+        created_by_id=None,  # auto-generated, not admin-created
+    )
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+
+    sign_url = f"{site_url}/sign/{token}"
+    try:
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your CAP Recruiting Agreement"
+        msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+        msg["To"] = user.email
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+          <img src="{site_url}/static/cap-logo.png" alt="CAP" style="height:50px;margin-bottom:24px;">
+          <h2 style="color:#0a1628;">Welcome to CAP Recruiting!</h2>
+          <p style="color:#374151;font-size:15px;line-height:1.6;">Hi {user.username},</p>
+          <p style="color:#374151;font-size:15px;line-height:1.6;">Thank you for signing up. Before you get started, please review and sign your player agreement. This is required to activate your full profile.</p>
+          <p style="margin:28px 0;text-align:center;">
+            <a href="{sign_url}" style="display:inline-block;background:#0a1628;color:#f0b429;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:800;font-size:15px;">Review &amp; Sign Agreement</a>
+          </p>
+          <p style="color:#6b7280;font-size:13px;">If the button doesn't work, copy and paste this link:<br><a href="{sign_url}" style="color:#0a1628;">{sign_url}</a></p>
+        </div>"""
+        msg.attach(MIMEText(html, "html"))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, user.email, msg.as_string())
+    except Exception as exc:
+        _logger.warning("Contract email to %s failed: %s", user.email, type(exc).__name__)
 
 
 def log_admin_action(db: Session, admin_id: int, action: str, target_id: int = None, detail: str = "", ip: str = ""):
@@ -1552,6 +1595,7 @@ async def signup_post(
                 _asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
             except Exception:
                 pass
+            _create_and_send_contract(db, user)
             request.session.clear()
             request.session["user_id"] = user.id
             request.session["is_admin"] = bool(user.is_admin)
