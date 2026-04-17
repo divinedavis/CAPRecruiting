@@ -37,7 +37,7 @@ input, textarea, select {
     border-radius: var(--radius-sm);
     font-size: 15px;
     font-family: inherit;
-    background: var(--white);
+    background: #edf0f3;
     transition: border-color 0.2s;
     outline: none;
 }
@@ -208,7 +208,7 @@ textarea { resize: vertical; }
 .art-icon { font-size: 96px; }
 
 /* ── Features ─────────────────────────────────────────────────── */
-.features { padding: 80px 24px; background: var(--white); }
+.features { padding: 80px 24px; background: #edf0f3; }
 .section-title { text-align: center; font-size: 32px; font-weight: 800; color: var(--navy); margin-bottom: 48px; }
 .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto; }
 .feature-card {
@@ -230,7 +230,7 @@ textarea { resize: vertical; }
     padding: 40px 24px;
 }
 .auth-card {
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius-lg);
     padding: 40px;
@@ -284,7 +284,7 @@ textarea { resize: vertical; }
     gap: 20px;
 }
 .player-card {
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
     padding: 20px;
@@ -331,7 +331,7 @@ textarea { resize: vertical; }
 
 /* ── Profile Page ─────────────────────────────────────────────── */
 .share-bar {
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
     padding: 14px 20px;
@@ -344,12 +344,12 @@ textarea { resize: vertical; }
 .share-label { font-size: 14px; font-weight: 600; color: var(--gray-600); white-space: nowrap; }
 .share-input-group { display: flex; gap: 8px; flex: 1; min-width: 200px; }
 .share-input { flex: 1; font-size: 13px; color: var(--gray-600); background: var(--gray-50); }
-.share-input-group .btn { border-color: var(--gray-200); color: var(--gray-800); background: var(--white); }
+.share-input-group .btn { border-color: var(--gray-200); color: var(--gray-800); background: #edf0f3; }
 
 .profile-layout { display: flex; gap: 24px; }
 .profile-main { flex: 1; min-width: 0; }
 .profile-header-card {
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
     padding: 28px;
@@ -395,7 +395,7 @@ textarea { resize: vertical; }
 .profile-actions .btn-outline { border-color: var(--gray-200); color: var(--gray-800); }
 
 .profile-section {
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
     padding: 24px;
@@ -441,7 +441,7 @@ textarea { resize: vertical; }
     flex-direction: column;
     align-items: center;
     padding: 16px 10px 12px;
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius-sm);
     text-align: center;
@@ -466,7 +466,7 @@ textarea { resize: vertical; }
 }
 .transcript-modal-backdrop.open { display: flex; }
 .transcript-modal {
-    background: var(--white);
+    background: #edf0f3;
     border-radius: var(--radius);
     width: 100%;
     max-width: 860px;
@@ -498,7 +498,7 @@ textarea { resize: vertical; }
 .edit-header h1 { font-size: 28px; font-weight: 800; color: var(--navy); }
 .edit-header p { color: var(--gray-600); margin-top: 6px; }
 .form-section {
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
     padding: 24px;
@@ -518,7 +518,7 @@ textarea { resize: vertical; }
     align-items: center;
     gap: 14px;
     padding: 16px 20px;
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
     margin-bottom: 8px;
@@ -547,7 +547,7 @@ textarea { resize: vertical; }
 .chat-layout {
     max-width: 720px;
     margin: 0 auto;
-    background: var(--white);
+    background: #edf0f3;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius-lg);
     display: flex;
@@ -759,7 +759,7 @@ textarea { resize: vertical; }
 /* ── Admin Panel ─────────────────────────────────────────────── */
 .admin-panel { display: grid; grid-template-columns: 360px 1fr; gap: 32px; margin-top: 8px; }
 .admin-form-card {
-    background: var(--white); border: 1.5px solid var(--gray-200);
+    background: #edf0f3; border: 1.5px solid var(--gray-200);
     border-radius: 16px; padding: 28px 24px;
     height: fit-content;
 }
