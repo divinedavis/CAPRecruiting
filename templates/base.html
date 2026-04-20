@@ -17,7 +17,9 @@
     <meta name="twitter:image" content="{% block tw_image %}https://caprecruiting.com/static/og-default.png{% endblock %}">
     <link rel="icon" href="/static/cap-logo.png" type="image/png">
     <link rel="apple-touch-icon" href="/static/cap-logo.png">
-    <link rel="stylesheet" href="/static/style.css?v=20260410">
+    <link rel="stylesheet" href="/static/style.css?v=20260420">
+    <link rel="privacy-policy" href="https://caprecruiting.com/privacy">
+    <link rel="terms-of-service" href="https://caprecruiting.com/terms">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Google Analytics (inline only - no external GTM script to prevent supply chain risk) -->
     <script>
@@ -71,6 +73,7 @@
                 <form method="post" action="/logout" style="display:inline;margin:0;"><button type="submit" class="btn btn-ghost" style="border:none;cursor:pointer;">Logout</button></form>
             {% else %}
                 <a href="/dashboard">Browse Players</a>
+                <a href="/privacy">Privacy</a>
                 <a href="/login">Login</a>
                 <a href="/pricing" class="btn btn-primary">Sign Up</a>
             {% endif %}
