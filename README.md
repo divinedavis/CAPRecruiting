@@ -28,8 +28,7 @@ CAP Recruiting connects high school football players with college coaches — a 
 
 <p align="center"><img src="doc/imgs/home.png" alt="CAP Recruiting — connect high school football talent with college coaches" width="1040px" /></p>
 <p align="center"><img src="doc/imgs/dashboard.png" alt="Searchable player directory with stats, ratings, and offers" width="1040px" /></p>
-<p align="center"><img src="doc/imgs/pricing.png" alt="Three-tier pricing — Essentials, Advanced, Premium" width="1040px" /></p>
-<p align="center"><img src="doc/imgs/signup.png" alt="Player signup with tier selection and Google OAuth" width="1040px" /></p>
+<p align="center"><img src="doc/imgs/scout.png" alt="Coach scout dashboard — watch, contact, evaluate, offer, commit lanes" width="1040px" /></p>
 
 ## What It Does
 
