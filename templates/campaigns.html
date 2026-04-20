@@ -2,20 +2,27 @@
 {% block title %}Email Campaigns — CAP Recruiting{% endblock %}
 {% block content %}
 <style>
-.cp-page { max-width: 900px; margin: 0 auto; padding: 24px; }
-.cp-page h1 { font-size: 24px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
-.cp-page .sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
-.cp-card { display: flex; justify-content: space-between; align-items: center; padding: 16px; border: 1.5px solid #e5e7eb; border-radius: 10px; margin-bottom: 8px; background: #fff; gap: 12px; flex-wrap: wrap; }
-.cp-card .name { font-weight: 800; color: #0a1628; font-size: 15px; }
-.cp-card .meta { font-size: 12px; color: #6b7280; margin-top: 2px; }
-.cp-status { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; letter-spacing: .04em; }
+body { background: #f7f7f8; }
+.cp-page { max-width: 900px; margin: 0 auto; padding: 28px 24px 48px; }
+.cp-page h1 { font-size: 24px; font-weight: 700; color: #0a1628; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+.cp-page .sub { color: #737482; font-size: 14px; margin: 0 0 24px 0; }
+.cp-shell { background: #fff; border: 1px solid #eeeef0; border-radius: 16px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.cp-card { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border: 1px solid #eeeef0; border-radius: 12px; margin-bottom: 8px; background: #fff; gap: 12px; flex-wrap: wrap; transition: all .15s ease; }
+.cp-card:hover { border-color: #d4d4d8; background: #fafafa; }
+.cp-card .name { font-weight: 600; color: #0a1628; font-size: 15px; letter-spacing: -0.005em; }
+.cp-card .meta { font-size: 12px; color: #737482; margin-top: 3px; }
+.cp-status { display: inline-block; padding: 3px 12px; font-size: 11px; font-weight: 600; border-radius: 999px; letter-spacing: .01em; text-transform: capitalize; }
 .cp-status.draft { background: #fef3c7; color: #92400e; }
 .cp-status.sending { background: #dbeafe; color: #1d4ed8; }
 .cp-status.sent { background: #d1fae5; color: #065f46; }
-.cp-btn { padding: 8px 16px; background: #0a1628; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: none; }
-.cp-new { display: flex; gap: 8px; margin-bottom: 20px; align-items: end; }
-.cp-new input { padding: 8px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 250px; }
-.cp-back { display: inline-block; margin-bottom: 16px; color: #0a1628; font-weight: 700; font-size: 13px; text-decoration: none; }
+.cp-btn { padding: 10px 18px; background: #0a1628; color: #fff; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: background .15s; }
+.cp-btn:hover { background: #1a2638; }
+.cp-new { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #e5e7eb; align-items: center; flex-wrap: wrap; }
+.cp-new input { padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; min-width: 260px; flex: 1; background: #fff; color: #0a1628; transition: border-color .15s; }
+.cp-new input:focus { outline: none; border-color: #0a1628; box-shadow: 0 0 0 3px rgba(10,22,40,.06); }
+.cp-back { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 18px; color: #737482; font-weight: 500; font-size: 13px; text-decoration: none; transition: color .15s; }
+.cp-back:hover { color: #0a1628; }
+.cp-empty { color: #9ca3af; font-size: 14px; text-align: center; padding: 48px 24px; }
 </style>
 
 <div class="cp-page">
@@ -23,29 +30,31 @@
   <h1>Email Campaigns</h1>
   <p class="sub">Create and send tracked email campaigns to coaching staff</p>
 
-  <form method="post" action="/admin/marketing/campaigns/create" class="cp-new">
-    <input type="text" name="name" placeholder="Campaign name (e.g. Spring 2026 D2 Outreach)" required>
-    <button type="submit" class="cp-btn">New Campaign</button>
-  </form>
+  <div class="cp-shell">
+    <form method="post" action="/admin/marketing/campaigns/create" class="cp-new">
+      <input type="text" name="name" placeholder="Campaign name (e.g. Spring 2026 D2 Outreach)" required>
+      <button type="submit" class="cp-btn">New Campaign</button>
+    </form>
 
-  {% if campaigns %}
-  {% for c in campaigns %}
-  <a href="/admin/marketing/campaigns/{{ c.id }}" style="text-decoration:none;">
-    <div class="cp-card">
-      <div>
-        <div class="name">{{ c.name }}</div>
-        <div class="meta">
-          Created {{ c.created_at.strftime('%Y-%m-%d') }}
-          {% if c.sent_at %} · Sent {{ c.sent_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
-          {% if c.sent_count %} · {{ c.sent_count }} emails{% endif %}
+    {% if campaigns %}
+    {% for c in campaigns %}
+    <a href="/admin/marketing/campaigns/{{ c.id }}" style="text-decoration:none;">
+      <div class="cp-card">
+        <div>
+          <div class="name">{{ c.name }}</div>
+          <div class="meta">
+            Created {{ c.created_at.strftime('%Y-%m-%d') }}
+            {% if c.sent_at %} · Sent {{ c.sent_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+            {% if c.sent_count %} · {{ c.sent_count }} emails{% endif %}
+          </div>
         </div>
+        <span class="cp-status {{ c.status }}">{{ c.status }}</span>
       </div>
-      <span class="cp-status {{ c.status }}">{{ c.status }}</span>
-    </div>
-  </a>
-  {% endfor %}
-  {% else %}
-  <p style="color:#9ca3af; font-size:14px; text-align:center; padding:32px;">No campaigns yet. Create one above to get started.</p>
-  {% endif %}
+    </a>
+    {% endfor %}
+    {% else %}
+    <p class="cp-empty">No campaigns yet. Create one above to get started.</p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

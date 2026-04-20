@@ -2,66 +2,82 @@
 {% block title %}Marketing CRM — CAP Recruiting{% endblock %}
 {% block content %}
 <style>
-.mk-page { max-width: 1200px; margin: 0 auto; padding: 24px; }
-.mk-h1 { font-size: 28px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
-.mk-sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
-.mk-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.mk-metric { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 14px 16px; }
-.mk-metric .lbl { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
-.mk-metric .val { font-size: 24px; font-weight: 800; color: #0a1628; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.mk-metric .sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-.mk-section { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
-.mk-section h2 { font-size: 15px; font-weight: 800; color: #0a1628; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1.5px solid #e5e7eb; }
-.mk-pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.mk-pipe a { display: block; text-decoration: none; padding: 12px 10px; border: 1.5px solid #e5e7eb; border-radius: 10px; color: #0a1628; text-align: center; }
+body { background: #f7f7f8; }
+.mk-page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+.mk-h1 { font-size: 26px; font-weight: 700; color: #0a1628; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+.mk-sub { color: #737482; font-size: 14px; margin: 0 0 24px 0; }
+.mk-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.mk-metric { background: #fff; border: 1px solid #eeeef0; border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.mk-metric .lbl { font-size: 11px; font-weight: 600; color: #737482; letter-spacing: .02em; }
+.mk-metric .val { font-size: 26px; font-weight: 700; color: #0a1628; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.mk-metric .sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+.mk-section { background: #fff; border: 1px solid #eeeef0; border-radius: 16px; padding: 22px 24px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.mk-section h2 { font-size: 16px; font-weight: 600; color: #0a1628; letter-spacing: -0.01em; margin: 0 0 16px 0; padding-bottom: 14px; border-bottom: 1px dashed #e5e7eb; display: flex; align-items: center; gap: 6px; }
+.mk-section h2 .info { color: #9ca3af; font-size: 13px; font-weight: 400; cursor: help; }
+.mk-pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.mk-pipe a { display: block; text-decoration: none; padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; color: #0a1628; text-align: center; background: #fafafa; transition: all .15s ease; }
+.mk-pipe a:hover { background: #f3f4f6; border-color: #d4d4d8; }
 .mk-pipe a.active { background: #0a1628; color: #fff; border-color: #0a1628; }
-.mk-pipe .n { font-size: 20px; font-weight: 800; }
-.mk-pipe .l { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+.mk-pipe .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.mk-pipe .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
+.mk-pipe a.active .l { color: #9ca3af; }
 .mk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.mk-table th { text-align: left; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; padding: 8px 6px; border-bottom: 1.5px solid #e5e7eb; }
-.mk-table td { padding: 10px 6px; border-bottom: 1px solid #f3f4f6; color: #0a1628; }
-.mk-table tr:hover td { background: #f9fafb; }
+.mk-table th { text-align: left; font-size: 11px; font-weight: 600; color: #737482; padding: 10px 8px; border-bottom: 1px dashed #e5e7eb; letter-spacing: .01em; }
+.mk-table td { padding: 12px 8px; border-bottom: 1px solid #f3f4f6; color: #0a1628; vertical-align: middle; }
+.mk-table tr:last-child td { border-bottom: none; }
+.mk-table tr:hover td { background: #fafafa; }
 .mk-table a { color: #0a1628; font-weight: 600; text-decoration: none; }
 .mk-table a:hover { text-decoration: underline; }
-.mk-stage-pill { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; border-radius: 10px; letter-spacing: .04em; }
+.mk-lead-name { display: flex; align-items: center; gap: 10px; }
+.mk-avatar { width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; flex-shrink: 0; display: block; object-fit: cover; }
+.mk-lead-email { font-size: 11px; color: #9ca3af; }
+.mk-stage-pill { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: 999px; letter-spacing: .01em; }
 .mk-stage-new { background: #dbeafe; color: #1d4ed8; }
 .mk-stage-contacted { background: #fef3c7; color: #92400e; }
 .mk-stage-responded { background: #e0e7ff; color: #4338ca; }
 .mk-stage-demo { background: #dcfce7; color: #166534; }
 .mk-stage-onboarded { background: #d1fae5; color: #065f46; }
 .mk-stage-inactive { background: #f3f4f6; color: #6b7280; }
-.mk-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+.mk-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px dashed #e5e7eb; }
 .mk-filters .fg { display: flex; flex-direction: column; gap: 4px; }
-.mk-filters label { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
-.mk-filters input, .mk-filters select { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; min-width: 130px; font-size: 13px; }
-.mk-filters button { padding: 8px 16px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; }
-.mk-filters a.reset { padding: 8px 14px; background: #f3f4f6; color: #0a1628; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 12px; border: 1.5px solid #e5e7eb; }
-.mk-new-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
-.mk-new-form input, .mk-new-form select, .mk-new-form textarea { padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
-.mk-btn-primary { padding: 10px 20px; background: #0a1628; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; }
-.mk-due { background: #fef3c7; border: 1.5px solid #f0b429; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-.mk-due a { color: #92400e; font-weight: 700; text-decoration: none; }
-.mk-pot-row { display: grid; grid-template-columns: 1.6fr 0.6fr 1fr 0.6fr 1fr 80px; gap: 10px; align-items: center; padding: 10px 6px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
-.mk-pot-row:hover { background: #f9fafb; }
-.mk-pot-row .school { font-weight: 700; color: #0a1628; }
+.mk-filters label { font-size: 11px; font-weight: 500; color: #737482; }
+.mk-filters input, .mk-filters select { padding: 9px 12px; border: 1px solid #e5e7eb; border-radius: 10px; min-width: 140px; font-size: 13px; background: #fff; color: #0a1628; transition: border-color .15s; }
+.mk-filters input:focus, .mk-filters select:focus { outline: none; border-color: #0a1628; box-shadow: 0 0 0 3px rgba(10,22,40,.06); }
+.mk-filters button { padding: 10px 18px; background: #0a1628; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.mk-filters button:hover { background: #1a2638; }
+.mk-filters a.reset { padding: 9px 16px; background: #f4f4f5; color: #0a1628; border-radius: 10px; text-decoration: none; font-weight: 500; font-size: 13px; border: 1px solid #eeeef0; }
+.mk-new-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.mk-new-form input, .mk-new-form select, .mk-new-form textarea { padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; width: 100%; box-sizing: border-box; background: #fff; color: #0a1628; transition: border-color .15s; }
+.mk-new-form input:focus, .mk-new-form select:focus, .mk-new-form textarea:focus { outline: none; border-color: #0a1628; box-shadow: 0 0 0 3px rgba(10,22,40,.06); }
+.mk-btn-primary { padding: 11px 22px; background: #0a1628; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background .15s; }
+.mk-btn-primary:hover { background: #1a2638; }
+.mk-btn-accent { padding: 11px 22px; background: #0a1628; color: #f0b429; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; text-decoration: none; display: inline-block; transition: background .15s; }
+.mk-btn-accent:hover { background: #1a2638; }
+.mk-due { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mk-due a { color: #92400e; font-weight: 600; text-decoration: none; }
+.mk-due-meta { font-size: 11px; color: #92400e; font-weight: 600; background: #fef3c7; padding: 4px 10px; border-radius: 999px; }
+.mk-pot-row { display: grid; grid-template-columns: 1.6fr 0.6fr 1fr 0.6fr 1fr 80px; gap: 12px; align-items: center; padding: 12px 8px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+.mk-pot-row:hover { background: #fafafa; }
+.mk-pot-row .school { font-weight: 600; color: #0a1628; }
 .mk-pot-row .sub { font-size: 11px; color: #9ca3af; }
-.mk-pot-row .div-pill { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 800; border-radius: 10px; background: #0a1628; color: #fff; letter-spacing: .04em; }
-.mk-pot-row .contacted { color: #166534; font-weight: 700; font-size: 11px; }
-.mk-pot-status { padding: 6px 8px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 11px; font-weight: 700; background: #fff; cursor: pointer; width: 100%; }
-.mk-pot-status.s-never_contacted { color: #6b7280; }
-.mk-pot-status.s-contacted { color: #065f46; border-color: #10b981; background: #ecfdf5; }
-.mk-pot-status.s-not_interested { color: #991b1b; border-color: #f87171; background: #fef2f2; }
-.mk-pot-btn { padding: 6px 10px; background: #0a1628; color: #fff; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
-.mk-pot-btn.secondary { background: #f3f4f6; color: #0a1628; border: 1.5px solid #e5e7eb; }
-.mk-pot-expand { display: none; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #f3f4f6; }
+.mk-pot-row .div-pill { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: 999px; background: #0a1628; color: #fff; letter-spacing: .01em; }
+.mk-pot-row .contacted { color: #166534; font-weight: 600; font-size: 11px; }
+.mk-pot-status { padding: 7px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 11px; font-weight: 600; background: #fff; cursor: pointer; width: 100%; transition: border-color .15s; }
+.mk-pot-status.s-never_contacted { color: #737482; }
+.mk-pot-status.s-contacted { color: #065f46; border-color: #86efac; background: #f0fdf4; }
+.mk-pot-status.s-not_interested { color: #991b1b; border-color: #fca5a5; background: #fef2f2; }
+.mk-pot-btn { padding: 7px 12px; background: #0a1628; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.mk-pot-btn.secondary { background: #f4f4f5; color: #0a1628; border: 1px solid #eeeef0; }
+.mk-pot-expand { display: none; padding: 14px 16px; background: #fafafa; border-bottom: 1px solid #f3f4f6; border-radius: 10px; margin: 6px 0; }
 .mk-pot-expand.open { display: block; }
-.mk-pot-expand input, .mk-pot-expand textarea { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 12px; width: 100%; box-sizing: border-box; }
+.mk-pot-expand input, .mk-pot-expand textarea { padding: 9px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; width: 100%; box-sizing: border-box; background: #fff; }
 .mk-pot-expand .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-.mk-pot-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
-.mk-pot-filters select, .mk-pot-filters input { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 12px; }
-.mk-pot-pager { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 16px; flex-wrap: wrap; }
-.mk-pot-pager a, .mk-pot-pager span { padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700; color: #0a1628; border: 1.5px solid #0a1628; background: #fff; min-width: 36px; text-align: center; box-sizing: border-box; }
-.mk-pot-pager a:hover { background: #f3f4f6; }
+.mk-pot-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed #e5e7eb; }
+.mk-pot-filters select, .mk-pot-filters input { padding: 9px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; background: #fff; color: #0a1628; }
+.mk-pot-header-row { background: #fafafa; font-size: 11px; color: #737482; font-weight: 600; border-bottom: 1px dashed #e5e7eb; border-radius: 10px 10px 0 0; }
+.mk-pot-pager { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 18px; flex-wrap: wrap; }
+.mk-pot-pager a, .mk-pot-pager span { padding: 7px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; color: #0a1628; border: 1px solid #eeeef0; background: #fff; min-width: 36px; text-align: center; box-sizing: border-box; transition: background .15s; }
+.mk-pot-pager a:hover { background: #f4f4f5; }
 .mk-pot-pager .active { background: #0a1628; color: #f0b429; border-color: #0a1628; }
 .mk-pot-pager .gap { border: none; color: #9ca3af; background: transparent; }
 @media (max-width: 900px) { .mk-pot-row { grid-template-columns: 1fr; } }
@@ -84,7 +100,7 @@ function submitPotentialStatus(sel) {
       <h1 class="mk-h1">Marketing CRM</h1>
       <p class="mk-sub" style="margin-bottom:0;">{{ total_leads }} lead{% if total_leads != 1 %}s{% endif %} · tracking every outreach touch</p>
     </div>
-    <a href="/admin/marketing/campaigns" style="display:inline-block; padding:10px 20px; background:#0a1628; color:#f0b429; border-radius:8px; text-decoration:none; font-weight:800; font-size:13px;">Email Campaigns</a>
+    <a href="/admin/marketing/campaigns" class="mk-btn-accent">Email Campaigns</a>
   </div>
 
   <div class="mk-metrics">
@@ -131,9 +147,9 @@ function submitPotentialStatus(sel) {
     <div class="mk-due">
       <div>
         <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
-        <span style="color:#6b7280; font-size:12px; margin-left:8px;">{{ lead.school or '—' }}{% if lead.role %} · {{ lead.role }}{% endif %}</span>
+        <span style="color:#737482; font-size:12px; margin-left:8px;">{{ lead.school or '—' }}{% if lead.role %} · {{ lead.role }}{% endif %}</span>
       </div>
-      <div style="font-size:11px; color:#92400e; font-weight:700;">Due {{ lead.next_followup_at.strftime('%Y-%m-%d') }}</div>
+      <div class="mk-due-meta">Due {{ lead.next_followup_at.strftime('%Y-%m-%d') }}</div>
     </div>
     {% endfor %}
   </div>
@@ -174,7 +190,7 @@ function submitPotentialStatus(sel) {
     <h2>Bulk Import (CSV)</h2>
     <form method="post" action="/admin/marketing/leads/import">
       <p style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">Paste CSV with headers. Required: <code>email</code>. Optional: name, phone, role, school, state, division, conference, tags, notes. Upserts by email.</p>
-      <textarea name="csv" rows="6" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; font-family:monospace; font-size:12px; box-sizing:border-box;" placeholder="name,email,phone,school,state,division,conference&#10;Jane Doe,jane@example.edu,555-0100,Kent State,OH,D1,MAC"></textarea>
+      <textarea name="csv" rows="6" style="width:100%; padding:12px; border:1px solid #e5e7eb; border-radius:10px; font-family:ui-monospace,SFMono-Regular,monospace; font-size:12px; box-sizing:border-box; background:#fafafa; color:#0a1628;" placeholder="name,email,phone,school,state,division,conference&#10;Jane Doe,jane@example.edu,555-0100,Kent State,OH,D1,MAC"></textarea>
       <button type="submit" class="mk-btn-primary" style="margin-top:10px;">Import</button>
     </form>
   </div>
@@ -233,8 +249,13 @@ function submitPotentialStatus(sel) {
         {% for lead in leads %}
         <tr>
           <td>
-            <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
-            {% if lead.name %}<div style="font-size:11px; color:#9ca3af;">{{ lead.email }}</div>{% endif %}
+            <div class="mk-lead-name">
+              <img class="mk-avatar" src="https://api.dicebear.com/9.x/notionists/svg?seed={{ lead.email|urlencode }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="" loading="lazy">
+              <div>
+                <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
+                {% if lead.name %}<div class="mk-lead-email">{{ lead.email }}</div>{% endif %}
+              </div>
+            </div>
           </td>
           <td>{{ lead.school or '—' }}</td>
           <td>{{ lead.role or '—' }}</td>
@@ -298,8 +319,8 @@ function submitPotentialStatus(sel) {
 
     {% if potentials %}
     {% set return_qs = 'pot_page=' ~ pot_page ~ '&pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q %}
-    <div style="border-top:1.5px solid #e5e7eb;">
-      <div class="mk-pot-row" style="background:#f9fafb; font-size:11px; text-transform:uppercase; color:#6b7280; font-weight:700; letter-spacing:.04em;">
+    <div style="border-top:1px dashed #e5e7eb;">
+      <div class="mk-pot-row mk-pot-header-row">
         <div>School</div>
         <div>Div</div>
         <div>Conference</div>
