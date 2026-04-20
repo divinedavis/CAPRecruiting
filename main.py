@@ -1913,8 +1913,9 @@ async def send_reset_email(to_email: str, reset_url: str):
     msg.attach(MIMEText(html, "html"))
     try:
         await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+        _logger.info("Password reset email sent to %s", to_email)
     except Exception as e:
-        _logger.warning("Email send error: %s", type(e).__name__)
+        _logger.error("Password reset email FAILED for %s: %s: %s", to_email, type(e).__name__, str(e), exc_info=True)
 
 async def send_player_signup_notification(player_username: str, player_email: str, school: str):
     try:
