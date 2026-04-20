@@ -177,5 +177,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<script>
+// Warn users in embedded webviews (Instagram, Messenger, TikTok, etc.) that Google OAuth won't work
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        var btn = document.querySelector('a[href="/auth/google"]');
+        if (!btn) return;
+        var ua = navigator.userAgent || '';
+        var inApp = /Instagram|FBAN|FBAV|Messenger|Line\/|TikTok|musical_ly|BytedanceWebview|LinkedInApp|Threads|Twitter|KAKAOTALK/i.test(ua);
+        if (!inApp) return;
+        var banner = document.createElement('div');
+        banner.setAttribute('role', 'alert');
+        banner.style.cssText = 'background:#fef3c7;border:1px solid #f0b429;border-left:4px solid #f0b429;color:#713f12;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.5;margin:0 0 16px 0;';
+        banner.innerHTML = "<strong>Google sign-in won't work in this app's browser.</strong><br>Tap the <strong>⋯</strong> menu and choose <strong>Open in Safari</strong> (or your default browser), or sign in with email below.";
+        if (btn.parentNode) btn.parentNode.insertBefore(banner, btn);
+    });
+})();
+</script>
 </body>
 </html>
