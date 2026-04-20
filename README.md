@@ -14,6 +14,7 @@ CAP Recruiting connects high school football players with college coaches — a 
 <a href="https://github.com/divinedavis/CAPRecruiting"><img src="https://img.shields.io/github/stars/divinedavis/CAPRecruiting.svg?style=flat&logo=github&colorB=f0b429&label=stars"></a>
 <a href="https://github.com/divinedavis/CAPRecruiting"><img src="https://img.shields.io/github/forks/divinedavis/CAPRecruiting.svg"></a>
 <a href="https://github.com/divinedavis/CAPRecruiting/commits/main"><img src="https://img.shields.io/github/last-commit/divinedavis/CAPRecruiting?color=0a1628"></a>
+<a href="https://opensource.org/licenses/AGPL-3.0"><img src="https://img.shields.io/badge/license-AGPL--3.0-purple.svg" alt="License: AGPL-3.0"></a>
 </p>
 
 <p align="center">
@@ -21,17 +22,14 @@ CAP Recruiting connects high school football players with college coaches — a 
     <a href="https://caprecruiting.com/pricing"><b>Pricing</b></a> •
     <a href="https://caprecruiting.com/signup"><b>Sign Up</b></a> •
     <a href="https://caprecruiting.com/dashboard"><b>Browse Players</b></a> •
+    <a href="https://www.linkedin.com/in/divinejdavis"><b>LinkedIn</b></a> •
     <a href="mailto:divinejdavis@gmail.com"><b>Contact</b></a>
 </p>
 
-<p align="center"><img src="https://caprecruiting.com/static/home-hero.png" alt="CAP Recruiting — connect high school football talent with college coaches" width="1040px" /></p>
-
-<!--
-Drop additional feature screenshots into doc/imgs/ and reference them here, e.g.:
-<p align="center"><img src="doc/imgs/dashboard.png" alt="Player directory" width="1040px" /></p>
-<p align="center"><img src="doc/imgs/profile.png" alt="Player profile with stats, photos, and videos" width="1040px" /></p>
-<p align="center"><img src="doc/imgs/marketing-crm.png" alt="Marketing CRM with pipeline and campaigns" width="1040px" /></p>
--->
+<p align="center"><img src="doc/imgs/home.png" alt="CAP Recruiting — connect high school football talent with college coaches" width="1040px" /></p>
+<p align="center"><img src="doc/imgs/dashboard.png" alt="Searchable player directory with stats, ratings, and offers" width="1040px" /></p>
+<p align="center"><img src="doc/imgs/pricing.png" alt="Three-tier pricing — Essentials, Advanced, Premium" width="1040px" /></p>
+<p align="center"><img src="doc/imgs/signup.png" alt="Player signup with tier selection and Google OAuth" width="1040px" /></p>
 
 ## What It Does
 
@@ -125,7 +123,9 @@ We're not trying to replace Hudl or the NCSA-style agencies — we're building s
 
 ## License
 
-All rights reserved. See [LICENSE](./LICENSE) (TODO — add license file).
+Distributed under the GNU AGPLv3 License. See [`LICENSE`](./LICENSE) for the full text.
+
+In short: you can use, study, modify, and redistribute this code under the AGPLv3. If you run a modified version as a network service, you must offer the source of your modifications to users of that service.
 
 ## Acknowledgments
 
