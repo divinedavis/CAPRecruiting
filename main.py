@@ -1452,6 +1452,10 @@ async def privacy_page(request: Request):
 async def terms_page(request: Request):
     return templates.TemplateResponse("terms.html", {"request": request})
 
+@app.get("/googlebd6b41dff5f2dd60.html")
+async def google_site_verification():
+    return Response(content="google-site-verification: googlebd6b41dff5f2dd60.html", media_type="text/html")
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly", bypass_token: str = None):
     teams = db.query(Team).order_by(Team.name).all()
