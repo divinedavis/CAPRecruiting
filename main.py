@@ -1444,6 +1444,14 @@ async def home(request: Request, db: Session = Depends(get_db)):
 async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    return templates.TemplateResponse("terms.html", {"request": request})
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly", bypass_token: str = None):
     teams = db.query(Team).order_by(Team.name).all()
