@@ -67,24 +67,6 @@ Subscriptions run through Stripe. Players pick a plan at signup and can upgrade 
 - WebSockets for real-time chat and unread badges
 - [Let's Encrypt](https://letsencrypt.org/) / Certbot for SSL
 
-## Getting Started with development
-
-```bash
-git clone git@github.com:divinedavis/CAPRecruiting.git
-cd CAPRecruiting
-
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# configure .env (DATABASE_URL, STRIPE_*, DO_SPACES_*, GMAIL_*, SESSION_SECRET)
-cp .env.example .env
-
-uvicorn main:app --reload --port 8080
-```
-
-Open [http://localhost:8080](http://localhost:8080). The SQLite schema auto-creates on first run.
-
 ## Roadmap
 
 - [ ] Coach-initiated bulk messaging (gated by tier)
