@@ -31,7 +31,7 @@ window.COLLEGE_DATA = {
         "Lone Star": ["Angelo State","Eastern New Mexico","Midwestern State","UTPB","West Texas A&M"],
         "MIAA": ["Augustana (SD)","Bemidji State","Concordia-St. Paul","Minnesota Duluth","Minnesota State","MSU Moorhead","Northern State","St. Cloud State","SW Minnesota State","Wayne State (NE)","Winona State"],
         "NE10": ["Bentley","Franklin Pierce","Merrimack","New Haven","Post","Saint Anselm","Saint Michael's","Southern Connecticut","Stonehill"],
-        "PSAC": ["Bloomsburg","California (PA)","Cheney","Clarion","East Stroudsburg","Edinboro","Indiana (PA)","Kutztown","Lock Haven","Mansfield","Millersville","Shippensburg","Slippery Rock","West Chester"],
+        "PSAC": ["Bloomsburg","California (PA)","Clarion","East Stroudsburg","Edinboro","Indiana (PA)","Kutztown","Lock Haven","Mansfield","Millersville","Seton Hill","Shippensburg","Slippery Rock","West Chester"],
         "RMAC": ["Adams State","Black Hills State","Colorado Mesa","Colorado Mines","CSU Pueblo","Fort Lewis","New Mexico Highlands","South Dakota Mines","Western Colorado"],
         "SAC": ["Carson-Newman","Catawba","Emory & Henry","Lenoir-Rhyne","Mars Hill","Newberry","Tusculum","Wingate"],
         "SWAC D2": ["Fort Valley State","Miles","Stillman","Tuskegee"]
