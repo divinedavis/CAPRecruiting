@@ -159,6 +159,7 @@
                 </script>
             </div>
 
+            {% if is_premium %}
             <div class="form-section">
                 <h2>Parent / Guardian Info</h2>
                 <div class="form-row">
@@ -202,6 +203,13 @@
                     </div>
                 </div>
             </div>
+            {% else %}
+            <div class="form-section" style="background:#fff8e7; border:1.5px solid #f0b429;">
+                <h2>Parent / Guardian Info</h2>
+                <p class="section-hint" style="margin-bottom:12px;">Add mother / father contact info so coaches can reach your family. Available on the <strong>Premium</strong> plan.</p>
+                <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429;">Upgrade to Premium</a>
+            </div>
+            {% endif %}
 
             <div class="form-section">
                 <h2>Athletic Info</h2>
@@ -509,6 +517,7 @@
                 </div>
             </div>
 
+            {% if is_advanced %}
             <div class="form-section">
                 <h2>Biggest Factors</h2>
                 <p class="section-hint">What matters most when choosing a college? Select all that apply.</p>
@@ -532,6 +541,13 @@
                     {% endfor %}
                 </div>
             </div>
+            {% else %}
+            <div class="form-section" style="background:#fff8e7; border:1.5px solid #f0b429;">
+                <h2>Biggest Factors</h2>
+                <p class="section-hint" style="margin-bottom:12px;">Tell coaches what matters most to you when choosing a college. Available on the <strong>Advanced</strong> plan.</p>
+                <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429;">Upgrade to Advanced</a>
+            </div>
+            {% endif %}
 
             <div class="form-section">
                 <h2>About Me</h2>
@@ -629,6 +645,7 @@
                 <h2>External Links</h2>
                 <p class="section-hint">Add your Hudl profile and other links so coaches can find your highlights</p>
                 <div class="link-input-group">
+                    {% if is_premium %}
                     <div class="form-row">
                         <div class="form-group">
                             <label>
@@ -639,6 +656,14 @@
                             <span class="field-hint">Your Hudl highlight reel will appear on your player card</span>
                         </div>
                     </div>
+                    {% else %}
+                    <div style="padding:14px; background:#fff8e7; border:1.5px solid #f0b429; border-radius:10px; margin-bottom:14px;">
+                        <div style="font-weight:700; color:#0a1628; margin-bottom:4px;">Hudl Profile URL</div>
+                        <div style="font-size:13px; color:#6b7280; margin-bottom:10px;">Available on the <strong>Premium</strong> plan.</div>
+                        <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429; font-size:13px; padding:6px 14px;">Upgrade to Premium</a>
+                    </div>
+                    {% endif %}
+                    {% if is_advanced %}
                     <div class="form-row">
                         <div class="form-group">
                             <label>
@@ -657,6 +682,13 @@
                             <input type="url" name="instagram_url" value="{{ profile.instagram_url if profile else '' }}" placeholder="https://instagram.com/yourusername">
                         </div>
                     </div>
+                    {% else %}
+                    <div style="padding:14px; background:#fff8e7; border:1.5px solid #f0b429; border-radius:10px;">
+                        <div style="font-weight:700; color:#0a1628; margin-bottom:4px;">X (Twitter) &amp; Instagram</div>
+                        <div style="font-size:13px; color:#6b7280; margin-bottom:10px;">Add your social profiles on the <strong>Advanced</strong> plan.</div>
+                        <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429; font-size:13px; padding:6px 14px;">Upgrade to Advanced</a>
+                    </div>
+                    {% endif %}
 
                 </div>
             </div>
@@ -751,6 +783,7 @@
 
             {% endif %}
 
+            {% if is_premium %}
             <div class="form-section">
                 <h2>Contact Info <span class="section-hint" style="font-size:13px; font-weight:400; margin-left:8px;">Only visible to logged-in users</span></h2>
                 <div class="form-row">
@@ -764,11 +797,18 @@
                     </div>
                 </div>
             </div>
+            {% elif user.role == "player" %}
+            <div class="form-section" style="background:#fff8e7; border:1.5px solid #f0b429;">
+                <h2>Contact Info</h2>
+                <p class="section-hint" style="margin-bottom:12px;">Share your phone and email with coaches on the <strong>Premium</strong> plan.</p>
+                <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429;">Upgrade to Premium</a>
+            </div>
+            {% endif %}
 
         </form>
 
         <!-- Videos section (outside main form, players only) -->
-        {% if user.role == "player" %}
+        {% if user.role == "player" and is_premium %}
         <div class="form-section">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                 <h2 style="margin-bottom:0;">Videos</h2>
@@ -832,7 +872,15 @@
         </div>
         {% endif %}
 
-        {% if user.role == "player" %}
+        {% if user.role == "player" and not is_premium %}
+        <div class="form-section" style="background:#fff8e7; border:1.5px solid #f0b429;">
+            <h2>Videos</h2>
+            <p class="section-hint" style="margin-bottom:12px;">Upload highlight reels for coaches to watch. Available on the <strong>Premium</strong> plan.</p>
+            <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429;">Upgrade to Premium</a>
+        </div>
+        {% endif %}
+
+        {% if user.role == "player" and is_advanced %}
         <!-- Photos section -->
         <div class="form-section">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
@@ -928,6 +976,19 @@
             {% else %}
             <p style="color:var(--gray-400); font-size:14px;">No transcripts yet. Upload your first transcript above.</p>
             {% endif %}
+        </div>
+        {% endif %}
+
+        {% if user.role == "player" and not is_advanced %}
+        <div class="form-section" style="background:#fff8e7; border:1.5px solid #f0b429;">
+            <h2>Photos</h2>
+            <p class="section-hint" style="margin-bottom:12px;">Build a photo gallery coaches can browse. Available on the <strong>Advanced</strong> plan.</p>
+            <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429;">Upgrade to Advanced</a>
+        </div>
+        <div class="form-section" style="background:#fff8e7; border:1.5px solid #f0b429;">
+            <h2>Transcripts</h2>
+            <p class="section-hint" style="margin-bottom:12px;">Upload your academic transcripts for coaches to review. Available on the <strong>Advanced</strong> plan.</p>
+            <a href="/upgrade" class="btn btn-primary" style="background:#f0b429; color:#0a1628; border-color:#f0b429;">Upgrade to Advanced</a>
         </div>
         {% endif %}
 

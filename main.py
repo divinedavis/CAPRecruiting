@@ -950,6 +950,32 @@ def player_tier(target_user) -> str:
     return target_user.subscription_tier or "free"
 
 
+def can_edit_advanced_fields(user) -> bool:
+    """True if the profile owner may edit Advanced-tier fields.
+
+    Non-player roles (coaches) and admins always bypass the gate.
+    Players must be on Advanced or higher.
+    """
+    if user is None:
+        return False
+    if getattr(user, "is_admin", False) or getattr(user, "role", "") != "player":
+        return True
+    return tier_gte(user.subscription_tier or "free", "advanced")
+
+
+def can_edit_premium_fields(user) -> bool:
+    """True if the profile owner may edit Premium-tier fields.
+
+    Non-player roles (coaches) and admins always bypass the gate.
+    Players must be on Premium.
+    """
+    if user is None:
+        return False
+    if getattr(user, "is_admin", False) or getattr(user, "role", "") != "player":
+        return True
+    return tier_gte(user.subscription_tier or "free", "premium")
+
+
 def _safe_redirect(url: str, fallback: str = "/profile/edit") -> str:
     """Only allow relative redirects to prevent open redirect attacks."""
     if url and url.startswith("/") and not url.startswith("//"):
@@ -2390,7 +2416,7 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
     transcript_error = request.query_params.get("transcript_error")
     success = request.query_params.get("success") == "1"
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == user_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if user.role == "player" else []
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": success, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error, "image_list": image_list})
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": success, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user)})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -2430,14 +2456,15 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
         p.county = form.get("school_county", "")[:100]
-        p.mother_first_name = form.get("mother_first_name", "")[:100]
-        p.mother_last_name = form.get("mother_last_name", "")[:100]
-        p.mother_email = form.get("mother_email", "")[:200]
-        p.mother_phone = form.get("mother_phone", "")[:50]
-        p.father_first_name = form.get("father_first_name", "")[:100]
-        p.father_last_name = form.get("father_last_name", "")[:100]
-        p.father_email = form.get("father_email", "")[:200]
-        p.father_phone = form.get("father_phone", "")[:50]
+        if can_edit_premium_fields(user):
+            p.mother_first_name = form.get("mother_first_name", "")[:100]
+            p.mother_last_name = form.get("mother_last_name", "")[:100]
+            p.mother_email = form.get("mother_email", "")[:200]
+            p.mother_phone = form.get("mother_phone", "")[:50]
+            p.father_first_name = form.get("father_first_name", "")[:100]
+            p.father_last_name = form.get("father_last_name", "")[:100]
+            p.father_email = form.get("father_email", "")[:200]
+            p.father_phone = form.get("father_phone", "")[:50]
         p.home_address_street = form.get("home_address_street", "")[:200]
         p.home_address_city = form.get("home_address_city", "")[:100]
         p.home_address_state = form.get("home_address_state", "")[:10]
@@ -2459,15 +2486,19 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", "")[:200])
             setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   "")[:50])
-        p.hudl_url = form.get("hudl_url", "")[:100]
-        p.x_url = form.get("x_url", "")[:100]
-        p.instagram_url = form.get("instagram_url", "")[:100]
-        p.phone = form.get("phone", "")[:100]
-        p.contact_email = form.get("contact_email", "")[:100]
+        if can_edit_premium_fields(user):
+            p.hudl_url = form.get("hudl_url", "")[:100]
+        if can_edit_advanced_fields(user):
+            p.x_url = form.get("x_url", "")[:100]
+            p.instagram_url = form.get("instagram_url", "")[:100]
+        if can_edit_premium_fields(user):
+            p.phone = form.get("phone", "")[:100]
+            p.contact_email = form.get("contact_email", "")[:100]
         p.intended_major = form.get("intended_major", "")[:100]
-        _allowed_factors = {"location", "winning_tradition", "education", "player_development", "opportunity_to_play", "cost", "school_size", "job_placement", "facilities"}
-        _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
-        p.biggest_factors = ",".join(_selected)
+        if can_edit_advanced_fields(user):
+            _allowed_factors = {"location", "winning_tradition", "education", "player_development", "opportunity_to_play", "cost", "school_size", "job_placement", "facilities"}
+            _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
+            p.biggest_factors = ",".join(_selected)
         # Sync profile changes to questionnaire if it exists
         q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
         if q:
@@ -2546,7 +2577,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
     transcripts = db.query(Transcript).filter(Transcript.user_id == user_id).order_by(Transcript.created_at.desc()).all() if user.role == "player" else []
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == user_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if user.role == "player" else []
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None, "image_list": image_list})
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user)})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
@@ -2739,6 +2770,9 @@ async def upload_video(
         return RedirectResponse("/login", status_code=302)
     redirect_to = _safe_redirect(redirect_to, "/profile/edit")
     logged_in = db.query(User).filter(User.id == user_id).first()
+    # Premium gate: videos are a Premium-tier feature (admins / coaches bypass)
+    if logged_in and logged_in.role == "player" and not logged_in.is_admin and not tier_gte(logged_in.subscription_tier or "free", "premium"):
+        return RedirectResponse(redirect_to + "?video_error=tier", status_code=302)
 
     # Allow admin to upload video for another user
     if target_user_id.strip().isdigit() and logged_in and logged_in.is_admin:
@@ -2877,6 +2911,10 @@ async def upload_profile_image(request: Request, db: Session = Depends(get_db)):
 
     form = await request.form()
     redirect_to = _safe_redirect(str(form.get("redirect_to", "")), "/profile/edit")
+    # Advanced gate: photo gallery is an Advanced-tier feature (admins bypass)
+    if uploader.role == "player" and not uploader.is_admin and not tier_gte(uploader.subscription_tier or "free", "advanced"):
+        _sep = "&" if "?" in redirect_to else "?"
+        return RedirectResponse(redirect_to + _sep + "photo_error=tier", status_code=302)
     back = redirect_to
 
     # Determine target user
@@ -2982,6 +3020,9 @@ async def upload_transcript(
     user = db.query(User).filter(User.id == user_id).first()
     if not user or (user.role != "player" and not user.is_admin):
         raise HTTPException(status_code=403, detail="Only players or admins can upload transcripts.")
+    # Advanced gate: transcripts are an Advanced-tier feature (admins bypass)
+    if user.role == "player" and not user.is_admin and not tier_gte(user.subscription_tier or "free", "advanced"):
+        return RedirectResponse(redirect_to + "?transcript_error=tier", status_code=302)
 
     target_user_id = user_id
     if user.is_admin:
