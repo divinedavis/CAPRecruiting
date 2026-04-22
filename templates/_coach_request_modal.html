@@ -16,28 +16,13 @@
         <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">Email</label>
         <input type="email" id="cr-email" placeholder="coach@school.edu" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
       </div>
-      <div class="form-group" style="margin-bottom:12px;">
-        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">Division</label>
-        <select id="cr-division" onchange="onCrDivision()" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
-          <option value="">— Select division —</option>
-          <option value="D1">NCAA Division I</option>
-          <option value="D2">NCAA Division II</option>
-          <option value="D3">NCAA Division III</option>
-          <option value="NAIA">NAIA</option>
-          <option value="JUCO">Junior College (JUCO)</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:12px;">
-        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">Conference</label>
-        <select id="cr-conference" onchange="onCrConference()" disabled style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
-          <option value="">— Select conference —</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:20px;">
-        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">College / University</label>
-        <select id="cr-college" disabled style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
-          <option value="">— Select college —</option>
-        </select>
+      <div class="form-group" style="margin-bottom:20px; position:relative;">
+        <label style="font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase;">School</label>
+        <input type="text" id="cr-school-search" placeholder="Start typing your school…" autocomplete="off" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box; margin-top:4px;">
+        <input type="hidden" id="cr-college" value="">
+        <input type="hidden" id="cr-division" value="">
+        <input type="hidden" id="cr-conference" value="">
+        <div id="cr-school-results" style="display:none; position:absolute; left:0; right:0; top:100%; background:#fff; border:1.5px solid #0a1628; border-top:none; border-radius:0 0 10px 10px; max-height:240px; overflow-y:auto; z-index:10; box-shadow:0 8px 24px rgba(0,0,0,.12);"></div>
       </div>
       <div style="display:flex; gap:10px;">
         <button type="button" onclick="closeCoachRequestModal()" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
@@ -53,35 +38,68 @@ function openCoachRequestModal() {
   document.getElementById('cr-success').style.display = 'none';
   document.getElementById('cr-error').style.display = 'none';
   document.getElementById('cr-form').style.display = '';
+  var s = document.getElementById('cr-school-search');
+  if (s) s.value = '';
+  document.getElementById('cr-college').value = '';
+  document.getElementById('cr-division').value = '';
+  document.getElementById('cr-conference').value = '';
+  var box = document.getElementById('cr-school-results');
+  if (box) box.style.display = 'none';
 }
 function closeCoachRequestModal() {
   document.getElementById('coach-request-modal').style.display = 'none';
 }
-function onCrDivision() {
-  var div = document.getElementById('cr-division').value;
-  var conf = document.getElementById('cr-conference');
-  var col = document.getElementById('cr-college');
-  conf.innerHTML = '<option value="">— Select conference —</option>';
-  col.innerHTML = '<option value="">— Select college —</option>';
-  conf.disabled = true; col.disabled = true;
-  if (!div || !window.COLLEGE_DATA || !window.COLLEGE_DATA[div]) return;
-  Object.keys(window.COLLEGE_DATA[div]).sort().forEach(function(c) {
-    var opt = document.createElement('option'); opt.value = c; opt.textContent = c; conf.appendChild(opt);
+var _crAllSchools = (function() {
+  var out = [];
+  if (!window.COLLEGE_DATA) return out;
+  Object.keys(window.COLLEGE_DATA).forEach(function(div) {
+    Object.keys(window.COLLEGE_DATA[div]).forEach(function(conf) {
+      window.COLLEGE_DATA[div][conf].forEach(function(name) {
+        out.push({name: name, division: div, conference: conf, search: name.toLowerCase()});
+      });
+    });
   });
-  conf.disabled = false;
+  out.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  return out;
+})();
+
+function _crSelectSchool(s) {
+  document.getElementById('cr-school-search').value = s.name + ' (' + s.division + ' — ' + s.conference + ')';
+  document.getElementById('cr-college').value = s.name;
+  document.getElementById('cr-division').value = s.division;
+  document.getElementById('cr-conference').value = s.conference;
+  document.getElementById('cr-school-results').style.display = 'none';
 }
-function onCrConference() {
-  var div = document.getElementById('cr-division').value;
-  var conf = document.getElementById('cr-conference').value;
-  var col = document.getElementById('cr-college');
-  col.innerHTML = '<option value="">— Select college —</option>';
-  col.disabled = true;
-  if (!conf || !window.COLLEGE_DATA[div] || !window.COLLEGE_DATA[div][conf]) return;
-  window.COLLEGE_DATA[div][conf].sort().forEach(function(s) {
-    var opt = document.createElement('option'); opt.value = s; opt.textContent = s; col.appendChild(opt);
+
+(function() {
+  var input = document.getElementById('cr-school-search');
+  var box = document.getElementById('cr-school-results');
+  if (!input || !box) return;
+  input.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.getElementById('cr-college').value = '';
+    document.getElementById('cr-division').value = '';
+    document.getElementById('cr-conference').value = '';
+    if (q.length < 2) { box.style.display = 'none'; return; }
+    var matches = _crAllSchools.filter(function(s) { return s.search.indexOf(q) !== -1; }).slice(0, 20);
+    if (!matches.length) {
+      box.innerHTML = '<div style="padding:12px; color:#9ca3af; font-size:13px;">No matches. Try a different spelling.</div>';
+      box.style.display = 'block';
+      return;
+    }
+    box.innerHTML = '';
+    matches.forEach(function(s) {
+      var row = document.createElement('div');
+      row.style.cssText = 'padding:10px 14px; cursor:pointer; border-bottom:1px solid #f3f4f6; font-size:14px;';
+      row.innerHTML = '<strong style="color:#0a1628;">' + s.name + '</strong><span style="color:#6b7280; font-size:12px; margin-left:8px;">' + s.division + ' — ' + s.conference + '</span>';
+      row.addEventListener('mousedown', function(e) { e.preventDefault(); _crSelectSchool(s); });
+      box.appendChild(row);
+    });
+    box.style.display = 'block';
   });
-  col.disabled = false;
-}
+  input.addEventListener('blur', function() { setTimeout(function() { box.style.display = 'none'; }, 200); });
+  input.addEventListener('focus', function() { if (this.value.length >= 2) this.dispatchEvent(new Event('input')); });
+})();
 function submitCoachRequest() {
   var email = document.getElementById('cr-email').value.trim();
   var div = document.getElementById('cr-division').value;
@@ -90,7 +108,7 @@ function submitCoachRequest() {
   var err = document.getElementById('cr-error');
   err.style.display = 'none';
   if (!email) { err.textContent = 'Please enter an email address.'; err.style.display = ''; return; }
-  if (!school) { err.textContent = 'Please select your college.'; err.style.display = ''; return; }
+  if (!school) { err.textContent = 'Please search for and select your school.'; err.style.display = ''; return; }
   var btn = document.getElementById('cr-submit'); btn.disabled = true; btn.textContent = 'Submitting...';
   fetch('/coach-request', {
     method: 'POST',
