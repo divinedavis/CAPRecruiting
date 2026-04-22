@@ -35,6 +35,12 @@ SMTP_HOST     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT     = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER     = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+
+# When SMTP_PASSWORD is blank we're using Google SMTP Relay with IP-based auth —
+# skip login/auth entirely. Otherwise fall back to user/pass (Gmail SMTP).
+def _smtp_login_if_needed(server):
+    if SMTP_PASSWORD:
+        server.login(SMTP_USER, SMTP_PASSWORD)
 SITE_URL      = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
 GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
@@ -894,7 +900,7 @@ def _create_and_send_contract(db: Session, user):
         msg.attach(MIMEText(html, "html"))
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
             server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
+            _smtp_login_if_needed(server)
             server.sendmail(SMTP_USER, user.email, msg.as_string())
     except Exception as exc:
         _logger.warning("Contract email to %s failed: %s", user.email, type(exc).__name__)
@@ -1870,7 +1876,7 @@ async def _send_coach_request_emails(coach_email: str, school: str, division: st
         </div>"""
         coach_msg.attach(MIMEText(coach_html, "html"))
         try:
-            await aiosmtplib.send(coach_msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+            await aiosmtplib.send(coach_msg, hostname=SMTP_HOST, port=SMTP_PORT, username=(SMTP_USER or None), password=(SMTP_PASSWORD or None), start_tls=True)
         except Exception as e:
             _logger.warning("Coach invite email send failed: %s", type(e).__name__)
         # 2) Email admins with the request details
@@ -1892,7 +1898,7 @@ async def _send_coach_request_emails(coach_email: str, school: str, division: st
             </div>"""
             msg.attach(MIMEText(admin_html, "html"))
             try:
-                await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+                await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=(SMTP_USER or None), password=(SMTP_PASSWORD or None), start_tls=True)
             except Exception as e:
                 _logger.warning("Coach request admin email failed: %s", type(e).__name__)
     except Exception as e:
@@ -1938,7 +1944,7 @@ async def send_reset_email(to_email: str, reset_url: str):
     </div>"""
     msg.attach(MIMEText(html, "html"))
     try:
-        await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+        await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=(SMTP_USER or None), password=(SMTP_PASSWORD or None), start_tls=True)
         _logger.info("Password reset email sent to %s", to_email)
     except Exception as e:
         _logger.error("Password reset email FAILED for %s: %s: %s", to_email, type(e).__name__, str(e), exc_info=True)
@@ -1979,7 +1985,7 @@ async def send_player_signup_notification(player_username: str, player_email: st
             </div>
             """
             msg.attach(MIMEText(html, "html"))
-            await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+            await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=(SMTP_USER or None), password=(SMTP_PASSWORD or None), start_tls=True)
     except Exception:
         pass  # Don't fail signup if email fails
 
@@ -3920,7 +3926,7 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
             server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
+            _smtp_login_if_needed(server)
             server.sendmail(SMTP_USER, staff_member.email, msg.as_string())
         return True
     except Exception as exc:
@@ -4115,7 +4121,7 @@ async def admin_campaign_send(cid: int, request: Request, db: Session = Depends(
     try:
         server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
         server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
+        _smtp_login_if_needed(server)
 
         for staff, pot in recipients:
             token = _sec.token_urlsafe(24)
@@ -4337,7 +4343,7 @@ async def admin_marketing_send_email(lead_id: int, request: Request, db: Session
             msg["To"] = lead.email
             html_body = body.replace("\n", "<br>")
             msg.attach(MIMEText(html_body, "html"))
-            await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD, start_tls=True)
+            await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=(SMTP_USER or None), password=(SMTP_PASSWORD or None), start_tls=True)
         except Exception as e:
             _logger.warning("Marketing email send failed: %s", type(e).__name__)
     asyncio.create_task(_do_send())
