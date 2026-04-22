@@ -656,6 +656,16 @@ class EmailCampaign(Base):
     sent_at = Column(DateTime, nullable=True)
 
 
+class CampaignTestSend(Base):
+    __tablename__ = "campaign_test_sends"
+    id = Column(Integer, primary_key=True)
+    campaign_id = Column(Integer, ForeignKey("email_campaigns.id"), nullable=False, index=True)
+    recipient_email = Column(String, default="")
+    recipient_name = Column(String, default="")
+    sent_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+
+
 class TrackedEmail(Base):
     __tablename__ = "tracked_emails"
     id = Column(Integer, primary_key=True)
@@ -4052,11 +4062,31 @@ async def admin_campaign_detail(cid: int, request: Request, db: Session = Depend
     recip_page = min(recip_page, recip_total_pages)
     tracked = all_tracked[(recip_page - 1) * RECIP_PER_PAGE : recip_page * RECIP_PER_PAGE]
 
+    latest_test = (
+        db.query(CampaignTestSend)
+        .filter(CampaignTestSend.campaign_id == cid)
+        .order_by(CampaignTestSend.sent_at.desc())
+        .first()
+    )
+    last_test_sends = []
+    if latest_test:
+        window_start = latest_test.sent_at - timedelta(seconds=60)
+        last_test_sends = (
+            db.query(CampaignTestSend)
+            .filter(
+                CampaignTestSend.campaign_id == cid,
+                CampaignTestSend.sent_at >= window_start,
+            )
+            .order_by(CampaignTestSend.sent_at.desc())
+            .all()
+        )
+
     unread_count = unread_sender_count(db, user.id)
     return templates.TemplateResponse("campaign_detail.html", {
         "request": request, "user": user, "campaign": campaign,
         "tracked": tracked, "total": total, "opened": opened,
         "clicked": clicked, "signed": signed, "unread_count": unread_count,
+        "last_test_sends": last_test_sends,
         "recip_page": recip_page, "recip_total_pages": recip_total_pages,
         "recip_pages_visible": _page_window(recip_page, recip_total_pages, 3),
     })
@@ -4093,9 +4123,8 @@ async def admin_campaign_test(cid: int, request: Request, db: Session = Depends(
     if not subject_src or not body_src:
         return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=empty", status_code=302)
 
-    admins = db.query(User).filter(User.is_admin == True).all()
-    admin_emails = [a.email for a in admins if a.email]
-    if not admin_emails:
+    admins = [a for a in db.query(User).filter(User.is_admin == True).all() if a.email]
+    if not admins:
         return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=no_admins", status_code=302)
 
     site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
@@ -4107,7 +4136,7 @@ async def admin_campaign_test(cid: int, request: Request, db: Session = Depends(
     sample_school = "Test University"
     sample_division = "D2"
     sample_conference = "Test Conference"
-    sample_signup = f"{site_url}/signup/coach"
+    sample_signup = f"{site_url}/signup"
 
     sent = 0
     errors = 0
@@ -4115,7 +4144,7 @@ async def admin_campaign_test(cid: int, request: Request, db: Session = Depends(
         server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
         server.starttls()
         _smtp_login_if_needed(server)
-        for email in admin_emails:
+        for admin in admins:
             body = body_src
             body = body.replace("{{coach_name}}", sample_coach)
             body = body.replace("{{school}}", sample_school)
@@ -4132,13 +4161,20 @@ async def admin_campaign_test(cid: int, request: Request, db: Session = Depends(
             msg = MIMEMultipart("alternative")
             msg["Subject"] = f"[TEST] {subject}"
             msg["From"] = f"Collegiate Athletic Planning <{SMTP_USER}>"
-            msg["To"] = email
+            msg["To"] = admin.email
             msg.attach(MIMEText(body, "html"))
             try:
-                server.sendmail(SMTP_USER, email, msg.as_string())
+                server.sendmail(SMTP_USER, admin.email, msg.as_string())
+                db.add(CampaignTestSend(
+                    campaign_id=cid,
+                    recipient_email=admin.email,
+                    recipient_name=admin.username or "",
+                    sent_by=user.id,
+                ))
+                db.commit()
                 sent += 1
             except Exception as exc:
-                _logger.warning("Campaign %s test send to %s failed: %s", cid, email, type(exc).__name__)
+                _logger.warning("Campaign %s test send to %s failed: %s", cid, admin.email, type(exc).__name__)
                 errors += 1
         server.quit()
     except Exception as exc:

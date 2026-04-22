@@ -102,6 +102,22 @@ body { background: #f7f7f8; }
       </div>
     </form>
 
+    {% if last_test_sends %}
+    <div style="margin-top:24px; padding:16px 18px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px;">
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#374151; margin-bottom:10px;">
+        Last Test Sent — {{ last_test_sends[0].sent_at.strftime('%b %d, %Y · %H:%M UTC') }}
+      </div>
+      <ul style="list-style:none; margin:0; padding:0;">
+        {% for t in last_test_sends %}
+        <li style="padding:6px 0; color:#111827; font-size:14px;">
+          <strong>{{ t.recipient_name or t.recipient_email }}</strong>
+          <span style="color:#6b7280;"> — {{ t.recipient_email }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
     <div id="preview-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9999; display:none; align-items:center; justify-content:center;" onclick="if(event.target===this)closePreview();">
       <div id="preview-frame-wrap" style="background:#fff; border-radius:14px; overflow:hidden; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.3);">
         <div style="background:#0a1628; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center;">
