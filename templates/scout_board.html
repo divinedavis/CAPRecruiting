@@ -1,193 +1,143 @@
 {% extends "base.html" %}
 {% block title %}Scout Dashboard — CAP Recruiting{% endblock %}
 {% block content %}
-<div style="max-width:1600px; margin:0 auto; padding:24px;">
-  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
-    <div>
-      <h1 style="font-size:28px; font-weight:800; color:#0a1628; margin:0 0 4px 0;">Scout Dashboard</h1>
-      <p style="color:#6b7280; font-size:14px; margin:0;">{% if college %}{{ college }} · Shared with all coaches at your school{% else %}Set your college to start{% endif %}</p>
-    </div>
-    {% if not needs_college %}
-    <div style="display:flex; align-items:center; gap:10px;">
-      <button onclick="openAddCardModal()" class="btn btn-primary" style="padding:10px 20px; font-weight:700; border-radius:8px; border:none; cursor:pointer;">+ Add Player</button>
-      <div style="position:relative;">
-        <button onclick="toggleScoutMenu(event)" title="Menu" aria-label="Menu" style="padding:10px 12px; background:#f3f4f6; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a1628" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/static/scout.css?v=1">
+
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('sb-theme') || 'light';
+    document.documentElement.setAttribute('data-sb-preboot', t);
+  } catch(e) {}
+})();
+</script>
+
+<div class="sb-page" id="sb-page">
+  <div class="sb-wrap">
+    <div class="sb-header">
+      <div>
+        <h1 class="sb-title">Scout Dashboard</h1>
+        <p class="sb-sub">{% if college %}{{ college }} · Shared with all coaches at your school{% else %}Set your college to start{% endif %}</p>
+      </div>
+      {% if not needs_college %}
+      <div class="sb-actions">
+        <button onclick="openAddCardModal()" class="sb-btn sb-btn-primary">+ Add Player</button>
+        <button onclick="toggleTheme()" class="sb-icon-btn sb-theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <div id="scout-menu" style="display:none; position:absolute; top:100%; right:0; margin-top:6px; background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:220px; z-index:900; overflow:hidden;">
-          <a href="/questionnaires/view" style="display:block; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600; text-decoration:none;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">View Questionnaires</a>
-          <div style="height:1px; background:#e5e7eb;"></div>
-          <button onclick="exportCsv()" style="display:block; width:100%; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">Export CSV</button>
-          <div style="height:1px; background:#e5e7eb;"></div>
-          <button onclick="openArchiveDrawer()" style="display:block; width:100%; text-align:left; padding:12px 16px; background:none; border:none; cursor:pointer; font-size:14px; color:#0a1628; font-weight:600;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">View Archived</button>
+        <div class="sb-menu-wrap">
+          <button onclick="toggleScoutMenu(event)" title="Menu" aria-label="Menu" class="sb-icon-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div id="scout-menu" class="sb-menu">
+            <a href="/questionnaires/view" class="sb-menu-item">View Questionnaires</a>
+            <div class="sb-menu-divider"></div>
+            <button onclick="exportCsv()" class="sb-menu-item">Export CSV</button>
+            <div class="sb-menu-divider"></div>
+            <button onclick="openArchiveDrawer()" class="sb-menu-item">View Archived</button>
+          </div>
         </div>
       </div>
+      {% endif %}
     </div>
-    {% endif %}
-  </div>
 
-  {% if needs_college %}
-  <div style="background:#fef3c7; border:2px solid #fbbf24; border-radius:12px; padding:24px; text-align:center;">
-    <h2 style="margin:0 0 8px 0; color:#92400e;">College Not Set</h2>
-    <p style="color:#92400e; margin:0 0 16px 0;">Set your college on your profile edit page to use the Scout Dashboard.</p>
-    <a href="/profile/edit" class="btn btn-primary" style="padding:10px 20px; text-decoration:none; border-radius:8px; display:inline-block;">Go to Profile</a>
-  </div>
-  {% else %}
+    {% if needs_college %}
+    <div class="sb-banner">
+      <h2>College Not Set</h2>
+      <p>Set your college on your profile edit page to use the Scout Dashboard.</p>
+      <a href="/profile/edit" class="sb-btn sb-btn-primary" style="text-decoration:none;">Go to Profile</a>
+    </div>
+    {% else %}
 
-  <!-- Board -->
-  <div id="board" style="display:flex; gap:20px; overflow-x:auto; padding-bottom:20px; align-items:stretch;">
-    {% for lane in lanes %}
-    {% if not loop.first %}
-    <div aria-hidden="true" style="flex:0 0 1px; background:#cbd5e1; align-self:stretch; margin:8px 0; pointer-events:none;"></div>
-    {% endif %}
-    <div class="sb-lane" data-lane-id="{{ lane.id }}" style="flex:0 0 280px; background:#f3f4f6; border-radius:12px; padding:12px; display:flex; flex-direction:column;">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-        <div class="lane-title" data-lane-id="{{ lane.id }}" style="font-weight:700; font-size:14px; color:#0a1628; text-transform:uppercase; letter-spacing:.04em; cursor:pointer;" ondblclick="renameLane({{ lane.id }}, this)">{{ lane.name }}</div>
-        <div style="display:flex; gap:4px;">
-          <span style="background:#e5e7eb; color:#6b7280; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">{{ cards_by_lane[lane.id]|length }}</span>
-          <button onclick="deleteLane({{ lane.id }})" title="Delete lane" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:14px;">×</button>
+    <div id="board" class="sb-board">
+      {% for lane in lanes %}
+      {% if not loop.first %}
+      <div aria-hidden="true" class="sb-lane-divider"></div>
+      {% endif %}
+      <div class="sb-lane" data-lane-id="{{ lane.id }}">
+        <div class="sb-lane-header">
+          <div class="sb-lane-title" data-lane-id="{{ lane.id }}" ondblclick="renameLane({{ lane.id }}, this)">{{ lane.name }}</div>
+          <div class="sb-lane-right">
+            <span class="sb-lane-count">{{ cards_by_lane[lane.id]|length }}</span>
+            <button onclick="deleteLane({{ lane.id }})" title="Delete lane" class="sb-lane-delete" aria-label="Delete lane">×</button>
+          </div>
         </div>
-      </div>
-      <div class="sb-cards" data-lane-id="{{ lane.id }}" style="display:flex; flex-direction:column; gap:10px; min-height:60px; flex:1;">
-        {% for card in cards_by_lane[lane.id] %}
-        <div class="sb-card" draggable="true" data-card-id="{{ card.id }}"
-             style="background:#fff; border:2px solid #0a1628; border-radius:10px; padding:12px; cursor:pointer; transition:all .15s;">
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-            {% if card.photo %}
-            <img src="{{ card.photo }}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; flex-shrink:0;" alt="">
-            {% else %}
-            <div style="width:80px; height:80px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:28px; color:#6b7280; flex-shrink:0;">{{ card.name[0] if card.name else '?' }}</div>
-            {% endif %}
-            <div style="flex:1; min-width:0;">
-              <div style="font-weight:700; font-size:14px; color:#0a1628; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ card.name or 'Unnamed' }}</div>
-              <div style="display:flex; gap:6px; align-items:center; margin-top:2px;">
-                {% if card.position %}<span style="font-size:10px; font-weight:700; color:#0a1628; background:#f0b429; padding:1px 6px; border-radius:4px;">{{ card.position }}</span>{% endif %}
-                {% if card.is_custom %}<span style="font-size:10px; color:#9ca3af; font-weight:600;">CUSTOM</span>{% endif %}
+        <div class="sb-cards" data-lane-id="{{ lane.id }}">
+          {% for card in cards_by_lane[lane.id] %}
+          <div class="sb-card" draggable="true" data-card-id="{{ card.id }}">
+            <div class="sb-card-top">
+              {% if card.photo %}
+              <img src="{{ card.photo }}" class="sb-avatar" alt="">
+              {% else %}
+              <div class="sb-avatar-initials">{{ card.name[0]|upper if card.name else '?' }}</div>
+              {% endif %}
+              <div class="sb-card-head">
+                <div class="sb-card-name">{{ card.name or 'Unnamed' }}</div>
+                <div class="sb-card-badges">
+                  {% if card.position %}<span class="sb-badge sb-badge-position">{{ card.position }}</span>{% endif %}
+                  {% if card.is_custom %}<span class="sb-badge sb-badge-custom">CUSTOM</span>{% endif %}
+                </div>
               </div>
             </div>
+            {% if card.high_school %}<div class="sb-card-meta">{{ card.high_school }}</div>{% endif %}
+            {% if card.city or card.state %}<div class="sb-card-meta-sub">{{ card.city }}{% if card.city and card.state %}, {% endif %}{{ card.state }}</div>{% endif %}
+            {% if card.visit_date %}<div class="sb-card-visit">Visit: {{ card.visit_date }}</div>{% endif %}
+            {% if card.scout_name %}<div class="sb-card-scout">Scout: {{ card.scout_name }}</div>{% endif %}
           </div>
-          {% if card.high_school %}
-          <div style="font-size:12px; color:#6b7280; margin-bottom:2px;">{{ card.high_school }}</div>
-          {% endif %}
-          {% if card.city or card.state %}
-          <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">{{ card.city }}{% if card.city and card.state %}, {% endif %}{{ card.state }}</div>
-          {% endif %}
-          {% if card.visit_date %}
-          <div style="font-size:11px; color:#3b82f6; font-weight:600;">Visit: {{ card.visit_date }}</div>
-          {% endif %}
-          {% if card.scout_name %}
-          <div style="font-size:11px; color:#6b7280; margin-top:4px;">Scout: {{ card.scout_name }}</div>
-          {% endif %}
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
-    </div>
-    {% endfor %}
-    {% if lanes|length < 5 %}
-    <div style="flex:0 0 280px;">
-      <button onclick="addLane()" style="width:100%; padding:14px; background:transparent; border:2px dashed #d1d5db; border-radius:12px; color:#6b7280; font-weight:600; cursor:pointer;">+ Add Swimlane</button>
+      {% endfor %}
+      {% if lanes|length < 5 %}
+      <div class="sb-add-lane-wrap">
+        <button onclick="addLane()" class="sb-add-lane">+ Add Swimlane</button>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
-  {% endif %}
 </div>
 
 <!-- Add Card Modal -->
-<div id="add-card-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:14px; padding:28px; max-width:560px; width:90%; max-height:90vh; overflow-y:auto;">
-    <h2 style="margin:0 0 20px 0; color:#0a1628;">Add Player to Board</h2>
+<div id="add-card-modal" class="sb-modal">
+  <div class="sb-modal-body">
+    <div class="sb-modal-header">
+      <h2 class="sb-modal-title">Add Player to Board</h2>
+      <button onclick="closeAddCardModal()" class="sb-modal-close" aria-label="Close">×</button>
+    </div>
 
-    <div style="margin-bottom:20px;">
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <button onclick="setAddMode('existing')" id="mode-existing" class="btn btn-primary" style="flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer;">Select from Directory</button>
-        <button onclick="setAddMode('custom')" id="mode-custom" class="btn" style="flex:1; padding:8px; border:1.5px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer;">Custom Player</button>
+    <div class="sb-tab-row">
+      <button onclick="setAddMode('existing')" id="mode-existing" class="sb-tab active">Select from Directory</button>
+      <button onclick="setAddMode('custom')" id="mode-custom" class="sb-tab">Custom Player</button>
+    </div>
+
+    <div id="mode-existing-form">
+      <div class="sb-field">
+        <label class="sb-label" for="player-search">Search Player</label>
+        <input type="text" id="player-search" class="sb-input" oninput="onNameInput(this.value)" placeholder="Type player name...">
       </div>
 
-      <div id="mode-existing-form">
-        <label style="font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase;">Search Player</label>
-        <input type="text" id="player-search" oninput="onNameInput(this.value)" placeholder="Type player name..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
-
-        <div id="filter-panel" style="margin-top:12px; padding:12px; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:8px;">
-          <div style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Or filter by</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label style="font-size:11px; font-weight:600; color:#6b7280;">40 Time</label>
-              <select id="filter-forty" onchange="runFilterSearch()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
-                <option value="">Any</option>
-                <option value="u44">Below 4.4</option>
-                <option value="44_45">4.4 – 4.5</option>
-                <option value="45_47">4.5 – 4.7</option>
-                <option value="o47">4.7+</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px; font-weight:600; color:#6b7280;">Grad Year</label>
-              <select id="filter-grad" onchange="runFilterSearch()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
-                <option value="">Any</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-                <option value="2027">2027</option>
-                <option value="2028">2028</option>
-                <option value="2029">2029</option>
-                <option value="2030">2030</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px; font-weight:600; color:#6b7280;">Position</label>
-              <select id="filter-position" onchange="runFilterSearch()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
-                <option value="">Any</option>
-                <optgroup label="Offense"><option>QB</option><option>RB</option><option>FB</option><option>WR</option><option>TE</option><option>OL</option><option>OT</option><option>OG</option><option>C</option></optgroup>
-                <optgroup label="Defense"><option>DL</option><option>DE</option><option>DT</option><option>LB</option><option>ILB</option><option>OLB</option><option>DB</option><option>CB</option><option>S</option><option>FS</option><option>SS</option></optgroup>
-                <optgroup label="Special Teams"><option>K</option><option>P</option><option>LS</option></optgroup>
-                <option>ATH</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px; font-weight:600; color:#6b7280;">State</label>
-              <select id="filter-state" onchange="onFilterStateChange()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
-                <option value="">Any</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px; font-weight:600; color:#6b7280;">City</label>
-              <select id="filter-city" onchange="onFilterCityChange()" disabled style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
-                <option value="">Any</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px; font-weight:600; color:#6b7280;">School</label>
-              <select id="filter-school" onchange="runFilterSearch()" disabled style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:6px; box-sizing:border-box;">
-                <option value="">Any</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div id="player-search-results" style="margin-top:12px; max-height:260px; overflow-y:auto;"></div>
-      </div>
-
-      <div id="mode-custom-form" style="display:none;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div id="filter-panel" class="sb-filter-panel">
+        <div class="sb-filter-title">Or filter by</div>
+        <div class="sb-filter-grid">
           <div>
-            <label style="font-size:12px; font-weight:600; color:#6b7280;">First Name</label>
-            <input type="text" id="custom-first" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+            <label class="sb-label" for="filter-forty">40 Time</label>
+            <select id="filter-forty" class="sb-select" onchange="runFilterSearch()">
+              <option value="">Any</option>
+              <option value="u44">Below 4.4</option>
+              <option value="44_45">4.4 – 4.5</option>
+              <option value="45_47">4.5 – 4.7</option>
+              <option value="o47">4.7+</option>
+            </select>
           </div>
           <div>
-            <label style="font-size:12px; font-weight:600; color:#6b7280;">Last Name</label>
-            <input type="text" id="custom-last" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
-          </div>
-        </div>
-        <div style="margin-top:10px; position:relative;">
-          <label style="font-size:12px; font-weight:600; color:#6b7280;">High School</label>
-          <input type="text" id="custom-school-search" placeholder="Type to search schools..." autocomplete="off" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
-          <input type="hidden" id="custom-school" value="">
-          <div id="custom-school-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:200px; overflow-y:auto; background:#fff; border:1.5px solid #e5e7eb; border-top:none; border-radius:0 0 8px 8px; z-index:1001; box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:#6b7280;">Grad Year</label>
-            <select id="custom-grad" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
-              <option value="">Select year</option>
+            <label class="sb-label" for="filter-grad">Grad Year</label>
+            <select id="filter-grad" class="sb-select" onchange="runFilterSearch()">
+              <option value="">Any</option>
               <option value="2025">2025</option>
               <option value="2026">2026</option>
               <option value="2027">2027</option>
@@ -197,162 +147,228 @@
             </select>
           </div>
           <div>
-            <label style="font-size:12px; font-weight:600; color:#6b7280;">Position</label>
-            <select id="custom-position" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
-              <option value="">Select position</option>
-              <optgroup label="Offense">
-                <option value="QB">QB</option>
-                <option value="RB">RB</option>
-                <option value="FB">FB</option>
-                <option value="WR">WR</option>
-                <option value="TE">TE</option>
-                <option value="OL">OL</option>
-                <option value="OT">OT</option>
-                <option value="OG">OG</option>
-                <option value="C">C</option>
-              </optgroup>
-              <optgroup label="Defense">
-                <option value="DL">DL</option>
-                <option value="DE">DE</option>
-                <option value="DT">DT</option>
-                <option value="LB">LB</option>
-                <option value="ILB">ILB</option>
-                <option value="OLB">OLB</option>
-                <option value="DB">DB</option>
-                <option value="CB">CB</option>
-                <option value="S">S</option>
-                <option value="FS">FS</option>
-                <option value="SS">SS</option>
-              </optgroup>
-              <optgroup label="Special Teams">
-                <option value="K">K</option>
-                <option value="P">P</option>
-                <option value="LS">LS</option>
-              </optgroup>
-              <option value="ATH">ATH</option>
+            <label class="sb-label" for="filter-position">Position</label>
+            <select id="filter-position" class="sb-select" onchange="runFilterSearch()">
+              <option value="">Any</option>
+              <optgroup label="Offense"><option>QB</option><option>RB</option><option>FB</option><option>WR</option><option>TE</option><option>OL</option><option>OT</option><option>OG</option><option>C</option></optgroup>
+              <optgroup label="Defense"><option>DL</option><option>DE</option><option>DT</option><option>LB</option><option>ILB</option><option>OLB</option><option>DB</option><option>CB</option><option>S</option><option>FS</option><option>SS</option></optgroup>
+              <optgroup label="Special Teams"><option>K</option><option>P</option><option>LS</option></optgroup>
+              <option>ATH</option>
+            </select>
+          </div>
+          <div>
+            <label class="sb-label" for="filter-state">State</label>
+            <select id="filter-state" class="sb-select" onchange="onFilterStateChange()">
+              <option value="">Any</option>
+            </select>
+          </div>
+          <div>
+            <label class="sb-label" for="filter-city">City</label>
+            <select id="filter-city" class="sb-select" onchange="onFilterCityChange()" disabled>
+              <option value="">Any</option>
+            </select>
+          </div>
+          <div>
+            <label class="sb-label" for="filter-school">School</label>
+            <select id="filter-school" class="sb-select" onchange="runFilterSearch()" disabled>
+              <option value="">Any</option>
             </select>
           </div>
         </div>
       </div>
+
+      <div id="player-search-results" class="sb-results"></div>
     </div>
 
-    <div style="margin-bottom:16px;">
-      <label style="font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase;">Add to Lane</label>
-      <select id="add-lane" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+    <div id="mode-custom-form" style="display:none;">
+      <div class="sb-grid-2">
+        <div class="sb-field">
+          <label class="sb-label" for="custom-first">First Name</label>
+          <input type="text" id="custom-first" class="sb-input">
+        </div>
+        <div class="sb-field">
+          <label class="sb-label" for="custom-last">Last Name</label>
+          <input type="text" id="custom-last" class="sb-input">
+        </div>
+      </div>
+      <div class="sb-field sb-autocomplete">
+        <label class="sb-label" for="custom-school-search">High School</label>
+        <input type="text" id="custom-school-search" class="sb-input" placeholder="Type to search schools..." autocomplete="off">
+        <input type="hidden" id="custom-school" value="">
+        <div id="custom-school-dropdown" class="sb-autocomplete-dropdown"></div>
+      </div>
+      <div class="sb-grid-2">
+        <div class="sb-field">
+          <label class="sb-label" for="custom-grad">Grad Year</label>
+          <select id="custom-grad" class="sb-select">
+            <option value="">Select year</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+            <option value="2029">2029</option>
+            <option value="2030">2030</option>
+          </select>
+        </div>
+        <div class="sb-field">
+          <label class="sb-label" for="custom-position">Position</label>
+          <select id="custom-position" class="sb-select">
+            <option value="">Select position</option>
+            <optgroup label="Offense">
+              <option value="QB">QB</option><option value="RB">RB</option><option value="FB">FB</option>
+              <option value="WR">WR</option><option value="TE">TE</option><option value="OL">OL</option>
+              <option value="OT">OT</option><option value="OG">OG</option><option value="C">C</option>
+            </optgroup>
+            <optgroup label="Defense">
+              <option value="DL">DL</option><option value="DE">DE</option><option value="DT">DT</option>
+              <option value="LB">LB</option><option value="ILB">ILB</option><option value="OLB">OLB</option>
+              <option value="DB">DB</option><option value="CB">CB</option><option value="S">S</option>
+              <option value="FS">FS</option><option value="SS">SS</option>
+            </optgroup>
+            <optgroup label="Special Teams">
+              <option value="K">K</option><option value="P">P</option><option value="LS">LS</option>
+            </optgroup>
+            <option value="ATH">ATH</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-field">
+      <label class="sb-label" for="add-lane">Add to Lane</label>
+      <select id="add-lane" class="sb-select">
         {% for lane in lanes %}
         <option value="{{ lane.id }}">{{ lane.name }}</option>
         {% endfor %}
       </select>
     </div>
 
-    <div style="display:flex; gap:10px;">
-      <button onclick="closeAddCardModal()" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
-      <button onclick="createCard()" style="flex:1; padding:12px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Add Card</button>
+    <div class="sb-modal-actions">
+      <button onclick="closeAddCardModal()" class="sb-btn sb-btn-ghost" style="flex:1;">Cancel</button>
+      <button onclick="createCard()" class="sb-btn sb-btn-primary" style="flex:1;">Add Card</button>
     </div>
   </div>
 </div>
 
 <!-- Add Scout Modal -->
-<div id="add-scout-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1100; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:14px; padding:28px; max-width:440px; width:90%;">
-    <h2 style="margin:0 0 20px 0; color:#0a1628;">Add New Scout</h2>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
-      <div>
-        <label style="font-size:12px; font-weight:600; color:#6b7280;">First Name</label>
-        <input type="text" id="new-scout-first" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+<div id="add-scout-modal" class="sb-modal" style="z-index:1100;">
+  <div class="sb-modal-body narrow">
+    <div class="sb-modal-header">
+      <h2 class="sb-modal-title">Add New Scout</h2>
+      <button onclick="closeAddScoutModal()" class="sb-modal-close" aria-label="Close">×</button>
+    </div>
+    <div class="sb-grid-2">
+      <div class="sb-field">
+        <label class="sb-label" for="new-scout-first">First Name</label>
+        <input type="text" id="new-scout-first" class="sb-input">
       </div>
-      <div>
-        <label style="font-size:12px; font-weight:600; color:#6b7280;">Last Name</label>
-        <input type="text" id="new-scout-last" style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; box-sizing:border-box;">
+      <div class="sb-field">
+        <label class="sb-label" for="new-scout-last">Last Name</label>
+        <input type="text" id="new-scout-last" class="sb-input">
       </div>
     </div>
-    <div style="display:flex; gap:10px;">
-      <button onclick="closeAddScoutModal()" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
-      <button onclick="submitNewScout()" style="flex:1; padding:12px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Add Scout</button>
+    <div class="sb-modal-actions">
+      <button onclick="closeAddScoutModal()" class="sb-btn sb-btn-ghost" style="flex:1;">Cancel</button>
+      <button onclick="submitNewScout()" class="sb-btn sb-btn-primary" style="flex:1;">Add Scout</button>
     </div>
   </div>
 </div>
 
 <!-- Card Detail Modal -->
-<div id="card-detail-modal" onclick="if(event.target===this)handleBackdropClick()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:14px; padding:28px; max-width:640px; width:90%; max-height:90vh; overflow-y:auto;">
-    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:16px;">
-      <h2 id="cd-name" style="margin:0; color:#0a1628;"></h2>
-      <button onclick="handleBackdropClick()" style="background:none; border:none; font-size:24px; color:#9ca3af; cursor:pointer;">×</button>
+<div id="card-detail-modal" class="sb-modal" onclick="if(event.target===this)handleBackdropClick()">
+  <div class="sb-modal-body wide">
+    <div class="sb-modal-header">
+      <h2 id="cd-name" class="sb-modal-title"></h2>
+      <button onclick="handleBackdropClick()" class="sb-modal-close" aria-label="Close">×</button>
     </div>
 
-    <div style="display:flex; gap:16px; margin-bottom:20px;">
-      <div style="flex:0 0 100px;">
-        <img id="cd-photo" src="" style="width:100px; height:100px; border-radius:50%; object-fit:cover; background:#f3f4f6;" alt="">
+    <div class="sb-cd-top">
+      <div class="sb-cd-avatar-col">
+        <img id="cd-photo" src="" class="sb-cd-avatar" alt="">
         <input type="file" id="cd-image-upload" accept="image/*" style="display:none;" onchange="uploadCardImage()">
-        <button onclick="document.getElementById('cd-image-upload').click()" style="width:100%; margin-top:8px; padding:6px; background:#f3f4f6; border:none; border-radius:6px; font-size:11px; cursor:pointer;">Change Image</button>
+        <button onclick="document.getElementById('cd-image-upload').click()" class="sb-cd-change-btn">Change Image</button>
       </div>
-      <div style="flex:1;">
-        <div id="cd-info" style="font-size:13px; color:#6b7280; line-height:1.6;"></div>
-        <a id="cd-profile-link" href="#" target="_blank" style="display:none; margin-top:8px; font-size:13px; color:#3b82f6; font-weight:600;">View Full Profile →</a>
-        <a id="cd-questionnaire-link" href="#" target="_blank" style="display:none; margin-top:4px; font-size:13px; color:#3b82f6; font-weight:600;">View Questionnaire →</a>
-      </div>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-      <div>
-        <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Campus Visit Date</label>
-        <input type="date" id="cd-visit-date" onchange="markDirty()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
-      </div>
-      <div>
-        <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">HS Visit Date</label>
-        <input type="date" id="cd-hs-visit-date" onchange="markDirty()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box;">
+      <div class="sb-cd-info-col">
+        <div id="cd-info" class="sb-cd-info"></div>
+        <a id="cd-profile-link" href="#" target="_blank" class="sb-cd-link">View Full Profile →</a>
+        <a id="cd-questionnaire-link" href="#" target="_blank" class="sb-cd-link">View Questionnaire →</a>
       </div>
     </div>
 
-    <div style="margin-bottom:16px;">
-      <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Scout</label>
-      <div style="display:flex; gap:8px; margin-top:4px;">
-        <select id="cd-scout" onchange="markDirty()" style="flex:1; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px;">
+    <div class="sb-grid-2">
+      <div class="sb-field">
+        <label class="sb-label" for="cd-visit-date">Campus Visit Date</label>
+        <input type="date" id="cd-visit-date" class="sb-input" onchange="markDirty()">
+      </div>
+      <div class="sb-field">
+        <label class="sb-label" for="cd-hs-visit-date">HS Visit Date</label>
+        <input type="date" id="cd-hs-visit-date" class="sb-input" onchange="markDirty()">
+      </div>
+    </div>
+
+    <div class="sb-field">
+      <label class="sb-label" for="cd-scout">Scout</label>
+      <div class="sb-scout-row">
+        <select id="cd-scout" class="sb-select" onchange="markDirty()">
           <option value="">— No scout —</option>
           {% for s in scouts %}
           <option value="{{ s.first_name }} {{ s.last_name }}">{{ s.first_name }} {{ s.last_name }}</option>
           {% endfor %}
         </select>
-        <button onclick="addScout()" style="padding:8px 12px; background:#f3f4f6; border:none; border-radius:8px; cursor:pointer; font-size:12px;">+ New Scout</button>
+        <button onclick="addScout()" class="sb-btn sb-btn-ghost sb-btn-sm">+ New Scout</button>
       </div>
     </div>
 
-    <div style="margin-bottom:16px;">
-      <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Swimlane</label>
-      <select id="cd-lane" onchange="markDirty()" style="width:100%; padding:8px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px;">
+    <div class="sb-field">
+      <label class="sb-label" for="cd-lane">Swimlane</label>
+      <select id="cd-lane" class="sb-select" onchange="markDirty()">
         {% for lane in lanes %}
         <option value="{{ lane.id }}">{{ lane.name }}</option>
         {% endfor %}
       </select>
     </div>
 
-    <div style="margin-bottom:16px;">
-      <label style="font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;">Notes</label>
-      <textarea id="cd-notes" rows="5" oninput="markDirty()" placeholder="Add notes about this player..." style="width:100%; padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-top:4px; box-sizing:border-box; font-family:inherit;"></textarea>
+    <div class="sb-field">
+      <label class="sb-label" for="cd-notes">Notes</label>
+      <textarea id="cd-notes" class="sb-textarea" rows="5" oninput="markDirty()" placeholder="Add notes about this player..."></textarea>
     </div>
 
-    <div style="display:flex; justify-content:space-between; gap:10px;">
-      <button onclick="completeCard()" style="padding:10px 24px; background:#dc2626; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Archive</button>
-      <button onclick="doneCard()" style="padding:10px 24px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Save &amp; Close</button>
+    <div class="sb-modal-actions">
+      <button onclick="completeCard()" class="sb-btn sb-btn-danger">Archive</button>
+      <button onclick="doneCard()" class="sb-btn sb-btn-primary">Save &amp; Close</button>
     </div>
   </div>
 </div>
 
 <!-- Archive Drawer -->
-<div id="archive-drawer" onclick="if(event.target===this)closeArchiveDrawer()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:1050; justify-content:flex-end;">
-  <div style="background:#fff; width:100%; max-width:480px; height:100%; box-shadow:-4px 0 24px rgba(0,0,0,.2); display:flex; flex-direction:column;">
-    <div style="padding:20px 24px; border-bottom:1.5px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
-      <h2 style="margin:0; font-size:18px; color:#0a1628;">Archived Players</h2>
-      <button onclick="closeArchiveDrawer()" style="background:none; border:none; font-size:24px; color:#9ca3af; cursor:pointer;">×</button>
+<div id="archive-drawer" class="sb-drawer" onclick="if(event.target===this)closeArchiveDrawer()">
+  <div class="sb-drawer-body">
+    <div class="sb-drawer-header">
+      <h2 class="sb-drawer-title">Archived Players</h2>
+      <button onclick="closeArchiveDrawer()" class="sb-modal-close" aria-label="Close">×</button>
     </div>
-    <div id="archive-list" style="flex:1; overflow-y:auto; padding:16px 24px;">
-      <p style="color:#9ca3af; font-size:13px; text-align:center; margin-top:20px;">Loading…</p>
+    <div id="archive-list" class="sb-drawer-list">
+      <p class="sb-empty-text">Loading…</p>
     </div>
   </div>
 </div>
 
 <script>
+(function initTheme() {
+  var t = 'light';
+  try { t = localStorage.getItem('sb-theme') || 'light'; } catch(e) {}
+  var page = document.getElementById('sb-page');
+  if (page) page.setAttribute('data-theme', t);
+})();
+function toggleTheme() {
+  var page = document.getElementById('sb-page');
+  if (!page) return;
+  var cur = page.getAttribute('data-theme') || 'light';
+  var next = cur === 'dark' ? 'light' : 'dark';
+  page.setAttribute('data-theme', next);
+  try { localStorage.setItem('sb-theme', next); } catch(e) {}
+}
+
 var currentCardId = null;
 var addMode = 'existing';
 var selectedPlayerId = null;
@@ -361,7 +377,7 @@ var cardDirty = false;
 function markDirty() { cardDirty = true; }
 
 function openAddCardModal() {
-  document.getElementById('add-card-modal').style.display = 'flex';
+  document.getElementById('add-card-modal').classList.add('open');
   document.getElementById('player-search').value = '';
   document.getElementById('player-search-results').innerHTML = '';
   var panel = document.getElementById('filter-panel');
@@ -378,23 +394,15 @@ function openAddCardModal() {
 }
 
 function closeAddCardModal() {
-  document.getElementById('add-card-modal').style.display = 'none';
+  document.getElementById('add-card-modal').classList.remove('open');
 }
 
 function setAddMode(mode) {
   addMode = mode;
   document.getElementById('mode-existing-form').style.display = mode === 'existing' ? '' : 'none';
   document.getElementById('mode-custom-form').style.display = mode === 'custom' ? '' : 'none';
-  var btn1 = document.getElementById('mode-existing');
-  var btn2 = document.getElementById('mode-custom');
-  btn1.className = mode === 'existing' ? 'btn btn-primary' : 'btn';
-  btn1.style.background = mode === 'existing' ? '#0a1628' : '#fff';
-  btn1.style.color = mode === 'existing' ? '#fff' : '#0a1628';
-  btn1.style.border = mode === 'existing' ? 'none' : '1.5px solid #e5e7eb';
-  btn2.className = mode === 'custom' ? 'btn btn-primary' : 'btn';
-  btn2.style.background = mode === 'custom' ? '#0a1628' : '#fff';
-  btn2.style.color = mode === 'custom' ? '#fff' : '#0a1628';
-  btn2.style.border = mode === 'custom' ? 'none' : '1.5px solid #e5e7eb';
+  document.getElementById('mode-existing').classList.toggle('active', mode === 'existing');
+  document.getElementById('mode-custom').classList.toggle('active', mode === 'custom');
 }
 
 var schoolSearchTimer;
@@ -416,18 +424,16 @@ var schoolSearchTimer;
           results.forEach(function(s) {
             var item = document.createElement('div');
             item.textContent = s.label;
-            item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:13px; color:#0a1628;';
+            item.className = 'sb-autocomplete-item';
             item.onmousedown = function(e) {
               e.preventDefault();
               input.value = s.name;
               hidden.value = s.name;
               dropdown.style.display = 'none';
             };
-            item.onmouseover = function() { this.style.background = '#f3f4f6'; };
-            item.onmouseout = function() { this.style.background = ''; };
             dropdown.appendChild(item);
           });
-          dropdown.style.display = results.length ? '' : 'none';
+          dropdown.style.display = results.length ? 'block' : 'none';
         });
     }, 300);
   });
@@ -438,18 +444,19 @@ var searchTimer;
 function renderPlayerResults(results) {
   var html = results.map(function(p) {
     var meta = [p.school || '', p.position || '', p.grad_year || '', p.forty_yard ? p.forty_yard + ' 40' : ''].filter(Boolean).join(' · ');
-    var disabled = p.on_board;
-    var rowStyle = 'padding:10px; border:1.5px solid #e5e7eb; border-radius:8px; margin-bottom:6px; display:flex; align-items:center; gap:10px;'
-      + (disabled ? ' opacity:0.55; cursor:not-allowed; background:#f9fafb;' : ' cursor:pointer;');
-    var click = disabled ? '' : ' onclick="selectPlayer(' + p.user_id + ', this)"';
-    var badge = disabled ? '<span style="margin-left:auto; font-size:10px; font-weight:700; color:#6b7280; background:#e5e7eb; padding:3px 8px; border-radius:10px; text-transform:uppercase;">On Board</span>' : '';
-    return '<div' + click + ' data-player-id="' + p.user_id + '" style="' + rowStyle + '">' +
-      (p.photo ? '<img src="' + p.photo + '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">' : '<div style="width:32px; height:32px; border-radius:50%; background:#e5e7eb;"></div>') +
-      '<div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; color:#0a1628;">' + p.name + '</div><div style="font-size:12px; color:#6b7280;">' + meta + '</div></div>' +
+    var cls = 'sb-result' + (p.on_board ? ' disabled' : '');
+    var click = p.on_board ? '' : ' onclick="selectPlayer(' + p.user_id + ', this)"';
+    var badge = p.on_board ? '<span class="sb-badge sb-badge-onboard">On Board</span>' : '';
+    var avatar = p.photo
+      ? '<img src="' + p.photo + '" class="sb-result-avatar">'
+      : '<div class="sb-result-avatar-initials">' + (p.name ? escapeHtml(p.name[0].toUpperCase()) : '?') + '</div>';
+    return '<div' + click + ' data-player-id="' + p.user_id + '" class="' + cls + '">' +
+      avatar +
+      '<div class="sb-result-body"><div class="sb-result-name">' + escapeHtml(p.name) + '</div><div class="sb-result-meta">' + escapeHtml(meta) + '</div></div>' +
       badge +
       '</div>';
   }).join('');
-  document.getElementById('player-search-results').innerHTML = html || '<p style="color:#9ca3af; font-size:13px;">No results</p>';
+  document.getElementById('player-search-results').innerHTML = html || '<p class="sb-empty-text">No results</p>';
 }
 
 function onNameInput(q) {
@@ -563,9 +570,8 @@ function onFilterCityChange() {
 
 function selectPlayer(id, el) {
   selectedPlayerId = id;
-  document.querySelectorAll('#player-search-results div[data-player-id]').forEach(function(d) { d.style.background = ''; d.style.borderColor = '#e5e7eb'; });
-  el.style.background = '#fef3c7';
-  el.style.borderColor = '#f0b429';
+  document.querySelectorAll('#player-search-results .sb-result').forEach(function(d) { d.classList.remove('selected'); });
+  el.classList.add('selected');
 }
 
 function createCard() {
@@ -600,26 +606,26 @@ function openCard(cardId) {
       document.getElementById('cd-name').textContent = (c.first_name + ' ' + c.last_name).trim() || 'Player';
       document.getElementById('cd-photo').src = c.photo || '/static/cap-logo.png';
       var info = [];
-      if (c.high_school) info.push('<strong>School:</strong> ' + c.high_school);
-      if (c.position) info.push('<strong>Position:</strong> ' + c.position);
-      if (c.grad_year) info.push('<strong>Class:</strong> ' + c.grad_year);
-      if (c.height) info.push('<strong>Height:</strong> ' + c.height);
-      if (c.weight) info.push('<strong>Weight:</strong> ' + c.weight);
+      if (c.high_school) info.push('<strong>School:</strong> ' + escapeHtml(c.high_school));
+      if (c.position) info.push('<strong>Position:</strong> ' + escapeHtml(c.position));
+      if (c.grad_year) info.push('<strong>Class:</strong> ' + escapeHtml(String(c.grad_year)));
+      if (c.height) info.push('<strong>Height:</strong> ' + escapeHtml(c.height));
+      if (c.weight) info.push('<strong>Weight:</strong> ' + escapeHtml(String(c.weight)));
       if (c.is_custom) info.push('<em>Custom Player</em>');
       document.getElementById('cd-info').innerHTML = info.join('<br>');
       var link = document.getElementById('cd-profile-link');
       if (c.profile_username) {
         link.href = '/profile/' + c.profile_username;
-        link.style.display = '';
+        link.classList.add('show');
       } else {
-        link.style.display = 'none';
+        link.classList.remove('show');
       }
       var qlink = document.getElementById('cd-questionnaire-link');
       if (c.profile_username && c.has_questionnaire) {
         qlink.href = '/questionnaires/view/' + c.profile_username;
-        qlink.style.display = '';
+        qlink.classList.add('show');
       } else {
-        qlink.style.display = 'none';
+        qlink.classList.remove('show');
       }
       document.getElementById('cd-visit-date').value = c.visit_date || '';
       document.getElementById('cd-hs-visit-date').value = c.high_school_visit_date || '';
@@ -627,7 +633,7 @@ function openCard(cardId) {
       document.getElementById('cd-lane').value = c.lane_id || '';
       document.getElementById('cd-notes').value = c.notes || '';
       cardDirty = false;
-      document.getElementById('card-detail-modal').style.display = 'flex';
+      document.getElementById('card-detail-modal').classList.add('open');
     });
 }
 
@@ -644,7 +650,7 @@ function handleBackdropClick() {
 }
 
 function closeCardDetail(reload) {
-  document.getElementById('card-detail-modal').style.display = 'none';
+  document.getElementById('card-detail-modal').classList.remove('open');
   currentCardId = null;
   cardDirty = false;
   if (reload !== false) location.reload();
@@ -718,15 +724,15 @@ function completeCard() {
 function toggleScoutMenu(e) {
   if (e) e.stopPropagation();
   var menu = document.getElementById('scout-menu');
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  menu.classList.toggle('open');
 }
 function closeScoutMenu() {
   var menu = document.getElementById('scout-menu');
-  if (menu) menu.style.display = 'none';
+  if (menu) menu.classList.remove('open');
 }
 document.addEventListener('click', function(e) {
   var menu = document.getElementById('scout-menu');
-  if (!menu || menu.style.display !== 'block') return;
+  if (!menu || !menu.classList.contains('open')) return;
   if (!menu.contains(e.target)) closeScoutMenu();
 });
 
@@ -737,15 +743,15 @@ function exportCsv() {
 
 function openArchiveDrawer() {
   closeScoutMenu();
-  document.getElementById('archive-drawer').style.display = 'flex';
+  document.getElementById('archive-drawer').classList.add('open');
   var list = document.getElementById('archive-list');
-  list.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center; margin-top:20px;">Loading…</p>';
+  list.innerHTML = '<p class="sb-empty-text">Loading…</p>';
   fetch('/dashboard/scout/archived')
     .then(function(r) { return r.json(); })
     .then(function(res) {
       var cards = res.cards || [];
       if (!cards.length) {
-        list.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center; margin-top:20px;">No archived players yet.</p>';
+        list.innerHTML = '<p class="sb-empty-text">No archived players yet.</p>';
         return;
       }
       list.innerHTML = cards.map(function(c) {
@@ -755,26 +761,25 @@ function openArchiveDrawer() {
         if (who) meta.push('by ' + who);
         if (when) meta.push(when);
         var avatar = c.photo
-          ? '<img src="' + escapeAttr(c.photo) + '" style="width:44px; height:44px; border-radius:50%; object-fit:cover; flex-shrink:0;">'
-          : '<div style="width:44px; height:44px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; font-weight:700; color:#6b7280; flex-shrink:0;">' + (c.name ? escapeHtml(c.name[0]) : '?') + '</div>';
-        return '<div style="display:flex; align-items:center; gap:12px; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; margin-bottom:10px;">'
+          ? '<img src="' + escapeAttr(c.photo) + '" class="sb-archive-avatar">'
+          : '<div class="sb-archive-avatar-initials">' + (c.name ? escapeHtml(c.name[0].toUpperCase()) : '?') + '</div>';
+        var posBadge = c.position ? ' <span class="sb-badge sb-badge-position">' + escapeHtml(c.position) + '</span>' : '';
+        return '<div class="sb-archive-row">'
           + avatar
-          + '<div style="flex:1; min-width:0;">'
-          + '<div style="font-weight:700; font-size:14px; color:#0a1628;">' + escapeHtml(c.name || 'Unnamed')
-          + (c.position ? ' <span style="font-size:10px; font-weight:700; color:#0a1628; background:#f0b429; padding:1px 6px; border-radius:4px; margin-left:4px;">' + escapeHtml(c.position) + '</span>' : '')
+          + '<div class="sb-archive-body">'
+          + '<div class="sb-archive-name">' + escapeHtml(c.name || 'Unnamed') + posBadge + '</div>'
+          + (c.high_school ? '<div class="sb-archive-meta">' + escapeHtml(c.high_school) + '</div>' : '')
+          + (c.lane_name ? '<div class="sb-archive-sub">From: ' + escapeHtml(c.lane_name) + '</div>' : '')
+          + (meta.length ? '<div class="sb-archive-sub">Completed ' + escapeHtml(meta.join(' · ')) + '</div>' : '')
           + '</div>'
-          + (c.high_school ? '<div style="font-size:12px; color:#6b7280;">' + escapeHtml(c.high_school) + '</div>' : '')
-          + (c.lane_name ? '<div style="font-size:11px; color:#9ca3af;">From: ' + escapeHtml(c.lane_name) + '</div>' : '')
-          + (meta.length ? '<div style="font-size:11px; color:#9ca3af; margin-top:2px;">Completed ' + escapeHtml(meta.join(' · ')) + '</div>' : '')
-          + '</div>'
-          + '<button onclick="restoreCard(' + c.id + ')" style="padding:8px 12px; background:#0a1628; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:12px;">Restore</button>'
+          + '<button onclick="restoreCard(' + c.id + ')" class="sb-btn sb-btn-primary sb-btn-sm">Restore</button>'
           + '</div>';
       }).join('');
     });
 }
 
 function closeArchiveDrawer() {
-  document.getElementById('archive-drawer').style.display = 'none';
+  document.getElementById('archive-drawer').classList.remove('open');
 }
 
 function restoreCard(cardId) {
@@ -826,12 +831,12 @@ function deleteLane(laneId) {
 function addScout() {
   document.getElementById('new-scout-first').value = '';
   document.getElementById('new-scout-last').value = '';
-  document.getElementById('add-scout-modal').style.display = 'flex';
+  document.getElementById('add-scout-modal').classList.add('open');
   setTimeout(function() { document.getElementById('new-scout-first').focus(); }, 50);
 }
 
 function closeAddScoutModal() {
-  document.getElementById('add-scout-modal').style.display = 'none';
+  document.getElementById('add-scout-modal').classList.remove('open');
 }
 
 function submitNewScout() {
@@ -863,11 +868,11 @@ document.querySelectorAll('.sb-card').forEach(function(card) {
   card.addEventListener('dragstart', function(e) {
     draggedCard = this;
     wasDragging = true;
-    this.style.opacity = '0.5';
+    this.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
   });
   card.addEventListener('dragend', function() {
-    this.style.opacity = '1';
+    this.classList.remove('dragging');
     draggedCard = null;
     setTimeout(function() { wasDragging = false; }, 50);
   });
@@ -885,6 +890,7 @@ document.querySelectorAll('.sb-lane').forEach(function(lane) {
     if (!draggedCard) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    lane.classList.add('drag-over');
     var afterEl = getDragAfterElement(cardsContainer, e.clientY);
     if (afterEl == null) {
       if (draggedCard.parentNode !== cardsContainer || cardsContainer.lastElementChild !== draggedCard) {
@@ -894,15 +900,19 @@ document.querySelectorAll('.sb-lane').forEach(function(lane) {
       cardsContainer.insertBefore(draggedCard, afterEl);
     }
   });
+  lane.addEventListener('dragleave', function(e) {
+    if (e.target === lane) lane.classList.remove('drag-over');
+  });
   lane.addEventListener('drop', function(e) {
     if (!draggedCard) return;
     e.preventDefault();
+    lane.classList.remove('drag-over');
     saveBoardState();
   });
 });
 
 function getDragAfterElement(container, y) {
-  var draggableElements = Array.from(container.querySelectorAll('.sb-card:not([style*="opacity: 0.5"])'));
+  var draggableElements = Array.from(container.querySelectorAll('.sb-card:not(.dragging)'));
   return draggableElements.reduce(function(closest, child) {
     var box = child.getBoundingClientRect();
     var offset = y - box.top - box.height / 2;
