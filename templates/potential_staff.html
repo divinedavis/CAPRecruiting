@@ -67,12 +67,32 @@
   <div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">No email template found. <a href="/admin/marketing/campaigns" style="color:#991b1b; font-weight:700;">Create a campaign first.</a></div>
   {% endif %}
 
-  {% if staff %}
-  <div style="margin-bottom:14px;">
+  {% set refreshed = request.query_params.get('refreshed') %}
+  {% set refresh_err = request.query_params.get('refresh_err') %}
+  {% if refreshed %}
+  <div style="background:#d1fae5; border:1px solid #10b981; color:#065f46; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">
+    Pulled {{ refreshed }} coaches from athletics site — {{ request.query_params.get('inserted') or 0 }} new, {{ request.query_params.get('updated') or 0 }} updated.
+  </div>
+  {% endif %}
+  {% if refresh_err == 'no_url' %}<div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">No athletics site URL on file for this school.</div>{% endif %}
+  {% if refresh_err == 'no_sidearm_page' %}<div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">Couldn't find a football coaches page. This school's site may not use Sidearm (only Sidearm-powered sites are supported right now) or the path is non-standard.</div>{% endif %}
+  {% if refresh_err == 'no_coaches' %}<div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">Page loaded but no coaches found in the table.</div>{% endif %}
+  {% if refresh_err == 'fetch_failed' %}<div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">Couldn't reach the athletics site. Try again in a moment.</div>{% endif %}
+
+  <div style="margin-bottom:14px; display:flex; gap:10px; flex-wrap:wrap;">
+    {% if staff %}
     <form method="post" action="/admin/marketing/potentials/{{ pot.id }}/staff/send-all" style="display:inline;">
       <button type="submit" onclick="return confirm('Send the campaign email individually to all {{ staff|length }} staff members at {{ pot.school }}? Each coach receives their own personalized copy with unique tracking.');" style="padding:10px 20px; background:#0a1628; color:#f0b429; border:none; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">Send Email to All Staff</button>
     </form>
+    {% endif %}
+    {% if pot.athletic_url %}
+    <form method="post" action="/admin/marketing/potentials/{{ pot.id }}/staff/refresh" style="display:inline;">
+      <button type="submit" onclick="return confirm('Pull the latest coaches from the athletics site? Existing coaches will be updated (title, photo, email) but notes and contact status will be preserved. New coaches will be added.');" style="padding:10px 20px; background:#fff; color:#0a1628; border:2px solid #0a1628; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">Refresh Staff from Athletics Site</button>
+    </form>
+    {% endif %}
   </div>
+
+  {% if staff %}
   {% for s in staff %}
   <div class="staff-card">
     <div class="staff-avatar">

@@ -4011,6 +4011,132 @@ async def admin_potential_staff_update(sid: int, request: Request, db: Session =
     return RedirectResponse(f"/admin/marketing/potentials/{staff.potential_id}/staff", status_code=302)
 
 
+def _scrape_sidearm_football_coaches(athletic_url: str):
+    """Scrape a Sidearm Sports football coaches page. Returns list of dicts
+    with name/title/email/image_url, or raises on failure. Handles most D2/D3
+    schools that use the Sidearm CMS (standard /sports/football/coaches path)."""
+    import requests
+    from bs4 import BeautifulSoup
+    from urllib.parse import urljoin
+
+    base = (athletic_url or "").strip()
+    if not base:
+        raise ValueError("no_url")
+    if not base.startswith(("http://", "https://")):
+        base = "https://" + base
+    candidates = [
+        urljoin(base + "/", "sports/football/coaches"),
+        urljoin(base + "/", "coaches.aspx?path=football"),
+    ]
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; CAPRecruitingBot/1.0)"}
+    html = None
+    for url in candidates:
+        try:
+            r = requests.get(url, headers=headers, timeout=12)
+            if r.status_code == 200 and "sidearm-coaches-coach" in r.text:
+                html = r.text
+                break
+        except Exception:
+            continue
+    if not html:
+        raise ValueError("no_sidearm_page")
+
+    soup = BeautifulSoup(html, "html.parser")
+    rows = soup.select("tr.sidearm-coaches-coach")
+    out = []
+    for tr in rows:
+        cells = tr.find_all(["td", "th"], recursive=False)
+        # Image cell
+        img_tag = tr.select_one("td.sidearm-coaches-image-cell img")
+        image_url = ""
+        if img_tag and img_tag.get("src"):
+            image_url = img_tag["src"].strip()
+        # Name (in <th><a>...</a></th>)
+        name_tag = tr.select_one("th a")
+        name = (name_tag.get_text(strip=True) if name_tag else "").strip()
+        # Title and email live in subsequent <td> cells. Find by content pattern:
+        title = ""
+        email = ""
+        for td in tr.find_all("td"):
+            mailto = td.select_one("a[href^='mailto:']")
+            if mailto and not email:
+                email = mailto.get("href", "").replace("mailto:", "").strip()
+                continue
+            if td.get("class") and "sidearm-coaches-image-cell" in td.get("class"):
+                continue
+            txt = td.get_text(" ", strip=True)
+            if txt and not title and not td.select_one("a[href^='tel:']") and "@" not in txt:
+                title = txt
+        if not name:
+            continue
+        out.append({
+            "name": name[:200],
+            "title": title[:200],
+            "email": email[:200],
+            "image_url": image_url[:500],
+        })
+    return out
+
+
+@app.post("/admin/marketing/potentials/{pid}/staff/refresh")
+async def admin_potential_staff_refresh(pid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    pot = db.query(MarketingPotential).filter(MarketingPotential.id == pid).first()
+    if not pot:
+        raise HTTPException(status_code=404, detail="Potential not found")
+    if not pot.athletic_url:
+        return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?refresh_err=no_url", status_code=302)
+
+    try:
+        scraped = _scrape_sidearm_football_coaches(pot.athletic_url)
+    except ValueError as ve:
+        return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?refresh_err={ve}", status_code=302)
+    except Exception as exc:
+        _logger.warning("Staff refresh failed for pid=%s: %s", pid, type(exc).__name__)
+        return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?refresh_err=fetch_failed", status_code=302)
+
+    if not scraped:
+        return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?refresh_err=no_coaches", status_code=302)
+
+    existing = db.query(PotentialStaff).filter(PotentialStaff.potential_id == pid).all()
+    by_email = {s.email.strip().lower(): s for s in existing if s.email}
+    by_name = {s.name.strip().lower(): s for s in existing if s.name}
+    updated = 0
+    inserted = 0
+    for c in scraped:
+        row = None
+        if c["email"]:
+            row = by_email.get(c["email"].strip().lower())
+        if not row and c["name"]:
+            row = by_name.get(c["name"].strip().lower())
+        if row:
+            changed = False
+            if c["title"] and row.title != c["title"]:
+                row.title = c["title"]; changed = True
+            if c["email"] and not row.email:
+                row.email = c["email"]; changed = True
+            if c["image_url"] and row.image_url != c["image_url"]:
+                row.image_url = c["image_url"]; changed = True
+            if changed:
+                updated += 1
+        else:
+            db.add(PotentialStaff(
+                potential_id=pid,
+                name=c["name"],
+                title=c["title"],
+                email=c["email"],
+                image_url=c["image_url"],
+            ))
+            inserted += 1
+    db.commit()
+
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, user.id, "refresh_staff", pid, f"scraped={len(scraped)} updated={updated} inserted={inserted}", _ip)
+    return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?refreshed={len(scraped)}&updated={updated}&inserted={inserted}", status_code=302)
+
+
 # ── Email Campaigns (admin) ───────────────────────────────────────────────────
 
 @app.get("/admin/marketing/campaigns", response_class=HTMLResponse)
