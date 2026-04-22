@@ -58,8 +58,12 @@ body { background: #f7f7f8; }
   {% set err_msg = request.query_params.get('error') %}
   {% if saved %}<div class="cd-alert success">Template saved.</div>{% endif %}
   {% if sent_msg %}<div class="cd-alert success">Campaign sent! {{ sent_msg }} emails delivered.</div>{% endif %}
+  {% set test_sent = request.query_params.get('test_sent') %}
+  {% if test_sent %}<div class="cd-alert success">Test sent to {{ test_sent }} admin{{ 's' if test_sent != '1' else '' }}. Check your inbox.</div>{% endif %}
   {% if err_msg == 'already_sent' %}<div class="cd-alert error">This campaign has already been sent.</div>{% endif %}
   {% if err_msg == 'empty' %}<div class="cd-alert error">Subject and body are required before sending.</div>{% endif %}
+  {% if err_msg == 'no_admins' %}<div class="cd-alert error">No admin users found to send test to.</div>{% endif %}
+  {% if err_msg == 'smtp' %}<div class="cd-alert error">SMTP error sending test. Check logs.</div>{% endif %}
 
   {% if campaign.status == 'sent' %}
   <div class="cd-metrics">
@@ -92,6 +96,7 @@ body { background: #f7f7f8; }
       <textarea name="body_html" placeholder="Write your email HTML here. Use merge fields above. Include {{signup_button}} where you want the signup CTA.">{{ campaign.body_html }}</textarea>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="submit" class="cd-btn">Save Template</button>
+        <button type="submit" class="cd-btn secondary" formaction="/admin/marketing/campaigns/{{ campaign.id }}/test" onclick="return confirm('Send a test of this campaign to all admins?')">Send Test to Admins</button>
         <button type="button" class="cd-btn secondary" onclick="showPreview('desktop')">Preview Desktop</button>
         <button type="button" class="cd-btn secondary" onclick="showPreview('mobile')">Preview Mobile</button>
       </div>

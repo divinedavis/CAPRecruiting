@@ -4078,6 +4078,78 @@ async def admin_campaign_save(cid: int, request: Request, db: Session = Depends(
     return RedirectResponse(f"/admin/marketing/campaigns/{cid}?saved=1", status_code=302)
 
 
+@app.post("/admin/marketing/campaigns/{cid}/test")
+async def admin_campaign_test(cid: int, request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    campaign = db.query(EmailCampaign).filter(EmailCampaign.id == cid).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    form = await request.form()
+    subject_src = (form.get("subject") or campaign.subject or "").strip()
+    body_src = (form.get("body_html") or campaign.body_html or "").strip()
+    if not subject_src or not body_src:
+        return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=empty", status_code=302)
+
+    admins = db.query(User).filter(User.is_admin == True).all()
+    admin_emails = [a.email for a in admins if a.email]
+    if not admin_emails:
+        return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=no_admins", status_code=302)
+
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    sample_coach = "Coach Smith"
+    sample_school = "Test University"
+    sample_division = "D2"
+    sample_conference = "Test Conference"
+    sample_signup = f"{site_url}/signup/coach"
+
+    sent = 0
+    errors = 0
+    try:
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        _smtp_login_if_needed(server)
+        for email in admin_emails:
+            body = body_src
+            body = body.replace("{{coach_name}}", sample_coach)
+            body = body.replace("{{school}}", sample_school)
+            body = body.replace("{{division}}", sample_division)
+            body = body.replace("{{conference}}", sample_conference)
+            body = body.replace("{{signup_link}}", sample_signup)
+            body = body.replace("{{signup_button}}", (
+                f'<a href="{sample_signup}" style="display:inline-block;padding:14px 32px;'
+                f'background:#0a1628;color:#f0b429;border-radius:8px;text-decoration:none;'
+                f'font-weight:800;font-size:15px;">Sign Up as a Coach</a>'
+            ))
+
+            subject = subject_src.replace("{{school}}", sample_school).replace("{{coach_name}}", sample_coach)
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"[TEST] {subject}"
+            msg["From"] = f"Collegiate Athletic Planning <{SMTP_USER}>"
+            msg["To"] = email
+            msg.attach(MIMEText(body, "html"))
+            try:
+                server.sendmail(SMTP_USER, email, msg.as_string())
+                sent += 1
+            except Exception as exc:
+                _logger.warning("Campaign %s test send to %s failed: %s", cid, email, type(exc).__name__)
+                errors += 1
+        server.quit()
+    except Exception as exc:
+        _logger.error("Campaign %s test SMTP failure: %s", cid, exc)
+        return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=smtp", status_code=302)
+
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, user.id, "test_campaign", cid, f"sent={sent} errors={errors}", _ip)
+    return RedirectResponse(f"/admin/marketing/campaigns/{cid}?test_sent={sent}", status_code=302)
+
+
 @app.post("/admin/marketing/campaigns/{cid}/send")
 async def admin_campaign_send(cid: int, request: Request, db: Session = Depends(get_db)):
     """Send the campaign to all potential staff with emails. Creates tracked emails with
