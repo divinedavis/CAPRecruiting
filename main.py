@@ -2859,7 +2859,7 @@ async def upload_video(
                 file_data,
                 SPACES_BUCKET,
                 key,
-                ExtraArgs={"ContentType": content_type}
+                ExtraArgs={"ContentType": content_type, "ACL": "public-read"}
             )
         )
     except Exception:
