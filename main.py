@@ -3439,6 +3439,8 @@ async def admin_edit_profile_get(target_id: int, request: Request, db: Session =
         "image_list": image_list,
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
+        "is_advanced": can_edit_advanced_fields(target),
+        "is_premium": can_edit_premium_fields(target),
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id).all()} if target.role == "player" else set(),
     })
 
@@ -3539,6 +3541,8 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         "image_list": image_list,
         "profile_form_action": f"/admin/users/{target_id}/edit-profile",
         "unread_count": unread_count,
+        "is_advanced": can_edit_advanced_fields(target),
+        "is_premium": can_edit_premium_fields(target),
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id).all()} if target.role == "player" else set(),
     })
 
