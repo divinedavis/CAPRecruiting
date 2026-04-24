@@ -1001,7 +1001,7 @@ def _safe_redirect(url: str, fallback: str = "/profile/edit") -> str:
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
 
-TRANSCRIPT_ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
+TRANSCRIPT_ALLOWED_EXTENSIONS = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "gif", "webp", "heic"}
 TRANSCRIPT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 TRANSCRIPT_MAX_COUNT = 4
 IMAGE_MAX_COUNT = 20
@@ -1012,6 +1012,12 @@ TRANSCRIPT_CONTENT_TYPES = {
     "pdf": "application/pdf",
     "doc": "application/msword",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "heic": "image/heic",
 }
 
 
@@ -3064,7 +3070,8 @@ async def upload_transcript(
         _detected = _magic.from_buffer(contents[:512], mime=True)
         _allowed_mimes = {"application/pdf", "application/msword",
                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                          "application/octet-stream"}
+                          "application/octet-stream",
+                          "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"}
         if _detected not in _allowed_mimes:
             return RedirectResponse(redirect_to + "?transcript_error=type", status_code=302)
     except ImportError:
