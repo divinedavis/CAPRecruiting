@@ -3977,6 +3977,11 @@ async def admin_staff_send_one(pid: int, request: Request, db: Session = Depends
     )
 
 
+@app.get("/admin/marketing/potentials/{pid}/staff/send-all")
+async def admin_staff_send_all_get(pid: int):
+    return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff", status_code=302)
+
+
 @app.post("/admin/marketing/potentials/{pid}/staff/send-all")
 async def admin_staff_send_all(pid: int, request: Request, db: Session = Depends(get_db)):
     user, err = _marketing_require_admin(request, db)
