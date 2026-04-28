@@ -3777,6 +3777,14 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
     pot_not_interested_total = db.query(MarketingPotential).filter(MarketingPotential.status == "not_interested").count()
     pot_grand_total = pot_never_total + pot_contacted_total + pot_not_interested_total
 
+    # ── Mass-email outreach metrics (TrackedEmail) ───────────────────────────
+    teams_contacted = db.query(TrackedEmail.potential_id).filter(
+        TrackedEmail.potential_id != None
+    ).distinct().count()
+    emails_sent = db.query(TrackedEmail).count()
+    emails_opened = db.query(TrackedEmail).filter(TrackedEmail.opened_at != None).count()
+    emails_clicked = db.query(TrackedEmail).filter(TrackedEmail.clicked_at != None).count()
+
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
         "user": user,
@@ -3813,6 +3821,10 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "pot_contacted_total": pot_contacted_total,
         "pot_not_interested_total": pot_not_interested_total,
         "pot_grand_total": pot_grand_total,
+        "teams_contacted": teams_contacted,
+        "emails_sent": emails_sent,
+        "emails_opened": emails_opened,
+        "emails_clicked": emails_clicked,
     })
 
 
