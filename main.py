@@ -3777,13 +3777,17 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
     pot_not_interested_total = db.query(MarketingPotential).filter(MarketingPotential.status == "not_interested").count()
     pot_grand_total = pot_never_total + pot_contacted_total + pot_not_interested_total
 
-    # ── Mass-email outreach metrics (TrackedEmail) ───────────────────────────
+    # ── Mass-email outreach metrics (TrackedEmail, excluding test sends) ─────
     teams_contacted = db.query(TrackedEmail.potential_id).filter(
         TrackedEmail.potential_id != None
     ).distinct().count()
-    emails_sent = db.query(TrackedEmail).count()
-    emails_opened = db.query(TrackedEmail).filter(TrackedEmail.opened_at != None).count()
-    emails_clicked = db.query(TrackedEmail).filter(TrackedEmail.clicked_at != None).count()
+    emails_sent = db.query(TrackedEmail).filter(TrackedEmail.potential_id != None).count()
+    emails_opened = db.query(TrackedEmail).filter(
+        TrackedEmail.potential_id != None, TrackedEmail.opened_at != None
+    ).count()
+    emails_clicked = db.query(TrackedEmail).filter(
+        TrackedEmail.potential_id != None, TrackedEmail.clicked_at != None
+    ).count()
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3836,7 +3840,8 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
     email_filter = (request.query_params.get("filter") or "received").lower()
     if email_filter not in ("received", "opened", "clicked", "signed_up"):
         email_filter = "received"
-    q = db.query(TrackedEmail)
+    # Exclude test sends (no potential bound) from the recipient list
+    q = db.query(TrackedEmail).filter(TrackedEmail.potential_id != None)
     if email_filter == "opened":
         q = q.filter(TrackedEmail.opened_at != None)
     elif email_filter == "clicked":
@@ -3845,10 +3850,11 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
         q = q.filter(TrackedEmail.signed_up == True)
     rows = q.order_by(TrackedEmail.sent_at.desc()).all()
 
-    total_received = db.query(TrackedEmail).count()
-    total_opened = db.query(TrackedEmail).filter(TrackedEmail.opened_at != None).count()
-    total_clicked = db.query(TrackedEmail).filter(TrackedEmail.clicked_at != None).count()
-    total_signed_up = db.query(TrackedEmail).filter(TrackedEmail.signed_up == True).count()
+    base_q = db.query(TrackedEmail).filter(TrackedEmail.potential_id != None)
+    total_received = base_q.count()
+    total_opened = base_q.filter(TrackedEmail.opened_at != None).count()
+    total_clicked = base_q.filter(TrackedEmail.clicked_at != None).count()
+    total_signed_up = base_q.filter(TrackedEmail.signed_up == True).count()
 
     pot_ids = {r.potential_id for r in rows if r.potential_id}
     pots = {p.id: p for p in db.query(MarketingPotential).filter(MarketingPotential.id.in_(pot_ids)).all()} if pot_ids else {}
@@ -3935,6 +3941,76 @@ async def admin_marketing_potential_staff(pid: int, request: Request, db: Sessio
     })
 
 
+def _clean_whitespace(raw):
+    """Collapse runs of whitespace and trim. Safe on None."""
+    if not raw:
+        return ""
+    return re.sub(r"\s+", " ", raw).strip()
+
+
+def _first_name_for_greeting(raw):
+    """Return the recipient's first name for use in greetings/subjects.
+    Falls back to 'Coach' when the name is missing or unparseable."""
+    cleaned = _clean_whitespace(raw)
+    if not cleaned:
+        return "Coach"
+    first = cleaned.split()[0].rstrip(",.;:")
+    return first or "Coach"
+
+
+_NON_COACH_TITLE_BLOCKERS = (
+    "sports information", "athletic trainer", "equipment",
+    "compliance", "academic advisor", "academic coordinator",
+    "media relations", "marketing director", "communications director",
+    "ticket office", "facilities", "groundskeeper", "business manager",
+    "finance director", "concessions",
+)
+_COACH_TITLE_KEYWORDS = ("coach", "coordinator", "recruiting", "football")
+
+
+def _is_eligible_coach_title(title):
+    """Return True if this PotentialStaff title looks like a football coaching
+    role (or is empty/unknown — we err on inclusion). Blocks obvious non-coach
+    roles like Sports Information Director or Athletic Trainer from mass sends."""
+    if not title:
+        return True
+    t = title.lower()
+    if any(kw in t for kw in _COACH_TITLE_KEYWORDS):
+        return True
+    if any(blk in t for blk in _NON_COACH_TITLE_BLOCKERS):
+        return False
+    return True
+
+
+_GENERIC_FREE_DOMAINS = ("gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com", "icloud.com")
+_GENERIC_LOCAL_KEYWORDS = (
+    "athletic", "athletics", "dept", "department", "sports", "info",
+    "contact", "office", "staff", "team", "football", "admin", "general",
+    "support", "webmaster", "noreply", "help", "inquiry", "inquiries",
+)
+
+
+def _email_likely_belongs_to_name(email, name):
+    """Conservative scraper guard: refuse to bind a scraped email to a staff
+    name when the email looks like a generic department mailbox or, on a free
+    mail domain, doesn't share any token with the name. Returns True to bind,
+    False to reject."""
+    if not email:
+        return True
+    em = email.lower().strip()
+    if "@" not in em:
+        return False
+    local, _, domain = em.partition("@")
+    if any(kw in local for kw in _GENERIC_LOCAL_KEYWORDS):
+        return False
+    if domain in _GENERIC_FREE_DOMAINS:
+        if not name:
+            return False
+        tokens = [t.lower() for t in re.split(r"[\s,.\-]+", name) if t and len(t) >= 3]
+        return any(t in local for t in tokens)
+    return True
+
+
 def _send_staff_email(db, admin_user, campaign, staff_member, potential):
     """Send a tracked campaign email to a single staff member. Returns True on success."""
     import secrets as _sec
@@ -3975,9 +4051,11 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
 
     signup_link = f"{site_url}/track/{token}"
     pixel_url = f"{site_url}/track/pixel/{token}.png"
+    greeting_name = _first_name_for_greeting(staff_member.name)
+    school_clean = _clean_whitespace(potential.school)
     body = campaign.body_html
-    body = body.replace("{{coach_name}}", staff_member.name or "Coach")
-    body = body.replace("{{school}}", potential.school or "")
+    body = body.replace("{{coach_name}}", greeting_name)
+    body = body.replace("{{school}}", school_clean)
     body = body.replace("{{division}}", potential.division or "")
     body = body.replace("{{conference}}", potential.conference or "")
     body = body.replace("{{signup_link}}", signup_link)
@@ -3988,7 +4066,7 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
     ))
     body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="">'
 
-    subject = campaign.subject.replace("{{school}}", potential.school or "").replace("{{coach_name}}", staff_member.name or "Coach")
+    subject = campaign.subject.replace("{{school}}", school_clean).replace("{{coach_name}}", greeting_name)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -4055,6 +4133,7 @@ async def admin_staff_send_all(pid: int, request: Request, db: Session = Depends
     staff_list = db.query(PotentialStaff).filter(
         PotentialStaff.potential_id == pid, PotentialStaff.email != ""
     ).all()
+    staff_list = [s for s in staff_list if _is_eligible_coach_title(s.title)]
     sent = 0
     import time as _time
     for s in staff_list:
@@ -4146,6 +4225,10 @@ def _scrape_sidearm_football_coaches(athletic_url: str):
                 title = txt
         if not name:
             continue
+        name = _clean_whitespace(name)
+        title = _clean_whitespace(title)
+        if email and not _email_likely_belongs_to_name(email, name):
+            email = ""
         out.append({
             "name": name[:200],
             "title": title[:200],
