@@ -3954,8 +3954,10 @@ def _first_name_for_greeting(raw):
     cleaned = _clean_whitespace(raw)
     if not cleaned:
         return "Coach"
-    first = cleaned.split()[0].rstrip(",.;:")
-    return first or "Coach"
+    first = cleaned.split()[0].strip(",.;:")
+    if not first or not re.search(r"[A-Za-z]", first):
+        return "Coach"
+    return first
 
 
 _NON_COACH_TITLE_BLOCKERS = (
