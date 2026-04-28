@@ -8,13 +8,16 @@ body { background: #f7f7f8; }
 .ea-sub { color: #737482; font-size: 14px; margin: 0 0 20px 0; }
 .ea-back { color: #737482; font-size: 13px; text-decoration: none; }
 .ea-back:hover { color: #0a1628; }
-.ea-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+.ea-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 18px; }
 .ea-tab { display: block; text-decoration: none; padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; color: #0a1628; text-align: center; background: #fff; transition: all .15s ease; }
 .ea-tab:hover { background: #f3f4f6; border-color: #d4d4d8; }
 .ea-tab.active { background: #0a1628; color: #fff; border-color: #0a1628; }
+.ea-tab.summary { background: #fafafa; cursor: default; border-style: dashed; }
+.ea-tab.summary:hover { background: #fafafa; border-color: #eeeef0; }
 .ea-tab .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .ea-tab .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
 .ea-tab.active .l { color: #9ca3af; }
+@media (max-width: 760px) { .ea-tabs { grid-template-columns: repeat(2, 1fr); } }
 .ea-section { background: #fff; border: 1px solid #eeeef0; border-radius: 16px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .ea-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .ea-table th { text-align: left; font-size: 11px; font-weight: 600; color: #737482; padding: 10px 8px; border-bottom: 1px dashed #e5e7eb; letter-spacing: .01em; }
@@ -39,6 +42,10 @@ body { background: #f7f7f8; }
   <p class="ea-sub">Recipients of staff campaign emails, by engagement status.</p>
 
   <div class="ea-tabs">
+    <div class="ea-tab summary">
+      <div class="n">{{ total_teams }}</div>
+      <div class="l">Teams</div>
+    </div>
     <a href="?filter=received" class="ea-tab {% if email_filter == 'received' %}active{% endif %}">
       <div class="n">{{ total_received }}</div>
       <div class="l">Received</div>

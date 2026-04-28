@@ -3855,6 +3855,9 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
     total_opened = base_q.filter(TrackedEmail.opened_at != None).count()
     total_clicked = base_q.filter(TrackedEmail.clicked_at != None).count()
     total_signed_up = base_q.filter(TrackedEmail.signed_up == True).count()
+    total_teams = db.query(TrackedEmail.potential_id).filter(
+        TrackedEmail.potential_id != None
+    ).distinct().count()
 
     pot_ids = {r.potential_id for r in rows if r.potential_id}
     pots = {p.id: p for p in db.query(MarketingPotential).filter(MarketingPotential.id.in_(pot_ids)).all()} if pot_ids else {}
@@ -3872,6 +3875,7 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
         "total_opened": total_opened,
         "total_clicked": total_clicked,
         "total_signed_up": total_signed_up,
+        "total_teams": total_teams,
     })
 
 
