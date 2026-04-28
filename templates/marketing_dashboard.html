@@ -22,7 +22,8 @@ body { background: #f7f7f8; }
 .mk-pipe .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
 .mk-pipe a.active .l { color: #9ca3af; }
 .mk-pipe-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
-.mk-pipe-3 > div { padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; background: #fafafa; text-align: center; }
+.mk-pipe-3 > a { display: block; text-decoration: none; padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; background: #fafafa; text-align: center; color: #0a1628; transition: all .15s ease; }
+.mk-pipe-3 > a:hover { background: #f3f4f6; border-color: #d4d4d8; }
 .mk-pipe-3 .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #0a1628; }
 .mk-pipe-3 .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
 .mk-pipe-3 .sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
@@ -151,21 +152,21 @@ function submitPotentialStatus(sel) {
     </div>
     <div class="mk-pipe-subhead">Mass Email Outreach</div>
     <div class="mk-pipe-3">
-      <div>
+      <a href="/admin/marketing/email-activity?filter=received">
         <div class="n">{{ emails_sent }}</div>
         <div class="l">Received</div>
         <div class="sub">total recipients</div>
-      </div>
-      <div>
+      </a>
+      <a href="/admin/marketing/email-activity?filter=opened">
         <div class="n">{{ emails_opened }}</div>
         <div class="l">Opened</div>
         <div class="sub">{% if emails_sent %}{{ "%.0f"|format(emails_opened / emails_sent * 100) }}%{% else %}—{% endif %} of sent</div>
-      </div>
-      <div>
+      </a>
+      <a href="/admin/marketing/email-activity?filter=clicked">
         <div class="n">{{ emails_clicked }}</div>
         <div class="l">Clicked</div>
         <div class="sub">{% if emails_sent %}{{ "%.0f"|format(emails_clicked / emails_sent * 100) }}%{% else %}—{% endif %} of sent</div>
-      </div>
+      </a>
     </div>
   </div>
 

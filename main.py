@@ -3828,6 +3828,47 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
     })
 
 
+@app.get("/admin/marketing/email-activity", response_class=HTMLResponse)
+async def admin_marketing_email_activity(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    email_filter = (request.query_params.get("filter") or "received").lower()
+    if email_filter not in ("received", "opened", "clicked", "signed_up"):
+        email_filter = "received"
+    q = db.query(TrackedEmail)
+    if email_filter == "opened":
+        q = q.filter(TrackedEmail.opened_at != None)
+    elif email_filter == "clicked":
+        q = q.filter(TrackedEmail.clicked_at != None)
+    elif email_filter == "signed_up":
+        q = q.filter(TrackedEmail.signed_up == True)
+    rows = q.order_by(TrackedEmail.sent_at.desc()).all()
+
+    total_received = db.query(TrackedEmail).count()
+    total_opened = db.query(TrackedEmail).filter(TrackedEmail.opened_at != None).count()
+    total_clicked = db.query(TrackedEmail).filter(TrackedEmail.clicked_at != None).count()
+    total_signed_up = db.query(TrackedEmail).filter(TrackedEmail.signed_up == True).count()
+
+    pot_ids = {r.potential_id for r in rows if r.potential_id}
+    pots = {p.id: p for p in db.query(MarketingPotential).filter(MarketingPotential.id.in_(pot_ids)).all()} if pot_ids else {}
+    camp_ids = {r.campaign_id for r in rows if r.campaign_id}
+    camps = {c.id: c for c in db.query(EmailCampaign).filter(EmailCampaign.id.in_(camp_ids)).all()} if camp_ids else {}
+
+    return templates.TemplateResponse("email_activity.html", {
+        "request": request,
+        "user": user,
+        "rows": rows,
+        "pots": pots,
+        "camps": camps,
+        "email_filter": email_filter,
+        "total_received": total_received,
+        "total_opened": total_opened,
+        "total_clicked": total_clicked,
+        "total_signed_up": total_signed_up,
+    })
+
+
 @app.post("/admin/marketing/potentials/{pid}/contact")
 async def admin_marketing_potential_contact(pid: int, request: Request, db: Session = Depends(get_db)):
     user, err = _marketing_require_admin(request, db)

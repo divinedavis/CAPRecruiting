@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Email Activity — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+body { background: #f7f7f8; }
+.ea-page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+.ea-h1 { font-size: 26px; font-weight: 700; color: #0a1628; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+.ea-sub { color: #737482; font-size: 14px; margin: 0 0 20px 0; }
+.ea-back { color: #737482; font-size: 13px; text-decoration: none; }
+.ea-back:hover { color: #0a1628; }
+.ea-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+.ea-tab { display: block; text-decoration: none; padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; color: #0a1628; text-align: center; background: #fff; transition: all .15s ease; }
+.ea-tab:hover { background: #f3f4f6; border-color: #d4d4d8; }
+.ea-tab.active { background: #0a1628; color: #fff; border-color: #0a1628; }
+.ea-tab .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.ea-tab .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
+.ea-tab.active .l { color: #9ca3af; }
+.ea-section { background: #fff; border: 1px solid #eeeef0; border-radius: 16px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.ea-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ea-table th { text-align: left; font-size: 11px; font-weight: 600; color: #737482; padding: 10px 8px; border-bottom: 1px dashed #e5e7eb; letter-spacing: .01em; }
+.ea-table td { padding: 12px 8px; border-bottom: 1px solid #f3f4f6; color: #0a1628; vertical-align: middle; }
+.ea-table tr:last-child td { border-bottom: none; }
+.ea-table tr:hover td { background: #fafafa; }
+.ea-table a { color: #0a1628; font-weight: 600; text-decoration: none; }
+.ea-table a:hover { text-decoration: underline; }
+.ea-name { font-weight: 600; color: #0a1628; }
+.ea-email { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.ea-when { font-size: 12px; color: #6b7280; }
+.ea-pill { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 700; border-radius: 999px; letter-spacing: .02em; text-transform: uppercase; }
+.ea-pill.sent { background: #f3f4f6; color: #6b7280; }
+.ea-pill.opened { background: #dbeafe; color: #1d4ed8; }
+.ea-pill.clicked { background: #dcfce7; color: #166534; }
+.ea-pill.signed { background: #d1fae5; color: #065f46; }
+.ea-empty { text-align: center; padding: 60px 20px; color: #9ca3af; font-size: 14px; }
+</style>
+<div class="ea-page">
+  <a href="/admin/marketing" class="ea-back">← Back to Marketing CRM</a>
+  <h1 class="ea-h1" style="margin-top:8px;">Mass Email Activity</h1>
+  <p class="ea-sub">Recipients of staff campaign emails, by engagement status.</p>
+
+  <div class="ea-tabs">
+    <a href="?filter=received" class="ea-tab {% if email_filter == 'received' %}active{% endif %}">
+      <div class="n">{{ total_received }}</div>
+      <div class="l">Received</div>
+    </a>
+    <a href="?filter=opened" class="ea-tab {% if email_filter == 'opened' %}active{% endif %}">
+      <div class="n">{{ total_opened }}</div>
+      <div class="l">Opened</div>
+    </a>
+    <a href="?filter=clicked" class="ea-tab {% if email_filter == 'clicked' %}active{% endif %}">
+      <div class="n">{{ total_clicked }}</div>
+      <div class="l">Clicked</div>
+    </a>
+    <a href="?filter=signed_up" class="ea-tab {% if email_filter == 'signed_up' %}active{% endif %}">
+      <div class="n">{{ total_signed_up }}</div>
+      <div class="l">Signed Up</div>
+    </a>
+  </div>
+
+  <div class="ea-section">
+    {% if rows %}
+    <table class="ea-table">
+      <thead>
+        <tr>
+          <th>Recipient</th>
+          <th>School</th>
+          <th>Campaign</th>
+          <th>Sent</th>
+          <th>Opened</th>
+          <th>Clicked</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set pot = pots.get(r.potential_id) %}
+        {% set camp = camps.get(r.campaign_id) %}
+        <tr>
+          <td>
+            <div class="ea-name">{{ r.recipient_name or '—' }}</div>
+            <div class="ea-email">{{ r.recipient_email }}</div>
+          </td>
+          <td>
+            {% if pot %}
+              <a href="/admin/marketing/potentials/{{ pot.id }}/staff">{{ pot.school }}</a>
+              <div class="ea-email">{{ pot.division }} · {{ pot.state }}</div>
+            {% else %}
+              <span style="color:#9ca3af;">{{ r.school or '—' }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="ea-when">{{ camp.subject[:48] if camp else '—' }}{% if camp and camp.subject|length > 48 %}…{% endif %}</span>
+          </td>
+          <td><span class="ea-when">{{ r.sent_at.strftime('%Y-%m-%d %H:%M') if r.sent_at else '—' }}</span></td>
+          <td>
+            {% if r.opened_at %}
+              <span class="ea-when">{{ r.opened_at.strftime('%Y-%m-%d %H:%M') }}</span>
+              {% if r.open_count and r.open_count > 1 %}<div class="ea-email">×{{ r.open_count }}</div>{% endif %}
+            {% else %}
+              <span style="color:#d1d5db;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.clicked_at %}
+              <span class="ea-when">{{ r.clicked_at.strftime('%Y-%m-%d %H:%M') }}</span>
+              {% if r.click_count and r.click_count > 1 %}<div class="ea-email">×{{ r.click_count }}</div>{% endif %}
+            {% else %}
+              <span style="color:#d1d5db;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.signed_up %}
+              <span class="ea-pill signed">Signed Up</span>
+            {% elif r.clicked_at %}
+              <span class="ea-pill clicked">Clicked</span>
+            {% elif r.opened_at %}
+              <span class="ea-pill opened">Opened</span>
+            {% else %}
+              <span class="ea-pill sent">Sent</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="ea-empty">No recipients in this bucket yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
