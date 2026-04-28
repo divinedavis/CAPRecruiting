@@ -3972,6 +3972,10 @@ async def admin_staff_send_one(pid: int, request: Request, db: Session = Depends
     if not campaign:
         return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
     ok = _send_staff_email(db, user, campaign, staff, pot)
+    if ok:
+        pot.status = "contacted"
+        pot.contacted_at = datetime.utcnow()
+        db.commit()
     return RedirectResponse(
         f"/admin/marketing/potentials/{pid}/staff?sent={'1' if ok else 'dup'}", status_code=302
     )
@@ -4004,6 +4008,10 @@ async def admin_staff_send_all(pid: int, request: Request, db: Session = Depends
         if _send_staff_email(db, user, campaign, s, pot):
             sent += 1
             _time.sleep(0.5)
+    if sent > 0:
+        pot.status = "contacted"
+        pot.contacted_at = datetime.utcnow()
+        db.commit()
     _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
     log_admin_action(db, user.id, "send_staff_emails", pid, f"school={pot.school} sent={sent}", _ip)
     return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?sent={sent}", status_code=302)
