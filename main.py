@@ -4038,23 +4038,6 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
     token = _sec.token_urlsafe(24)
     invite = _sec.token_urlsafe(16)
 
-    coach_inv = CoachInvite(
-        token=invite, created_by=admin_user.id,
-        expires_at=datetime.utcnow() + timedelta(days=30),
-        note=f"Staff email: {staff_member.email} ({potential.school})",
-        source="campaign",
-    )
-    db.add(coach_inv)
-    te = TrackedEmail(
-        campaign_id=campaign.id, token=token,
-        staff_id=staff_member.id, potential_id=potential.id,
-        recipient_email=staff_member.email,
-        recipient_name=staff_member.name,
-        school=potential.school, invite_token=invite,
-    )
-    db.add(te)
-    db.commit()
-
     signup_link = f"{site_url}/track/{token}"
     pixel_url = f"{site_url}/track/pixel/{token}.png"
     greeting_name = _first_name_for_greeting(staff_member.name)
@@ -4086,10 +4069,27 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
             server.starttls()
             _smtp_login_if_needed(server)
             server.sendmail(SMTP_USER, staff_member.email, msg.as_string())
-        return True
     except Exception as exc:
         _logger.warning("Staff email to %s failed: %s", staff_member.email, type(exc).__name__)
         return False
+
+    coach_inv = CoachInvite(
+        token=invite, created_by=admin_user.id,
+        expires_at=datetime.utcnow() + timedelta(days=30),
+        note=f"Staff email: {staff_member.email} ({potential.school})",
+        source="campaign",
+    )
+    db.add(coach_inv)
+    te = TrackedEmail(
+        campaign_id=campaign.id, token=token,
+        staff_id=staff_member.id, potential_id=potential.id,
+        recipient_email=staff_member.email,
+        recipient_name=staff_member.name,
+        school=potential.school, invite_token=invite,
+    )
+    db.add(te)
+    db.commit()
+    return True
 
 
 @app.post("/admin/marketing/potentials/{pid}/staff/send-one")
