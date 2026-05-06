@@ -3879,6 +3879,47 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
     })
 
 
+@app.get("/admin/marketing/teams-contacted", response_class=HTMLResponse)
+async def admin_marketing_teams_contacted(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    pot_ids = [
+        r[0] for r in db.query(TrackedEmail.potential_id)
+        .filter(TrackedEmail.potential_id != None).distinct().all()
+    ]
+    pots = {p.id: p for p in db.query(MarketingPotential).filter(MarketingPotential.id.in_(pot_ids)).all()} if pot_ids else {}
+    tes = db.query(TrackedEmail).filter(TrackedEmail.potential_id.in_(pot_ids)).all() if pot_ids else []
+    agg = {}
+    for te in tes:
+        a = agg.setdefault(te.potential_id, {"sent": 0, "opened": 0, "clicked": 0, "last_sent_at": None})
+        a["sent"] += 1
+        if te.opened_at: a["opened"] += 1
+        if te.clicked_at: a["clicked"] += 1
+        if te.sent_at and (a["last_sent_at"] is None or te.sent_at > a["last_sent_at"]):
+            a["last_sent_at"] = te.sent_at
+    rows = []
+    for pid in pot_ids:
+        pot = pots.get(pid)
+        if not pot:
+            continue
+        a = agg.get(pid, {})
+        rows.append({
+            "pot": pot,
+            "emails_sent": a.get("sent", 0),
+            "emails_opened": a.get("opened", 0),
+            "emails_clicked": a.get("clicked", 0),
+            "last_sent_at": a.get("last_sent_at"),
+        })
+    rows.sort(key=lambda r: r["last_sent_at"] or datetime.min, reverse=True)
+    return templates.TemplateResponse("teams_contacted.html", {
+        "request": request,
+        "user": user,
+        "rows": rows,
+        "total_teams": len(rows),
+    })
+
+
 @app.post("/admin/marketing/potentials/{pid}/contact")
 async def admin_marketing_potential_contact(pid: int, request: Request, db: Session = Depends(get_db)):
     user, err = _marketing_require_admin(request, db)

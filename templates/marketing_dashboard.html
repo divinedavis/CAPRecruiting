@@ -21,12 +21,12 @@ body { background: #f7f7f8; }
 .mk-pipe .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .mk-pipe .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
 .mk-pipe a.active .l { color: #9ca3af; }
-.mk-pipe-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
-.mk-pipe-3 > a { display: block; text-decoration: none; padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; background: #fafafa; text-align: center; color: #0a1628; transition: all .15s ease; }
-.mk-pipe-3 > a:hover { background: #f3f4f6; border-color: #d4d4d8; }
-.mk-pipe-3 .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #0a1628; }
-.mk-pipe-3 .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
-.mk-pipe-3 .sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+.mk-pipe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+.mk-pipe-grid > a { display: block; text-decoration: none; padding: 14px 12px; border: 1px solid #eeeef0; border-radius: 12px; background: #fafafa; text-align: center; color: #0a1628; transition: all .15s ease; }
+.mk-pipe-grid > a:hover { background: #f3f4f6; border-color: #d4d4d8; }
+.mk-pipe-grid .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #0a1628; }
+.mk-pipe-grid .l { font-size: 11px; color: #737482; margin-top: 2px; font-weight: 500; }
+.mk-pipe-grid .sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
 .mk-pipe-subhead { font-size: 12px; font-weight: 600; color: #737482; margin: 18px 0 8px 0; letter-spacing: .02em; }
 .mk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .mk-table th { text-align: left; font-size: 11px; font-weight: 600; color: #737482; padding: 10px 8px; border-bottom: 1px dashed #e5e7eb; letter-spacing: .01em; }
@@ -151,7 +151,12 @@ function submitPotentialStatus(sel) {
       {% endfor %}
     </div>
     <div class="mk-pipe-subhead">Mass Email Outreach</div>
-    <div class="mk-pipe-3">
+    <div class="mk-pipe-grid">
+      <a href="/admin/marketing/teams-contacted">
+        <div class="n">{{ teams_contacted }}</div>
+        <div class="l">Teams</div>
+        <div class="sub">distinct schools emailed</div>
+      </a>
       <a href="/admin/marketing/email-activity?filter=received">
         <div class="n">{{ emails_sent }}</div>
         <div class="l">Received</div>

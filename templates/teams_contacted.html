@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Teams Contacted — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+body { background: #f7f7f8; }
+.tc-page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+.tc-h1 { font-size: 26px; font-weight: 700; color: #0a1628; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+.tc-sub { color: #737482; font-size: 14px; margin: 0 0 20px 0; }
+.tc-back { color: #737482; font-size: 13px; text-decoration: none; }
+.tc-back:hover { color: #0a1628; }
+.tc-section { background: #fff; border: 1px solid #eeeef0; border-radius: 16px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.tc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tc-table th { text-align: left; font-size: 11px; font-weight: 600; color: #737482; padding: 10px 8px; border-bottom: 1px dashed #e5e7eb; letter-spacing: .01em; }
+.tc-table td { padding: 12px 8px; border-bottom: 1px solid #f3f4f6; color: #0a1628; vertical-align: middle; }
+.tc-table tr:last-child td { border-bottom: none; }
+.tc-table tr:hover td { background: #fafafa; }
+.tc-table a { color: #0a1628; font-weight: 600; text-decoration: none; }
+.tc-table a:hover { text-decoration: underline; }
+.tc-meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.tc-when { font-size: 12px; color: #6b7280; }
+.tc-empty { text-align: center; padding: 60px 20px; color: #9ca3af; font-size: 14px; }
+.tc-count { font-variant-numeric: tabular-nums; font-weight: 600; }
+</style>
+<div class="tc-page">
+  <a href="/admin/marketing" class="tc-back">← Back to Marketing CRM</a>
+  <h1 class="tc-h1" style="margin-top:8px;">Teams Contacted</h1>
+  <p class="tc-sub">{{ total_teams }} distinct school{% if total_teams != 1 %}s{% endif %} reached via mass email outreach.</p>
+
+  <div class="tc-section">
+    {% if rows %}
+    <table class="tc-table">
+      <thead>
+        <tr>
+          <th>School</th>
+          <th>Division</th>
+          <th>Conference</th>
+          <th>State</th>
+          <th>Sent</th>
+          <th>Opened</th>
+          <th>Clicked</th>
+          <th>Last Sent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>
+            <a href="/admin/marketing/potentials/{{ r.pot.id }}/staff">{{ r.pot.school }}</a>
+          </td>
+          <td><span class="tc-when">{{ r.pot.division or '—' }}</span></td>
+          <td><span class="tc-when">{{ r.pot.conference or '—' }}</span></td>
+          <td><span class="tc-when">{{ r.pot.state or '—' }}</span></td>
+          <td><span class="tc-count">{{ r.emails_sent }}</span></td>
+          <td><span class="tc-count">{{ r.emails_opened }}</span></td>
+          <td><span class="tc-count">{{ r.emails_clicked }}</span></td>
+          <td><span class="tc-when">{{ r.last_sent_at.strftime('%Y-%m-%d %H:%M') if r.last_sent_at else '—' }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="tc-empty">No schools have been emailed yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
