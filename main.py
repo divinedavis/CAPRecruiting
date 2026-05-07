@@ -8399,3 +8399,50 @@ def schools_list(state: str, city: str, request: Request, db: Session = Depends(
     from sqlalchemy import text
     rows = db.execute(text("SELECT DISTINCT name FROM schools WHERE state=:state AND city=:city ORDER BY name"), {"state": state.upper(), "city": city}).fetchall()
     return JSONResponse([r[0] for r in rows])
+
+@app.get("/api/schools/search")
+def schools_search(q: str = "", limit: int = 20, request: Request = None, db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    q = (q or "").strip()
+    if len(q) < 2:
+        return JSONResponse([])
+    limit = max(1, min(int(limit or 20), 50))
+    rows = db.execute(
+        text(
+            "SELECT name, city, state FROM schools "
+            "WHERE name LIKE :prefix OR name LIKE :contains "
+            "ORDER BY CASE WHEN name LIKE :prefix THEN 0 ELSE 1 END, name "
+            "LIMIT :lim"
+        ),
+        {"prefix": f"{q}%", "contains": f"% {q}%", "lim": limit},
+    ).fetchall()
+    return JSONResponse([{"name": r[0], "city": r[1], "state": r[2]} for r in rows])
+
+@app.get("/api/colleges/search")
+def colleges_search(q: str = "", limit: int = 20, request: Request = None, db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    q = (q or "").strip()
+    if len(q) < 2:
+        return JSONResponse([])
+    limit = max(1, min(int(limit or 20), 50))
+    rows = db.execute(
+        text(
+            "SELECT school, division, conference, state FROM ("
+            "  SELECT school, division, conference, state FROM marketing_potentials "
+            "  WHERE school LIKE :prefix OR school LIKE :contains "
+            "  UNION "
+            "  SELECT school, '' AS division, '' AS conference, '' AS state FROM coach_profiles "
+            "  WHERE school LIKE :prefix OR school LIKE :contains "
+            ") ORDER BY CASE WHEN school LIKE :prefix THEN 0 ELSE 1 END, school "
+            "LIMIT :lim"
+        ),
+        {"prefix": f"{q}%", "contains": f"% {q}%", "lim": limit},
+    ).fetchall()
+    seen, out = set(), []
+    for r in rows:
+        name = (r[0] or "").strip()
+        if not name or name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        out.append({"name": name, "division": r[1] or "", "conference": r[2] or "", "state": r[3] or ""})
+    return JSONResponse(out)
