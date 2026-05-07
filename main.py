@@ -683,6 +683,8 @@ class TrackedEmail(Base):
     click_count = Column(Integer, default=0)
     signed_up = Column(Boolean, default=False)
     sent_at = Column(DateTime, default=datetime.utcnow)
+    bounced_at = Column(DateTime, nullable=True)
+    bounce_reason = Column(String, default="")
 
 
 class PotentialStaff(Base):
@@ -727,6 +729,16 @@ class MarketingActivity(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 Base.metadata.create_all(bind=engine)
+
+# Idempotent column adds for SQLite (Base.metadata.create_all doesn't add columns to existing tables)
+def _add_column_if_missing(table: str, column: str, ddl: str):
+    from sqlalchemy import text as _t
+    with engine.begin() as conn:
+        cols = [r[1] for r in conn.execute(_t(f"PRAGMA table_info({table})")).fetchall()]
+        if column not in cols:
+            conn.execute(_t(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+_add_column_if_missing("tracked_emails", "bounced_at", "DATETIME")
+_add_column_if_missing("tracked_emails", "bounce_reason", "TEXT DEFAULT ''")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -3991,7 +4003,9 @@ async def admin_marketing_potential_staff(pid: int, request: Request, db: Sessio
                 TrackedEmail.recipient_email == s.email
             ).order_by(TrackedEmail.sent_at.desc()).first()
             if te:
-                if te.signed_up:
+                if te.bounced_at:
+                    email_tracking[s.email] = "bounced"
+                elif te.signed_up:
                     email_tracking[s.email] = "signed_up"
                 elif te.clicked_at:
                     email_tracking[s.email] = "clicked"
@@ -4059,6 +4073,20 @@ _GENERIC_LOCAL_KEYWORDS = (
     "contact", "office", "staff", "team", "football", "admin", "general",
     "support", "webmaster", "noreply", "help", "inquiry", "inquiries",
 )
+
+
+def _decode_cfemail(hex_str):
+    """Decode Cloudflare's data-cfemail hex blob (XOR with first byte as key)."""
+    if not hex_str:
+        return ""
+    try:
+        raw = bytes.fromhex(hex_str.strip())
+        if len(raw) < 2:
+            return ""
+        key = raw[0]
+        return "".join(chr(b ^ key) for b in raw[1:])
+    except Exception:
+        return ""
 
 
 def _email_likely_belongs_to_name(email, name):
@@ -4183,6 +4211,125 @@ async def admin_staff_send_one(pid: int, request: Request, db: Session = Depends
     )
 
 
+def _scan_bounces_via_imap(db, since_days: int = 14):
+    """Connect to Gmail IMAP, find bounce notifications since `since_days` ago,
+    parse failed recipients, and mark matching TrackedEmail rows. Returns
+    (newly_marked, total_seen, error_str_or_none)."""
+    import imaplib
+    import email as _email_mod
+    from email.header import decode_header
+
+    host = os.environ.get("IMAP_HOST", "imap.gmail.com")
+    port = int(os.environ.get("IMAP_PORT", "993"))
+    user = os.environ.get("SMTP_USER", "")
+    pw   = os.environ.get("SMTP_PASSWORD", "")
+    if not user or not pw:
+        return 0, 0, "no_credentials"
+
+    cutoff = (datetime.utcnow() - timedelta(days=since_days)).strftime("%d-%b-%Y")
+
+    try:
+        M = imaplib.IMAP4_SSL(host, port)
+        M.login(user, pw)
+    except Exception as e:
+        return 0, 0, f"imap_login_failed:{type(e).__name__}"
+
+    newly = 0
+    seen = 0
+    try:
+        M.select("INBOX", readonly=True)
+        # Bounce notifications come from mailer-daemon; cast a wide net by combining searches
+        criteria_list = [
+            f'(SINCE {cutoff} FROM "mailer-daemon")',
+            f'(SINCE {cutoff} FROM "postmaster")',
+            f'(SINCE {cutoff} SUBJECT "Delivery Status Notification")',
+            f'(SINCE {cutoff} SUBJECT "Undelivered Mail")',
+        ]
+        ids = set()
+        for crit in criteria_list:
+            typ, data = M.search(None, crit)
+            if typ == "OK" and data and data[0]:
+                ids.update(data[0].split())
+        seen = len(ids)
+        for msg_id in ids:
+            typ, msg_data = M.fetch(msg_id, "(RFC822)")
+            if typ != "OK" or not msg_data or not msg_data[0]:
+                continue
+            msg = _email_mod.message_from_bytes(msg_data[0][1])
+            # Pull plain text from the bounce
+            body_text = ""
+            if msg.is_multipart():
+                for part in msg.walk():
+                    if part.get_content_type() in ("text/plain", "message/delivery-status", "message/rfc822"):
+                        try:
+                            body_text += part.get_payload(decode=True).decode(errors="ignore") + "\n"
+                        except Exception:
+                            pass
+            else:
+                try:
+                    body_text = msg.get_payload(decode=True).decode(errors="ignore")
+                except Exception:
+                    body_text = msg.get_payload() or ""
+
+            failed_emails = set()
+            # RFC 3464 DSN format
+            for m in re.finditer(r"Final-Recipient:\s*rfc822\s*;\s*([^\s\r\n]+)", body_text, re.I):
+                failed_emails.add(m.group(1).strip().strip("<>").lower())
+            # Common Postfix/Gmail bounce: "<email>:" then error
+            for m in re.finditer(r"<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>", body_text):
+                failed_emails.add(m.group(1).lower())
+
+            if not failed_emails:
+                continue
+
+            # Try to extract a one-line reason (first SMTP error or "said: ..." snippet)
+            reason = ""
+            r1 = re.search(r"(?:said:|Diagnostic-Code:.*?;)\s*([^\r\n]+)", body_text, re.I)
+            if r1:
+                reason = r1.group(1).strip()[:240]
+            else:
+                r2 = re.search(r"\b5\.\d\.\d\s+([^\r\n]+)", body_text)
+                if r2:
+                    reason = r2.group(0).strip()[:240]
+
+            for fe in failed_emails:
+                te = (
+                    db.query(TrackedEmail)
+                    .filter(TrackedEmail.recipient_email.ilike(fe))
+                    .order_by(TrackedEmail.sent_at.desc())
+                    .first()
+                )
+                if te and not te.bounced_at:
+                    te.bounced_at = datetime.utcnow()
+                    te.bounce_reason = reason
+                    newly += 1
+        if newly:
+            db.commit()
+    finally:
+        try:
+            M.close()
+        except Exception:
+            pass
+        try:
+            M.logout()
+        except Exception:
+            pass
+    return newly, seen, None
+
+
+@app.post("/admin/marketing/check-bounces")
+async def admin_check_bounces(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    newly, seen, error = _scan_bounces_via_imap(db, since_days=14)
+    return_to = request.headers.get("referer") or "/admin/marketing"
+    sep = "&" if "?" in return_to else "?"
+    if error:
+        return RedirectResponse(f"{return_to}{sep}bounce_err={error}", status_code=302)
+    return RedirectResponse(f"{return_to}{sep}bounces_seen={seen}&bounces_marked={newly}", status_code=302)
+
+
 @app.get("/admin/marketing/potentials/{pid}/staff/send-all")
 async def admin_staff_send_all_get(pid: int):
     return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff", status_code=302)
@@ -4285,15 +4432,34 @@ def _scrape_sidearm_football_coaches(athletic_url: str):
         title = ""
         email = ""
         for td in tr.find_all("td"):
+            # 1. Standard mailto: link
             mailto = td.select_one("a[href^='mailto:']")
             if mailto and not email:
                 email = mailto.get("href", "").replace("mailto:", "").strip()
                 continue
+            # 2. Cloudflare email obfuscation (data-cfemail hex blob)
+            if not email:
+                cf = td.select_one("[data-cfemail]")
+                if cf:
+                    decoded = _decode_cfemail(cf.get("data-cfemail", ""))
+                    if decoded:
+                        email = decoded
+                        continue
             if td.get("class") and "sidearm-coaches-image-cell" in td.get("class"):
                 continue
             txt = td.get_text(" ", strip=True)
-            if txt and not title and not td.select_one("a[href^='tel:']") and "@" not in txt:
+            if txt and not title and not td.select_one("a[href^='tel:']") and "@" not in txt and "[at]" not in txt.lower():
                 title = txt
+        # 3. Last-ditch: regex scan the whole row text for an email or "[at]"-style address
+        if not email:
+            row_text = tr.get_text(" ", strip=True)
+            m = re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", row_text)
+            if m:
+                email = m.group(0)
+            else:
+                m = re.search(r"([A-Za-z0-9._%+-]+)\s*[\[(]\s*at\s*[\])]\s*([A-Za-z0-9.-]+)\s*[\[(]\s*dot\s*[\])]\s*([A-Za-z]{2,})", row_text, re.I)
+                if m:
+                    email = f"{m.group(1)}@{m.group(2)}.{m.group(3)}"
         if not name:
             continue
         name = _clean_whitespace(name)

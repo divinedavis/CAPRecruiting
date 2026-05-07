@@ -53,7 +53,9 @@
     {% if pot.questionnaire_url %}
     <a href="{{ pot.questionnaire_url }}" target="_blank" rel="noopener">Questionnaire ↗</a>
     {% endif %}
-    <span>{{ staff|length }} staff member{% if staff|length != 1 %}s{% endif %} found</span>
+    {% set with_email = staff | selectattr('email') | list | length %}
+    {% set without_email = staff|length - with_email %}
+    <span>{{ staff|length }} staff found{% if without_email > 0 %} · <span style="color:#b45309;">{{ with_email }} emailable</span> · {{ without_email }} missing email{% endif %}</span>
   </div>
 
   {% set sent_msg = request.query_params.get('sent') %}
@@ -90,7 +92,22 @@
       <button type="submit" onclick="return confirm('Pull the latest coaches from the athletics site? Existing coaches will be updated (title, photo, email) but notes and contact status will be preserved. New coaches will be added.');" style="padding:10px 20px; background:#fff; color:#0a1628; border:2px solid #0a1628; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">Refresh Staff from Athletics Site</button>
     </form>
     {% endif %}
+    <form method="post" action="/admin/marketing/check-bounces" style="display:inline;">
+      <button type="submit" title="Scan support@caprecruiting.com inbox for bounce notifications and mark failed deliveries" style="padding:10px 20px; background:#fff; color:#0a1628; border:2px solid #d4d4d8; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">Check Bounces</button>
+    </form>
   </div>
+
+  {% set bounces_seen = request.query_params.get('bounces_seen') %}
+  {% set bounces_marked = request.query_params.get('bounces_marked') %}
+  {% set bounce_err = request.query_params.get('bounce_err') %}
+  {% if bounces_seen is not none %}
+  <div style="background:{% if bounces_marked|int > 0 %}#fef2f2; border:1px solid #fca5a5; color:#991b1b{% else %}#f0fdf4; border:1px solid #86efac; color:#166534{% endif %}; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">
+    Scanned {{ bounces_seen }} bounce notice{% if bounces_seen != '1' %}s{% endif %} · marked {{ bounces_marked }} failed deliver{% if bounces_marked == '1' %}y{% else %}ies{% endif %}.
+  </div>
+  {% endif %}
+  {% if bounce_err %}
+  <div style="background:#fef2f2; border:1px solid #f87171; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;">Bounce check failed: <code>{{ bounce_err }}</code></div>
+  {% endif %}
 
   {% if staff %}
   {% for s in staff %}
@@ -108,13 +125,15 @@
       {% if s.title %}<div class="staff-title">{{ s.title }}</div>{% endif %}
       {% if s.email %}
       <div class="staff-email" style="margin-top:3px;"><a href="mailto:{{ s.email }}">{{ s.email }}</a></div>
-      {% else %}
-      <div class="staff-title" style="color:#d1d5db; font-style:italic;">No email found</div>
       {% endif %}
 
       {# Email campaign tracking status #}
       {% set email_status = email_tracking.get(s.email, '') %}
-      {% if email_status %}
+      {% if not s.email %}
+      <div style="margin-top:5px;"><span class="staff-pill" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca;">No email — won't send</span></div>
+      {% elif email_status == 'bounced' %}
+      <div style="margin-top:5px;"><span class="staff-pill" style="background:#fee2e2; color:#7f1d1d; border:1px solid #fca5a5;">Bounced</span></div>
+      {% elif email_status %}
       <div style="margin-top:5px;">
         <span class="staff-pill {{ email_status }}">
           {% if email_status == 'signed_up' %}Signed Up
@@ -124,7 +143,7 @@
           {% endif %}
         </span>
       </div>
-      {% elif s.email %}
+      {% else %}
       <div style="margin-top:5px;"><span class="staff-pill none">Not emailed</span></div>
       {% endif %}
 
