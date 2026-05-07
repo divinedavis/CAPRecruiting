@@ -37,12 +37,8 @@
             {% if invite_token %}<input type="hidden" name="invite_token" value="{{ invite_token }}">{% endif %}
             {% if bypass_token %}<input type="hidden" name="bypass_token" value="{{ bypass_token }}">{% endif %}
             {% if invite_valid %}
-            <div style="background:#dbeafe; border:1.5px solid #93c5fd; border-radius:10px; padding:12px 16px; margin-bottom:12px; font-size:14px; color:#1d4ed8; font-weight:600;">
-                ✅ You have a valid coach invite. Fill in your details below to create your coach account.
-            </div>
-            <div style="background:#fef3c7; border:1.5px solid #f59e0b; border-radius:10px; padding:14px 16px; margin-bottom:20px; font-size:13px; color:#92400e; line-height:1.5;">
-                <strong>⚠️ Important — Enter your school carefully.</strong><br>
-                The school name you enter will be <strong>permanently linked to your account</strong> and cannot be changed later. Your scout dashboard, recruits, and notes are shared only with other coaches who enter the exact same school name. If you make a mistake you will need to contact an admin to fix it.
+            <div style="background:#dbeafe; border:1.5px solid #93c5fd; border-radius:10px; padding:12px 16px; margin-bottom:20px; font-size:14px; color:#1d4ed8; font-weight:600;">
+                ✅ {% if prefill_name %}Welcome, Coach {{ prefill_name.split(' ')[-1] }}.{% else %}Welcome.{% endif %} Confirm your details below to create your coach account.
             </div>
             <input type="hidden" name="role" value="coach">
             {% else %}
@@ -98,10 +94,10 @@
                 <div class="form-group">
                     <label>School</label>
                     <div id="coach-college-wrap" style="position:relative;">
-                        <input type="text" name="coach_college" id="coach-college" placeholder="e.g. Adams State University" autocomplete="off" style="width:100%; box-sizing:border-box;" maxlength="200">
+                        <input type="text" name="coach_college" id="coach-college" placeholder="e.g. Adams State University" autocomplete="off" style="width:100%; box-sizing:border-box;" maxlength="200" value="{{ prefill_school|e if prefill_school else '' }}">
                         <ul id="coach-college-suggest" role="listbox" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1000; margin:4px 0 0 0; padding:4px 0; list-style:none; background:#fff; border:1px solid #d4d4d8; border-radius:8px; box-shadow:0 6px 20px rgba(16,24,40,.08); max-height:280px; overflow-y:auto;"></ul>
                     </div>
-                    <span class="field-hint">Type the name of the school you coach at.</span>
+                    <span class="field-hint">Pre-filled from your invite. Edit only if it's wrong — coaches at the same school share one dashboard, so the name needs to match exactly.</span>
                     <span class="field-error" id="college-error"></span>
                 </div>
             </div>

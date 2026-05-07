@@ -1509,10 +1509,16 @@ async def signup_get(request: Request, db: Session = Depends(get_db), invite: st
     teams = db.query(Team).order_by(Team.name).all()
     invite_valid = False
     invite_error = None
+    prefill_school = ""
+    prefill_name = ""
     if invite:
         inv = db.query(CoachInvite).filter(CoachInvite.token == invite, CoachInvite.used == False).first()
         if inv and inv.expires_at > datetime.utcnow():
             invite_valid = True
+            te = db.query(TrackedEmail).filter(TrackedEmail.invite_token == invite).first()
+            if te:
+                prefill_school = te.school or ""
+                prefill_name = te.recipient_name or ""
         else:
             invite_error = "This invite link is invalid or has expired."
     if bypass_token:
@@ -1525,6 +1531,8 @@ async def signup_get(request: Request, db: Session = Depends(get_db), invite: st
         "selected_tier": tier,
         "selected_billing": billing,
         "bypass_token": bypass_token,
+        "prefill_school": prefill_school,
+        "prefill_name": prefill_name,
     })
 
 @app.post("/signup", response_class=HTMLResponse)
@@ -2031,16 +2039,32 @@ async def track_pixel(token: str, db: Session = Depends(get_db)):
 @app.get("/track/{token}")
 async def track_click(token: str, db: Session = Depends(get_db)):
     te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
     if te:
         if not te.clicked_at:
             te.clicked_at = datetime.utcnow()
         te.click_count = (te.click_count or 0) + 1
         db.commit()
-        site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
         if te.invite_token:
-            return RedirectResponse(f"{site_url}/signup?invite={te.invite_token}", status_code=302)
-    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+            return RedirectResponse(f"{site_url}/preview/{token}", status_code=302)
     return RedirectResponse(f"{site_url}/", status_code=302)
+
+
+@app.get("/preview/{token}", response_class=HTMLResponse)
+async def preview_dashboard(token: str, request: Request, db: Session = Depends(get_db)):
+    te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
+    if not te or not te.invite_token:
+        return RedirectResponse("/", status_code=302)
+    school = te.school or "Your School"
+    coach_name = te.recipient_name or ""
+    last_name = coach_name.split(" ")[-1] if coach_name else ""
+    return templates.TemplateResponse("preview_dashboard.html", {
+        "request": request,
+        "school": school,
+        "coach_name": coach_name,
+        "coach_last": last_name,
+        "invite_token": te.invite_token,
+    })
 
 
 @app.get("/forgot-password", response_class=HTMLResponse)

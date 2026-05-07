@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}{{ school }} — Scouting Dashboard Preview{% endblock %}
+{% block content %}
+<style>
+body { background: #f7f7f8; }
+.pv-page { max-width: 1280px; margin: 0 auto; padding: 24px 20px 60px; }
+.pv-banner { background: linear-gradient(135deg, #0a1628 0%, #1e3a5f 100%); color: #fff; padding: 18px 22px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 22px; box-shadow: 0 4px 14px rgba(10,22,40,.18); }
+.pv-banner-text { font-size: 14px; line-height: 1.4; }
+.pv-banner-text strong { color: #f0b429; }
+.pv-banner-cta { background: #f0b429; color: #0a1628; padding: 12px 22px; border-radius: 8px; font-weight: 800; font-size: 13px; text-decoration: none; white-space: nowrap; transition: transform .12s ease; }
+.pv-banner-cta:hover { transform: translateY(-1px); }
+.pv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 14px; }
+.pv-h1 { font-size: 28px; font-weight: 800; color: #0a1628; margin: 0; letter-spacing: -0.02em; }
+.pv-h1 .accent { color: #f0b429; }
+.pv-sub { color: #737482; font-size: 13px; margin: 4px 0 0 0; }
+.pv-actions { display: flex; gap: 10px; }
+.pv-btn { padding: 9px 16px; border: 1px solid #d4d4d8; background: #fff; color: #0a1628; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; }
+.pv-btn:hover { background: #f3f4f6; }
+
+.pv-board { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 14px; overflow-x: auto; padding-bottom: 10px; }
+.pv-lane { background: #fff; border: 1px solid #eeeef0; border-radius: 14px; padding: 14px; min-height: 480px; display: flex; flex-direction: column; }
+.pv-lane.over { background: #fffbeb; border-color: #f0b429; }
+.pv-lane-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #f3f4f6; }
+.pv-lane-name { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #0a1628; }
+.pv-lane-count { background: #f3f4f6; color: #6b7280; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.pv-lane-tint-watch { border-top: 4px solid #6b7280; }
+.pv-lane-tint-contact { border-top: 4px solid #3b82f6; }
+.pv-lane-tint-evaluate { border-top: 4px solid #f0b429; }
+.pv-lane-tint-offer { border-top: 4px solid #10b981; }
+.pv-lane-tint-commit { border-top: 4px solid #8b5cf6; }
+.pv-cards { display: flex; flex-direction: column; gap: 10px; }
+
+.pv-card { background: #fafafa; border: 1px solid #eeeef0; border-radius: 10px; padding: 12px; cursor: grab; transition: all .15s ease; }
+.pv-card:hover { background: #fff; border-color: #d4d4d8; box-shadow: 0 2px 8px rgba(16,24,40,.06); transform: translateY(-1px); }
+.pv-card.dragging { opacity: 0.4; cursor: grabbing; }
+.pv-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pv-avatar { width: 36px; height: 36px; border-radius: 50%; background: #0a1628; color: #f0b429; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; }
+.pv-card-name { font-size: 13px; font-weight: 700; color: #0a1628; line-height: 1.2; }
+.pv-card-pos { font-size: 11px; color: #737482; margin-top: 1px; }
+.pv-card-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.pv-pill { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 700; background: #f3f4f6; color: #4b5563; letter-spacing: .02em; }
+.pv-pill.gpa { background: #ecfdf5; color: #047857; }
+.pv-pill.ht { background: #eff6ff; color: #1d4ed8; }
+.pv-pill.wt { background: #fef3c7; color: #92400e; }
+.pv-stars { color: #f0b429; font-size: 12px; letter-spacing: 1px; margin-top: 6px; }
+.pv-card-school { font-size: 10px; color: #9ca3af; margin-top: 6px; }
+
+.pv-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #0a1628; color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(10,22,40,.3); display: flex; align-items: center; gap: 14px; opacity: 0; transition: opacity .25s ease, transform .25s ease; z-index: 1000; max-width: 90vw; }
+.pv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.pv-toast a { background: #f0b429; color: #0a1628; padding: 7px 14px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 12px; white-space: nowrap; }
+
+.pv-footer-cta { margin-top: 28px; background: #fff; border: 2px dashed #f0b429; border-radius: 14px; padding: 28px; text-align: center; }
+.pv-footer-cta h3 { color: #0a1628; font-size: 22px; margin: 0 0 8px 0; font-weight: 800; }
+.pv-footer-cta p { color: #4b5563; font-size: 14px; margin: 0 0 18px 0; }
+.pv-footer-cta a { display: inline-block; background: #0a1628; color: #f0b429; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; }
+
+@media (max-width: 900px) {
+    .pv-board { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+}
+</style>
+
+<div class="pv-page">
+    <div class="pv-banner">
+        <div class="pv-banner-text">
+            <strong>This is a live preview of your dashboard.</strong> Drag prospects between lanes — when you're ready, claim your account to load real recruits and share the board with your staff.
+        </div>
+        <a href="/signup?invite={{ invite_token }}" class="pv-banner-cta">Claim My Dashboard →</a>
+    </div>
+
+    <div class="pv-header">
+        <div>
+            <h1 class="pv-h1">{{ school }} <span class="accent">Scouting Board</span></h1>
+            <p class="pv-sub">Welcome{% if coach_last %}, Coach {{ coach_last }}{% endif %} · 6 sample prospects loaded · Drag cards between lanes to try it</p>
+        </div>
+        <div class="pv-actions">
+            <button class="pv-btn" data-toast="Filtering is unlocked once you claim your account.">Filter</button>
+            <button class="pv-btn" data-toast="Add real recruits once you claim your account.">+ Add Prospect</button>
+        </div>
+    </div>
+
+    <div class="pv-board" id="pv-board">
+        <div class="pv-lane pv-lane-tint-watch" data-lane="watch">
+            <div class="pv-lane-h"><span class="pv-lane-name">Watch</span><span class="pv-lane-count" data-count></span></div>
+            <div class="pv-cards">
+                <div class="pv-card" draggable="true">
+                    <div class="pv-card-top">
+                        <div class="pv-avatar">MJ</div>
+                        <div><div class="pv-card-name">Marcus Johnson</div><div class="pv-card-pos">QB · Class of 2027</div></div>
+                    </div>
+                    <div class="pv-card-stats"><span class="pv-pill ht">6'2"</span><span class="pv-pill wt">195 lbs</span><span class="pv-pill gpa">GPA 3.7</span></div>
+                    <div class="pv-stars">★★★★☆</div>
+                    <div class="pv-card-school">Lincoln HS · TX</div>
+                </div>
+                <div class="pv-card" draggable="true">
+                    <div class="pv-card-top">
+                        <div class="pv-avatar">DR</div>
+                        <div><div class="pv-card-name">Devon Rivera</div><div class="pv-card-pos">WR · Class of 2027</div></div>
+                    </div>
+                    <div class="pv-card-stats"><span class="pv-pill ht">6'0"</span><span class="pv-pill wt">180 lbs</span><span class="pv-pill gpa">GPA 3.4</span></div>
+                    <div class="pv-stars">★★★☆☆</div>
+                    <div class="pv-card-school">Roosevelt HS · CA</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pv-lane pv-lane-tint-contact" data-lane="contact">
+            <div class="pv-lane-h"><span class="pv-lane-name">Contact</span><span class="pv-lane-count" data-count></span></div>
+            <div class="pv-cards">
+                <div class="pv-card" draggable="true">
+                    <div class="pv-card-top">
+                        <div class="pv-avatar">TB</div>
+                        <div><div class="pv-card-name">Tyrell Brooks</div><div class="pv-card-pos">RB · Class of 2026</div></div>
+                    </div>
+                    <div class="pv-card-stats"><span class="pv-pill ht">5'11"</span><span class="pv-pill wt">205 lbs</span><span class="pv-pill gpa">GPA 3.5</span></div>
+                    <div class="pv-stars">★★★★☆</div>
+                    <div class="pv-card-school">Centennial HS · CO</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pv-lane pv-lane-tint-evaluate" data-lane="evaluate">
+            <div class="pv-lane-h"><span class="pv-lane-name">Evaluate</span><span class="pv-lane-count" data-count></span></div>
+            <div class="pv-cards">
+                <div class="pv-card" draggable="true">
+                    <div class="pv-card-top">
+                        <div class="pv-avatar">JA</div>
+                        <div><div class="pv-card-name">Jaylen Adams</div><div class="pv-card-pos">LB · Class of 2026</div></div>
+                    </div>
+                    <div class="pv-card-stats"><span class="pv-pill ht">6'1"</span><span class="pv-pill wt">220 lbs</span><span class="pv-pill gpa">GPA 3.6</span></div>
+                    <div class="pv-stars">★★★★★</div>
+                    <div class="pv-card-school">Westlake HS · TX</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pv-lane pv-lane-tint-offer" data-lane="offer">
+            <div class="pv-lane-h"><span class="pv-lane-name">Offer</span><span class="pv-lane-count" data-count></span></div>
+            <div class="pv-cards">
+                <div class="pv-card" draggable="true">
+                    <div class="pv-card-top">
+                        <div class="pv-avatar">CW</div>
+                        <div><div class="pv-card-name">Cameron Walsh</div><div class="pv-card-pos">OL · Class of 2026</div></div>
+                    </div>
+                    <div class="pv-card-stats"><span class="pv-pill ht">6'4"</span><span class="pv-pill wt">285 lbs</span><span class="pv-pill gpa">GPA 3.8</span></div>
+                    <div class="pv-stars">★★★★☆</div>
+                    <div class="pv-card-school">North Ridge HS · CO</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pv-lane pv-lane-tint-commit" data-lane="commit">
+            <div class="pv-lane-h"><span class="pv-lane-name">Commit</span><span class="pv-lane-count" data-count></span></div>
+            <div class="pv-cards">
+                <div class="pv-card" draggable="true">
+                    <div class="pv-card-top">
+                        <div class="pv-avatar">EM</div>
+                        <div><div class="pv-card-name">Eli Martinez</div><div class="pv-card-pos">DB · Class of 2026</div></div>
+                    </div>
+                    <div class="pv-card-stats"><span class="pv-pill ht">6'0"</span><span class="pv-pill wt">190 lbs</span><span class="pv-pill gpa">GPA 3.9</span></div>
+                    <div class="pv-stars">★★★★★</div>
+                    <div class="pv-card-school">Bishop Lynch · TX</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pv-footer-cta">
+        <h3>Ready to run {{ school }}'s real board?</h3>
+        <p>Free for college coaches. Pull your scouts in, share the dashboard with your staff, and move every prospect from Watch to Commit.</p>
+        <a href="/signup?invite={{ invite_token }}">Claim My Coach Account</a>
+    </div>
+</div>
+
+<div class="pv-toast" id="pv-toast" role="status">
+    <span id="pv-toast-msg"></span>
+    <a href="/signup?invite={{ invite_token }}">Claim Account</a>
+</div>
+
+<script>
+(function() {
+    const board = document.getElementById('pv-board');
+    const toast = document.getElementById('pv-toast');
+    const toastMsg = document.getElementById('pv-toast-msg');
+    let toastTimer;
+    let dragged = null;
+    let moveCount = 0;
+
+    function showToast(msg) {
+        toastMsg.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 4500);
+    }
+
+    function refreshCounts() {
+        board.querySelectorAll('.pv-lane').forEach(function(lane) {
+            lane.querySelector('[data-count]').textContent = lane.querySelectorAll('.pv-card').length;
+        });
+    }
+    refreshCounts();
+
+    board.querySelectorAll('.pv-card').forEach(function(card) {
+        card.addEventListener('dragstart', function(e) {
+            dragged = card;
+            card.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', function() {
+            card.classList.remove('dragging');
+            board.querySelectorAll('.pv-lane.over').forEach(function(l) { l.classList.remove('over'); });
+        });
+    });
+
+    board.querySelectorAll('.pv-lane').forEach(function(lane) {
+        lane.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            lane.classList.add('over');
+            e.dataTransfer.dropEffect = 'move';
+        });
+        lane.addEventListener('dragleave', function() { lane.classList.remove('over'); });
+        lane.addEventListener('drop', function(e) {
+            e.preventDefault();
+            lane.classList.remove('over');
+            if (!dragged) return;
+            lane.querySelector('.pv-cards').appendChild(dragged);
+            refreshCounts();
+            moveCount++;
+            const messages = [
+                'Nice — moves like that are saved automatically once you claim your account.',
+                'Your staff would see this update in real-time on a real board.',
+                'Want this to stick? Claim your dashboard.',
+            ];
+            showToast(messages[Math.min(moveCount - 1, messages.length - 1)]);
+        });
+    });
+
+    document.querySelectorAll('[data-toast]').forEach(function(btn) {
+        btn.addEventListener('click', function() { showToast(btn.dataset.toast); });
+    });
+})();
+</script>
+{% endblock %}
