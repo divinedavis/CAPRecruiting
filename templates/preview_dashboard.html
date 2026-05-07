@@ -87,9 +87,46 @@ body { background: #f7f7f8; }
 .pv-act.primary { background: #0a1628; color: #f0b429; border-color: #0a1628; }
 .pv-act.primary:hover { background: #1e3a5f; }
 
-@media (max-width: 900px) {
-    .pv-board { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+/* Mobile lane tabs (hidden on desktop) */
+.pv-tabs { display: none; }
+
+/* Per-card "Move" button — only shown on mobile to replace drag */
+.pv-card-move { display: none; }
+.pv-move-sheet { display: none; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e5e7eb; }
+.pv-move-sheet.open { display: flex; }
+.pv-move-sheet button { flex: 1; min-width: 88px; background: #fff; border: 1px solid #d4d4d8; color: #0a1628; padding: 8px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.pv-move-sheet button:hover { background: #0a1628; color: #f0b429; border-color: #0a1628; }
+
+@media (max-width: 760px) {
+    .pv-page { padding: 16px 14px 60px; }
+    .pv-banner { flex-direction: column; align-items: stretch; gap: 14px; padding: 16px 18px; }
+    .pv-banner-cta { text-align: center; padding: 13px 18px; }
+    .pv-header { flex-direction: column; align-items: stretch; gap: 12px; }
+    .pv-h1 { font-size: 22px; }
+    .pv-actions { display: flex; gap: 8px; }
+    .pv-actions .pv-btn { flex: 1; }
+
+    /* Tabs across the top, one lane visible at a time */
+    .pv-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .pv-tabs::-webkit-scrollbar { display: none; }
+    .pv-tab { background: #fff; border: 1px solid #eeeef0; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; color: #6b7280; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .pv-tab.active { background: #0a1628; color: #fff; border-color: #0a1628; }
+    .pv-tab .pv-tab-count { background: rgba(0,0,0,.08); color: inherit; font-size: 10px; padding: 1px 7px; border-radius: 999px; font-weight: 800; }
+    .pv-tab.active .pv-tab-count { background: rgba(255,255,255,.2); }
+
+    .pv-board { display: block; }
+    .pv-lane { display: none; min-height: 0; padding: 12px; }
+    .pv-lane.show { display: flex; flex-direction: column; }
+    .pv-lane-h { display: none; }
+    .pv-card { cursor: pointer; }
+    .pv-card[draggable] { -webkit-user-drag: none; }
+    .pv-card-move { display: inline-block; background: #fff; border: 1px solid #d4d4d8; color: #0a1628; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+
     .pv-grid { grid-template-columns: repeat(2, 1fr); }
+    .pv-modal-bg { padding: 0; }
+    .pv-modal { max-height: 100vh; max-width: 100vw; border-radius: 0; }
+    .pv-modal-actions { flex-direction: column; }
+    .pv-act { width: 100%; }
 }
 </style>
 
@@ -112,8 +149,16 @@ body { background: #f7f7f8; }
         </div>
     </div>
 
+    <div class="pv-tabs" id="pv-tabs" role="tablist">
+        <button class="pv-tab active" data-tab="watch" role="tab">Watch <span class="pv-tab-count" data-tab-count="watch"></span></button>
+        <button class="pv-tab" data-tab="contact" role="tab">Contact <span class="pv-tab-count" data-tab-count="contact"></span></button>
+        <button class="pv-tab" data-tab="evaluate" role="tab">Evaluate <span class="pv-tab-count" data-tab-count="evaluate"></span></button>
+        <button class="pv-tab" data-tab="offer" role="tab">Offer <span class="pv-tab-count" data-tab-count="offer"></span></button>
+        <button class="pv-tab" data-tab="commit" role="tab">Commit <span class="pv-tab-count" data-tab-count="commit"></span></button>
+    </div>
+
     <div class="pv-board" id="pv-board">
-        <div class="pv-lane pv-lane-tint-watch" data-lane="watch">
+        <div class="pv-lane pv-lane-tint-watch show" data-lane="watch">
             <div class="pv-lane-h"><span class="pv-lane-name">Watch</span><span class="pv-lane-count" data-count></span></div>
             <div class="pv-cards">
                 <div class="pv-card" draggable="true" data-id="mj">
@@ -345,9 +390,66 @@ const PROSPECTS = {
 
     function refreshCounts() {
         board.querySelectorAll('.pv-lane').forEach(function(lane) {
-            lane.querySelector('[data-count]').textContent = lane.querySelectorAll('.pv-card').length;
+            const n = lane.querySelectorAll('.pv-card').length;
+            const desktopCount = lane.querySelector('[data-count]');
+            if (desktopCount) desktopCount.textContent = n;
+            const tabCount = document.querySelector('[data-tab-count="' + lane.dataset.lane + '"]');
+            if (tabCount) tabCount.textContent = n;
         });
     }
+
+    // Mobile lane tab switching
+    document.querySelectorAll('.pv-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.pv-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            board.querySelectorAll('.pv-lane').forEach(function(lane) {
+                lane.classList.toggle('show', lane.dataset.lane === tab.dataset.tab);
+            });
+        });
+    });
+
+    // Inject mobile-only "Move" button + action sheet into each card
+    const LANES = [
+        { id: 'watch', label: 'Watch' },
+        { id: 'contact', label: 'Contact' },
+        { id: 'evaluate', label: 'Evaluate' },
+        { id: 'offer', label: 'Offer' },
+        { id: 'commit', label: 'Commit' },
+    ];
+    function moveCard(card, targetLaneId) {
+        const targetLane = board.querySelector('.pv-lane[data-lane="' + targetLaneId + '"] .pv-cards');
+        if (!targetLane) return;
+        targetLane.appendChild(card);
+        refreshCounts();
+        showToast('Moves stick once you claim your account.');
+    }
+    board.querySelectorAll('.pv-card').forEach(function(card) {
+        const moveBtn = document.createElement('button');
+        moveBtn.className = 'pv-card-move';
+        moveBtn.type = 'button';
+        moveBtn.textContent = 'Move →';
+        const sheet = document.createElement('div');
+        sheet.className = 'pv-move-sheet';
+        LANES.forEach(function(l) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = l.label;
+            b.addEventListener('click', function(e) {
+                e.stopPropagation();
+                sheet.classList.remove('open');
+                moveCard(card, l.id);
+            });
+            sheet.appendChild(b);
+        });
+        moveBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            sheet.classList.toggle('open');
+        });
+        card.appendChild(moveBtn);
+        card.appendChild(sheet);
+    });
+
     refreshCounts();
 
     function gridItem(label, value) {
