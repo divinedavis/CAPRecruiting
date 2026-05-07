@@ -685,6 +685,7 @@ class TrackedEmail(Base):
     sent_at = Column(DateTime, default=datetime.utcnow)
     bounced_at = Column(DateTime, nullable=True)
     bounce_reason = Column(String, default="")
+    last_seen_at = Column(DateTime, nullable=True, index=True)
 
 
 class PotentialStaff(Base):
@@ -739,6 +740,7 @@ def _add_column_if_missing(table: str, column: str, ddl: str):
             conn.execute(_t(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
 _add_column_if_missing("tracked_emails", "bounced_at", "DATETIME")
 _add_column_if_missing("tracked_emails", "bounce_reason", "TEXT DEFAULT ''")
+_add_column_if_missing("tracked_emails", "last_seen_at", "DATETIME")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -2062,6 +2064,18 @@ async def track_click(token: str, db: Session = Depends(get_db)):
     return RedirectResponse(f"{site_url}/", status_code=302)
 
 
+@app.post("/preview/{token}/ping")
+async def preview_ping(token: str, request: Request, db: Session = Depends(get_db)):
+    # Skip self-traffic from logged-in admins so internal QA doesn't pollute live counts
+    if request.session.get("is_admin"):
+        return Response(status_code=204)
+    te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
+    if te:
+        te.last_seen_at = datetime.utcnow()
+        db.commit()
+    return Response(status_code=204)
+
+
 @app.get("/preview/{token}", response_class=HTMLResponse)
 async def preview_dashboard(token: str, request: Request, db: Session = Depends(get_db)):
     te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
@@ -2076,6 +2090,7 @@ async def preview_dashboard(token: str, request: Request, db: Session = Depends(
         "coach_name": coach_name,
         "coach_last": last_name,
         "invite_token": te.invite_token,
+        "track_token": token,
     })
 
 
@@ -3824,6 +3839,18 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
     emails_clicked = db.query(TrackedEmail).filter(
         TrackedEmail.potential_id != None, TrackedEmail.clicked_at != None
     ).count()
+    _now = datetime.utcnow()
+    _today_utc = datetime(_now.year, _now.month, _now.day)
+    active_now = db.query(TrackedEmail).filter(
+        TrackedEmail.potential_id != None,
+        TrackedEmail.last_seen_at != None,
+        TrackedEmail.last_seen_at >= _now - timedelta(seconds=60),
+    ).count()
+    visitors_today = db.query(TrackedEmail).filter(
+        TrackedEmail.potential_id != None,
+        TrackedEmail.last_seen_at != None,
+        TrackedEmail.last_seen_at >= _today_utc,
+    ).count()
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3865,6 +3892,8 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "emails_sent": emails_sent,
         "emails_opened": emails_opened,
         "emails_clicked": emails_clicked,
+        "active_now": active_now,
+        "visitors_today": visitors_today,
     })
 
 
@@ -3912,6 +3941,33 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
         "total_clicked": total_clicked,
         "total_signed_up": total_signed_up,
         "total_teams": total_teams,
+    })
+
+
+@app.get("/admin/marketing/live-visitors", response_class=HTMLResponse)
+async def admin_marketing_live_visitors(request: Request, db: Session = Depends(get_db)):
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    f = (request.query_params.get("filter") or "active").lower()
+    if f not in ("active", "today"):
+        f = "active"
+    _now = datetime.utcnow()
+    _today_utc = datetime(_now.year, _now.month, _now.day)
+    q = db.query(TrackedEmail).filter(
+        TrackedEmail.potential_id != None, TrackedEmail.last_seen_at != None
+    )
+    if f == "active":
+        q = q.filter(TrackedEmail.last_seen_at >= _now - timedelta(seconds=60))
+    else:
+        q = q.filter(TrackedEmail.last_seen_at >= _today_utc)
+    rows = q.order_by(TrackedEmail.last_seen_at.desc()).all()
+    return templates.TemplateResponse("live_visitors.html", {
+        "request": request,
+        "user": user,
+        "rows": rows,
+        "filter": f,
+        "now": _now,
     })
 
 

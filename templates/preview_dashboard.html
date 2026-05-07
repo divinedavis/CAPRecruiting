@@ -548,6 +548,16 @@ const PROSPECTS = {
     document.querySelectorAll('[data-toast]').forEach(function(btn) {
         btn.addEventListener('click', function() { showToast(btn.dataset.toast); });
     });
+
+    // Heartbeat — lets the marketing dashboard show "Active Now" and "Visitors Today"
+    const PING_URL = '/preview/{{ track_token }}/ping';
+    function ping() {
+        try { fetch(PING_URL, {method:'POST', credentials:'same-origin', keepalive:true}); } catch(e) {}
+    }
+    ping();
+    setInterval(ping, 30000);
+    // Also ping when the tab becomes visible again (after sleep/lock)
+    document.addEventListener('visibilitychange', function() { if (!document.hidden) ping(); });
 })();
 </script>
 {% endblock %}

@@ -150,7 +150,25 @@ function submitPotentialStatus(sel) {
       </a>
       {% endfor %}
     </div>
-    <div class="mk-pipe-subhead">Mass Email Outreach</div>
+    <div class="mk-pipe-subhead">Live Dashboard Activity</div>
+    <div class="mk-pipe-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <a href="/admin/marketing/live-visitors?filter=active" style="position:relative;">
+        <div class="n" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+          {% if active_now %}<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.18); animation: mk-livepulse 1.6s infinite;"></span>{% endif %}
+          {{ active_now }}
+        </div>
+        <div class="l">Active Now</div>
+        <div class="sub">on the dashboard right now</div>
+      </a>
+      <a href="/admin/marketing/live-visitors?filter=today">
+        <div class="n">{{ visitors_today }}</div>
+        <div class="l">Visitors Today</div>
+        <div class="sub">since midnight UTC</div>
+      </a>
+    </div>
+    <style>@keyframes mk-livepulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.45); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }</style>
+
+    <div class="mk-pipe-subhead" style="margin-top:18px;">Mass Email Outreach</div>
     <div class="mk-pipe-grid">
       <a href="/admin/marketing/teams-contacted">
         <div class="n">{{ teams_contacted }}</div>
