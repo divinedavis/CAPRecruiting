@@ -54,8 +54,42 @@ body { background: #f7f7f8; }
 .pv-footer-cta p { color: #4b5563; font-size: 14px; margin: 0 0 18px 0; }
 .pv-footer-cta a { display: inline-block; background: #0a1628; color: #f0b429; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; }
 
+/* Prospect detail modal */
+.pv-modal-bg { position: fixed; inset: 0; background: rgba(10,22,40,.55); backdrop-filter: blur(2px); z-index: 1200; display: none; align-items: center; justify-content: center; padding: 20px; }
+.pv-modal-bg.open { display: flex; }
+.pv-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.pv-modal-head { padding: 22px 24px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: flex-start; gap: 16px; position: relative; }
+.pv-modal-avatar { width: 64px; height: 64px; border-radius: 50%; background: #0a1628; color: #f0b429; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; flex-shrink: 0; }
+.pv-modal-name { font-size: 22px; font-weight: 800; color: #0a1628; margin: 0; letter-spacing: -0.01em; }
+.pv-modal-meta { font-size: 13px; color: #6b7280; margin-top: 4px; }
+.pv-modal-stars { color: #f0b429; font-size: 16px; letter-spacing: 2px; margin-top: 4px; }
+.pv-modal-x { position: absolute; top: 16px; right: 18px; background: transparent; border: none; font-size: 24px; color: #9ca3af; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px; }
+.pv-modal-x:hover { background: #f3f4f6; color: #0a1628; }
+.pv-modal-body { padding: 8px 24px 22px; }
+.pv-modal-section { padding: 16px 0; border-bottom: 1px dashed #e5e7eb; }
+.pv-modal-section:last-of-type { border-bottom: none; }
+.pv-modal-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #737482; margin: 0 0 10px 0; }
+.pv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 14px; }
+.pv-grid-item { background: #fafafa; border: 1px solid #f3f4f6; border-radius: 8px; padding: 9px 12px; }
+.pv-grid-item .l { font-size: 10px; text-transform: uppercase; color: #9ca3af; letter-spacing: .04em; font-weight: 700; }
+.pv-grid-item .v { font-size: 15px; font-weight: 700; color: #0a1628; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.pv-modal-text { color: #374151; font-size: 14px; line-height: 1.55; }
+.pv-offers { display: flex; flex-wrap: wrap; gap: 6px; }
+.pv-offer { background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: .02em; }
+.pv-film-row { display: flex; align-items: center; justify-content: space-between; background: #fafafa; border: 1px solid #f3f4f6; border-radius: 10px; padding: 10px 14px; }
+.pv-film-row + .pv-film-row { margin-top: 8px; }
+.pv-film-name { font-size: 13px; font-weight: 600; color: #0a1628; }
+.pv-film-meta { font-size: 11px; color: #9ca3af; }
+.pv-film-play { background: #0a1628; color: #f0b429; font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; }
+.pv-modal-actions { background: #fafafa; border-top: 1px solid #f3f4f6; padding: 16px 24px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; }
+.pv-act { flex: 1; min-width: 130px; background: #fff; border: 1px solid #d4d4d8; color: #0a1628; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.pv-act:hover { background: #0a1628; color: #f0b429; border-color: #0a1628; }
+.pv-act.primary { background: #0a1628; color: #f0b429; border-color: #0a1628; }
+.pv-act.primary:hover { background: #1e3a5f; }
+
 @media (max-width: 900px) {
     .pv-board { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+    .pv-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 
@@ -82,7 +116,7 @@ body { background: #f7f7f8; }
         <div class="pv-lane pv-lane-tint-watch" data-lane="watch">
             <div class="pv-lane-h"><span class="pv-lane-name">Watch</span><span class="pv-lane-count" data-count></span></div>
             <div class="pv-cards">
-                <div class="pv-card" draggable="true">
+                <div class="pv-card" draggable="true" data-id="mj">
                     <div class="pv-card-top">
                         <div class="pv-avatar">MJ</div>
                         <div><div class="pv-card-name">Marcus Johnson</div><div class="pv-card-pos">QB · Class of 2027</div></div>
@@ -91,7 +125,7 @@ body { background: #f7f7f8; }
                     <div class="pv-stars">★★★★☆</div>
                     <div class="pv-card-school">Lincoln HS · TX</div>
                 </div>
-                <div class="pv-card" draggable="true">
+                <div class="pv-card" draggable="true" data-id="dr">
                     <div class="pv-card-top">
                         <div class="pv-avatar">DR</div>
                         <div><div class="pv-card-name">Devon Rivera</div><div class="pv-card-pos">WR · Class of 2027</div></div>
@@ -106,7 +140,7 @@ body { background: #f7f7f8; }
         <div class="pv-lane pv-lane-tint-contact" data-lane="contact">
             <div class="pv-lane-h"><span class="pv-lane-name">Contact</span><span class="pv-lane-count" data-count></span></div>
             <div class="pv-cards">
-                <div class="pv-card" draggable="true">
+                <div class="pv-card" draggable="true" data-id="tb">
                     <div class="pv-card-top">
                         <div class="pv-avatar">TB</div>
                         <div><div class="pv-card-name">Tyrell Brooks</div><div class="pv-card-pos">RB · Class of 2026</div></div>
@@ -121,7 +155,7 @@ body { background: #f7f7f8; }
         <div class="pv-lane pv-lane-tint-evaluate" data-lane="evaluate">
             <div class="pv-lane-h"><span class="pv-lane-name">Evaluate</span><span class="pv-lane-count" data-count></span></div>
             <div class="pv-cards">
-                <div class="pv-card" draggable="true">
+                <div class="pv-card" draggable="true" data-id="ja">
                     <div class="pv-card-top">
                         <div class="pv-avatar">JA</div>
                         <div><div class="pv-card-name">Jaylen Adams</div><div class="pv-card-pos">LB · Class of 2026</div></div>
@@ -136,7 +170,7 @@ body { background: #f7f7f8; }
         <div class="pv-lane pv-lane-tint-offer" data-lane="offer">
             <div class="pv-lane-h"><span class="pv-lane-name">Offer</span><span class="pv-lane-count" data-count></span></div>
             <div class="pv-cards">
-                <div class="pv-card" draggable="true">
+                <div class="pv-card" draggable="true" data-id="cw">
                     <div class="pv-card-top">
                         <div class="pv-avatar">CW</div>
                         <div><div class="pv-card-name">Cameron Walsh</div><div class="pv-card-pos">OL · Class of 2026</div></div>
@@ -151,7 +185,7 @@ body { background: #f7f7f8; }
         <div class="pv-lane pv-lane-tint-commit" data-lane="commit">
             <div class="pv-lane-h"><span class="pv-lane-name">Commit</span><span class="pv-lane-count" data-count></span></div>
             <div class="pv-cards">
-                <div class="pv-card" draggable="true">
+                <div class="pv-card" draggable="true" data-id="em">
                     <div class="pv-card-top">
                         <div class="pv-avatar">EM</div>
                         <div><div class="pv-card-name">Eli Martinez</div><div class="pv-card-pos">DB · Class of 2026</div></div>
@@ -176,13 +210,130 @@ body { background: #f7f7f8; }
     <a href="/signup?invite={{ invite_token }}">Claim Account</a>
 </div>
 
+<div class="pv-modal-bg" id="pv-modal-bg" role="dialog" aria-modal="true">
+    <div class="pv-modal">
+        <div class="pv-modal-head">
+            <div class="pv-modal-avatar" id="pv-modal-avatar"></div>
+            <div style="flex:1;">
+                <h2 class="pv-modal-name" id="pv-modal-name"></h2>
+                <div class="pv-modal-meta" id="pv-modal-meta"></div>
+                <div class="pv-modal-stars" id="pv-modal-stars"></div>
+            </div>
+            <button class="pv-modal-x" id="pv-modal-x" aria-label="Close">×</button>
+        </div>
+        <div class="pv-modal-body">
+            <div class="pv-modal-section">
+                <h3 class="pv-modal-h">Combine</h3>
+                <div class="pv-grid" id="pv-modal-combine"></div>
+            </div>
+            <div class="pv-modal-section">
+                <h3 class="pv-modal-h">Academics</h3>
+                <div class="pv-grid" id="pv-modal-academics"></div>
+            </div>
+            <div class="pv-modal-section">
+                <h3 class="pv-modal-h">Scouting Notes</h3>
+                <p class="pv-modal-text" id="pv-modal-notes"></p>
+            </div>
+            <div class="pv-modal-section">
+                <h3 class="pv-modal-h">Game Film</h3>
+                <div id="pv-modal-film"></div>
+            </div>
+            <div class="pv-modal-section" id="pv-modal-offers-wrap">
+                <h3 class="pv-modal-h">Other Offers</h3>
+                <div class="pv-offers" id="pv-modal-offers"></div>
+            </div>
+        </div>
+        <div class="pv-modal-actions">
+            <button class="pv-act primary" data-toast="Move prospects between lanes after you claim your account.">Move to Contact</button>
+            <button class="pv-act" data-toast="Add private scouting notes after you claim your account.">+ Add Note</button>
+            <button class="pv-act" data-toast="Direct messaging is unlocked after you claim your account.">Send Message</button>
+        </div>
+    </div>
+</div>
+
 <script>
+const PROSPECTS = {
+    mj: {
+        name: 'Marcus Johnson', initials: 'MJ', pos: 'QB', cls: '2027', stars: 4,
+        ht: '6\'2"', wt: '195 lbs', forty: '4.62s', vert: '32"', bench: '15 reps', shuttle: '4.31s', broad: '9\'4"',
+        gpa: '3.7', sat: '1280', act: '27', transcript: 'Available',
+        hs: 'Lincoln HS', loc: 'Austin, TX', hsCoach: 'Coach R. Patterson',
+        notes: 'Strong arm, plays calm in the pocket. Reads 2nd-level coverage well; needs to clean up footwork on roll-outs. 3,140 yds and 32 TDs as a junior. Multi-sport (basketball PG) — explains the agility numbers.',
+        film: [
+            { name: 'Junior Year Highlights', meta: '7:42 · Hudl' },
+            { name: 'Week 6 vs Westlake (full game)', meta: '1:48:11 · Hudl' },
+        ],
+        offers: ['Texas State', 'UTSA', 'Sam Houston', 'Rice (PWO)'],
+    },
+    dr: {
+        name: 'Devon Rivera', initials: 'DR', pos: 'WR', cls: '2027', stars: 3,
+        ht: '6\'0"', wt: '180 lbs', forty: '4.51s', vert: '36"', bench: '12 reps', shuttle: '4.18s', broad: '10\'1"',
+        gpa: '3.4', sat: '1140', act: '24', transcript: 'Available',
+        hs: 'Roosevelt HS', loc: 'Long Beach, CA', hsCoach: 'Coach M. Alvarez',
+        notes: 'Smooth route runner with above-average ball skills. 64 catches / 1,021 yds / 11 TDs as a junior. Needs to add weight; releases vs press are inconsistent. Track 100m at 10.92.',
+        film: [
+            { name: 'Top 12 Plays — Junior Year', meta: '4:28 · Hudl' },
+        ],
+        offers: ['Cal Poly', 'San Diego State (camp invite)'],
+    },
+    tb: {
+        name: 'Tyrell Brooks', initials: 'TB', pos: 'RB', cls: '2026', stars: 4,
+        ht: '5\'11"', wt: '205 lbs', forty: '4.48s', vert: '34"', bench: '21 reps', shuttle: '4.22s', broad: '9\'8"',
+        gpa: '3.5', sat: '1190', act: '25', transcript: 'Available',
+        hs: 'Centennial HS', loc: 'Aurora, CO', hsCoach: 'Coach D. Whitfield',
+        notes: 'Patient, decisive runner with elite contact balance. 1,643 yds rushing, 18 rush TDs, 27 receptions. Plus pass-pro. Ankle sprain mid-season; cleared and was full speed by playoffs.',
+        film: [
+            { name: 'Senior Highlights (8 games)', meta: '6:14 · Hudl' },
+            { name: 'Combine Workout — Boulder', meta: '3:02 · YouTube' },
+        ],
+        offers: ['Air Force', 'Wyoming', 'Northern Colorado', 'Colorado Mesa'],
+    },
+    ja: {
+        name: 'Jaylen Adams', initials: 'JA', pos: 'LB', cls: '2026', stars: 5,
+        ht: '6\'1"', wt: '220 lbs', forty: '4.56s', vert: '35"', bench: '24 reps', shuttle: '4.05s', broad: '10\'2"',
+        gpa: '3.6', sat: '1240', act: '26', transcript: 'Available',
+        hs: 'Westlake HS', loc: 'Austin, TX', hsCoach: 'Coach J. Hartfield',
+        notes: 'Sideline-to-sideline range. 138 tackles / 11 TFL / 4 sacks as a junior. Diagnoses zone-read concepts at a high level. Class president, 4-year team captain pedigree.',
+        film: [
+            { name: 'Junior Year Tape', meta: '8:51 · Hudl' },
+            { name: 'Postseason Run vs Allen', meta: '2:24:08 · Hudl' },
+        ],
+        offers: ['Baylor', 'TCU', 'Texas Tech', 'Houston', 'SMU', 'Tulsa'],
+    },
+    cw: {
+        name: 'Cameron Walsh', initials: 'CW', pos: 'OL', cls: '2026', stars: 4,
+        ht: '6\'4"', wt: '285 lbs', forty: '5.21s', vert: '24"', bench: '28 reps', shuttle: '4.71s', broad: '8\'6"',
+        gpa: '3.8', sat: '1310', act: '28', transcript: 'Available',
+        hs: 'North Ridge HS', loc: 'Fort Collins, CO', hsCoach: 'Coach B. Larkin',
+        notes: 'Plays both LT and LG; projects best at guard at the next level. Powerful base, finishes through the whistle. Needs to keep pad level low on second-level climbs. Honor roll all 4 years.',
+        film: [
+            { name: 'Senior Year — All Run Snaps', meta: '12:06 · Hudl' },
+        ],
+        offers: ['Colorado State', 'Wyoming', 'Northern Colorado', 'Montana State'],
+    },
+    em: {
+        name: 'Eli Martinez', initials: 'EM', pos: 'DB', cls: '2026', stars: 5,
+        ht: '6\'0"', wt: '190 lbs', forty: '4.43s', vert: '38"', bench: '17 reps', shuttle: '3.98s', broad: '10\'4"',
+        gpa: '3.9', sat: '1380', act: '30', transcript: 'Available',
+        hs: 'Bishop Lynch', loc: 'Dallas, TX', hsCoach: 'Coach A. Greenwood',
+        notes: 'Press-corner build with elite recovery speed. 6 INTs and 14 PBUs as a junior. Hips fluid, ball skills are translatable. Could play S in zone-heavy schemes. National Honor Society.',
+        film: [
+            { name: 'Lock-down Reel', meta: '5:12 · Hudl' },
+            { name: 'Showcase 7-on-7', meta: '4:41 · YouTube' },
+        ],
+        offers: ['Oklahoma', 'Arkansas', 'TCU', 'Texas Tech', 'Tulane', 'Houston', 'SMU'],
+    },
+};
+
 (function() {
     const board = document.getElementById('pv-board');
     const toast = document.getElementById('pv-toast');
     const toastMsg = document.getElementById('pv-toast-msg');
+    const modalBg = document.getElementById('pv-modal-bg');
+    const modalX  = document.getElementById('pv-modal-x');
     let toastTimer;
     let dragged = null;
+    let didDrag = false;
     let moveCount = 0;
 
     function showToast(msg) {
@@ -199,15 +350,73 @@ body { background: #f7f7f8; }
     }
     refreshCounts();
 
+    function gridItem(label, value) {
+        return '<div class="pv-grid-item"><div class="l">' + label + '</div><div class="v">' + value + '</div></div>';
+    }
+    function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function starString(n) { return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
+
+    function openModal(id) {
+        const p = PROSPECTS[id];
+        if (!p) return;
+        document.getElementById('pv-modal-avatar').textContent = p.initials;
+        document.getElementById('pv-modal-name').textContent = p.name;
+        document.getElementById('pv-modal-meta').textContent = p.pos + ' · Class of ' + p.cls + ' · ' + p.hs + ' (' + p.loc + ')';
+        document.getElementById('pv-modal-stars').textContent = starString(p.stars);
+        document.getElementById('pv-modal-combine').innerHTML = [
+            gridItem('Height', p.ht),
+            gridItem('Weight', p.wt),
+            gridItem('40 Yard', p.forty),
+            gridItem('Vertical', p.vert),
+            gridItem('Bench', p.bench),
+            gridItem('Pro Shuttle', p.shuttle),
+            gridItem('Broad Jump', p.broad),
+        ].join('');
+        document.getElementById('pv-modal-academics').innerHTML = [
+            gridItem('GPA', p.gpa),
+            gridItem('SAT', p.sat),
+            gridItem('ACT', p.act),
+            gridItem('Transcript', p.transcript),
+            gridItem('HS Coach', p.hsCoach),
+        ].join('');
+        document.getElementById('pv-modal-notes').textContent = p.notes;
+        document.getElementById('pv-modal-film').innerHTML = p.film.map(function(f) {
+            return '<div class="pv-film-row"><div><div class="pv-film-name">' + escapeHtml(f.name) + '</div><div class="pv-film-meta">' + escapeHtml(f.meta) + '</div></div><button class="pv-film-play" data-toast="Game film unlocks after you claim your account.">▶ Play</button></div>';
+        }).join('');
+        document.getElementById('pv-modal-offers').innerHTML = (p.offers || []).map(function(o) {
+            return '<span class="pv-offer">' + escapeHtml(o) + '</span>';
+        }).join('');
+        modalBg.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        // bind toast on freshly-rendered film play buttons + actions
+        modalBg.querySelectorAll('[data-toast]').forEach(function(btn) {
+            btn.onclick = function(ev) { ev.stopPropagation(); showToast(btn.dataset.toast); };
+        });
+    }
+    function closeModal() {
+        modalBg.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    modalX.addEventListener('click', closeModal);
+    modalBg.addEventListener('click', function(e) { if (e.target === modalBg) closeModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
     board.querySelectorAll('.pv-card').forEach(function(card) {
         card.addEventListener('dragstart', function(e) {
             dragged = card;
+            didDrag = true;
             card.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
         });
         card.addEventListener('dragend', function() {
             card.classList.remove('dragging');
             board.querySelectorAll('.pv-lane.over').forEach(function(l) { l.classList.remove('over'); });
+            // small delay so a click event fired right after dragend gets suppressed
+            setTimeout(function() { didDrag = false; }, 50);
+        });
+        card.addEventListener('click', function() {
+            if (didDrag) return;
+            openModal(card.dataset.id);
         });
     });
 
