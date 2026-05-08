@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, 
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, distinct, func
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, distinct, func, or_
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from starlette.middleware.sessions import SessionMiddleware
 import re
@@ -3886,6 +3886,19 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         TrackedEmail.potential_id != None,
         TrackedEmail.clicked_claim_at != None,
     ).scalar() or 0
+    # Likely-human heuristic — a real coach reading the dashboard
+    # either dwelled past the one-shot heartbeat that security
+    # gateways fire (>10s between click and last_seen_at) or
+    # actually clicked the Claim Account button. One heartbeat
+    # immediately after click is the bot signature.
+    visitors_human_count = db.query(func.count(func.distinct(func.lower(TrackedEmail.recipient_email)))).filter(
+        TrackedEmail.potential_id != None,
+        TrackedEmail.last_seen_at != None,
+        or_(
+            TrackedEmail.clicked_claim_at != None,
+            (func.julianday(TrackedEmail.last_seen_at) - func.julianday(TrackedEmail.clicked_at)) * 86400 > 10,
+        ),
+    ).scalar() or 0
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3932,6 +3945,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "visitors_this_month": visitors_this_month,
         "visitors_all_time": visitors_all_time,
         "visitors_claimed_count": visitors_claimed_count,
+        "visitors_human_count": visitors_human_count,
     })
 
 
@@ -3988,7 +4002,7 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
     if err:
         return err
     f = (request.query_params.get("filter") or "active").lower()
-    if f not in ("active", "today", "month", "all", "claimed"):
+    if f not in ("active", "today", "month", "all", "claimed", "human"):
         f = "active"
     _now = datetime.utcnow()
     _today_utc = datetime(_now.year, _now.month, _now.day)
@@ -3999,6 +4013,17 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
         q = db.query(TrackedEmail).filter(
             TrackedEmail.potential_id != None,
             TrackedEmail.clicked_claim_at != None,
+        )
+    elif f == "human":
+        # Same heuristic as visitors_human_count on the dashboard:
+        # claimed-click OR dwell > 10s rules out gateway prefetchers.
+        q = db.query(TrackedEmail).filter(
+            TrackedEmail.potential_id != None,
+            TrackedEmail.last_seen_at != None,
+            or_(
+                TrackedEmail.clicked_claim_at != None,
+                (func.julianday(TrackedEmail.last_seen_at) - func.julianday(TrackedEmail.clicked_at)) * 86400 > 10,
+            ),
         )
     else:
         q = db.query(TrackedEmail).filter(
