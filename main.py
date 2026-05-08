@@ -3846,11 +3846,11 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         TrackedEmail.last_seen_at != None,
         TrackedEmail.last_seen_at >= _now - timedelta(seconds=60),
     ).count()
-    visitors_today = db.query(TrackedEmail).filter(
+    visitors_today = db.query(func.count(func.distinct(func.lower(TrackedEmail.recipient_email)))).filter(
         TrackedEmail.potential_id != None,
         TrackedEmail.last_seen_at != None,
         TrackedEmail.last_seen_at >= _today_utc,
-    ).count()
+    ).scalar() or 0
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -4447,7 +4447,7 @@ async def admin_staff_send_all(
     # SMTP sends crawl through dozens of coaches.
     ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
     background.add_task(_run_staff_blast, pid, user.id, campaign.id, ip)
-    return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?queued=1", status_code=302)
+    return RedirectResponse(f"/admin/marketing?queued={pid}#potentials", status_code=302)
 
 
 @app.post("/admin/marketing/potentials/staff/{sid}/update")
