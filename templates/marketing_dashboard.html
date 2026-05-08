@@ -208,100 +208,6 @@ function submitPotentialStatus(sel) {
   </div>
   {% endif %}
 
-  <div class="mk-section">
-    <h2>Leads</h2>
-    <form method="get" class="mk-filters">
-      <div class="fg">
-        <label>Search</label>
-        <input type="text" name="q" value="{{ filter_q }}" placeholder="name / email / school">
-      </div>
-      <div class="fg">
-        <label>Stage</label>
-        <select name="stage">
-          <option value="">All</option>
-          {% for s in stages %}<option value="{{ s }}"{% if filter_stage == s %} selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="fg">
-        <label>Source</label>
-        <select name="source">
-          <option value="">All</option>
-          {% for s in distinct_sources %}<option value="{{ s }}"{% if filter_source == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="fg">
-        <label>State</label>
-        <select name="state">
-          <option value="">All</option>
-          {% for s in distinct_states %}<option value="{{ s }}"{% if filter_state == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="fg">
-        <label>Tag</label>
-        <input type="text" name="tag" value="{{ filter_tag }}" placeholder="tag name">
-      </div>
-      <button type="submit">Apply</button>
-      <a href="/admin/marketing" class="reset">Reset</a>
-    </form>
-
-    {% if leads %}
-    <div style="overflow-x:auto;">
-    <table class="mk-table">
-      <thead>
-        <tr>
-          <th>Name / Email</th>
-          <th>School</th>
-          <th>Role</th>
-          <th>Stage</th>
-          <th>Source</th>
-          <th>Last Contact</th>
-          <th>Follow-up</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for lead in leads %}
-        <tr>
-          <td>
-            <div class="mk-lead-name">
-              <img class="mk-avatar" src="https://api.dicebear.com/9.x/notionists/svg?seed={{ lead.email|urlencode }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="" loading="lazy">
-              <div>
-                <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
-                {% if lead.name %}<div class="mk-lead-email">{{ lead.email }}</div>{% endif %}
-              </div>
-            </div>
-          </td>
-          <td>{{ lead.school or '—' }}</td>
-          <td>{{ lead.role or '—' }}</td>
-          <td><span class="mk-stage-pill mk-stage-{{ lead.stage }}">{{ stage_labels[lead.stage] if lead.stage in stage_labels else lead.stage }}</span></td>
-          <td>{{ lead.source or '—' }}</td>
-          <td>{{ lead.last_contacted_at.strftime('%Y-%m-%d') if lead.last_contacted_at else '—' }}</td>
-          <td>{{ lead.next_followup_at.strftime('%Y-%m-%d') if lead.next_followup_at else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    </div>
-
-    {% if leads_total_pages > 1 %}
-    {% set leads_qs = 'stage=' ~ filter_stage ~ '&source=' ~ filter_source ~ '&state=' ~ filter_state ~ '&q=' ~ filter_q ~ '&tag=' ~ filter_tag %}
-    <div class="mk-pot-pager" style="margin-top:14px;">
-      {% if leads_page > 1 %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page - 1 }}">‹ Prev</a>{% endif %}
-      {% for n in leads_pages_visible %}
-        {% if n == leads_page %}
-          <span class="active">{{ n }}</span>
-        {% else %}
-          <a href="/admin/marketing?{{ leads_qs }}&leads_page={{ n }}">{{ n }}</a>
-        {% endif %}
-      {% endfor %}
-      {% if leads_page < leads_total_pages %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page + 1 }}">Next ›</a>{% endif %}
-    </div>
-    {% endif %}
-
-    {% else %}
-    <p style="color:#9ca3af; font-size:13px; text-align:center; padding:32px;">No leads match your filters.</p>
-    {% endif %}
-  </div>
-
   <div class="mk-section" id="potentials">
     <h2>Potentials</h2>
     <p class="mk-sub" style="margin-top:-6px;">
@@ -402,3 +308,97 @@ function submitPotentialStatus(sel) {
   </div>
 </div>
 {% endblock %}
+  <div class="mk-section">
+    <h2>Leads</h2>
+    <form method="get" class="mk-filters">
+      <div class="fg">
+        <label>Search</label>
+        <input type="text" name="q" value="{{ filter_q }}" placeholder="name / email / school">
+      </div>
+      <div class="fg">
+        <label>Stage</label>
+        <select name="stage">
+          <option value="">All</option>
+          {% for s in stages %}<option value="{{ s }}"{% if filter_stage == s %} selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Source</label>
+        <select name="source">
+          <option value="">All</option>
+          {% for s in distinct_sources %}<option value="{{ s }}"{% if filter_source == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>State</label>
+        <select name="state">
+          <option value="">All</option>
+          {% for s in distinct_states %}<option value="{{ s }}"{% if filter_state == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Tag</label>
+        <input type="text" name="tag" value="{{ filter_tag }}" placeholder="tag name">
+      </div>
+      <button type="submit">Apply</button>
+      <a href="/admin/marketing" class="reset">Reset</a>
+    </form>
+
+    {% if leads %}
+    <div style="overflow-x:auto;">
+    <table class="mk-table">
+      <thead>
+        <tr>
+          <th>Name / Email</th>
+          <th>School</th>
+          <th>Role</th>
+          <th>Stage</th>
+          <th>Source</th>
+          <th>Last Contact</th>
+          <th>Follow-up</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td>
+            <div class="mk-lead-name">
+              <img class="mk-avatar" src="https://api.dicebear.com/9.x/notionists/svg?seed={{ lead.email|urlencode }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="" loading="lazy">
+              <div>
+                <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
+                {% if lead.name %}<div class="mk-lead-email">{{ lead.email }}</div>{% endif %}
+              </div>
+            </div>
+          </td>
+          <td>{{ lead.school or '—' }}</td>
+          <td>{{ lead.role or '—' }}</td>
+          <td><span class="mk-stage-pill mk-stage-{{ lead.stage }}">{{ stage_labels[lead.stage] if lead.stage in stage_labels else lead.stage }}</span></td>
+          <td>{{ lead.source or '—' }}</td>
+          <td>{{ lead.last_contacted_at.strftime('%Y-%m-%d') if lead.last_contacted_at else '—' }}</td>
+          <td>{{ lead.next_followup_at.strftime('%Y-%m-%d') if lead.next_followup_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    {% if leads_total_pages > 1 %}
+    {% set leads_qs = 'stage=' ~ filter_stage ~ '&source=' ~ filter_source ~ '&state=' ~ filter_state ~ '&q=' ~ filter_q ~ '&tag=' ~ filter_tag %}
+    <div class="mk-pot-pager" style="margin-top:14px;">
+      {% if leads_page > 1 %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page - 1 }}">‹ Prev</a>{% endif %}
+      {% for n in leads_pages_visible %}
+        {% if n == leads_page %}
+          <span class="active">{{ n }}</span>
+        {% else %}
+          <a href="/admin/marketing?{{ leads_qs }}&leads_page={{ n }}">{{ n }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if leads_page < leads_total_pages %}<a href="/admin/marketing?{{ leads_qs }}&leads_page={{ leads_page + 1 }}">Next ›</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p style="color:#9ca3af; font-size:13px; text-align:center; padding:32px;">No leads match your filters.</p>
+    {% endif %}
+  </div>
+
