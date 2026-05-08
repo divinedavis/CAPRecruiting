@@ -3851,6 +3851,12 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         TrackedEmail.last_seen_at != None,
         TrackedEmail.last_seen_at >= _today_utc,
     ).scalar() or 0
+    _month_utc = datetime(_now.year, _now.month, 1)
+    visitors_this_month = db.query(func.count(func.distinct(func.lower(TrackedEmail.recipient_email)))).filter(
+        TrackedEmail.potential_id != None,
+        TrackedEmail.last_seen_at != None,
+        TrackedEmail.last_seen_at >= _month_utc,
+    ).scalar() or 0
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3894,6 +3900,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "emails_clicked": emails_clicked,
         "active_now": active_now,
         "visitors_today": visitors_today,
+        "visitors_this_month": visitors_this_month,
     })
 
 
