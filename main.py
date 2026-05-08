@@ -3,7 +3,7 @@ import csv
 import io
 import boto3
 from botocore.client import Config
-from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -4391,8 +4391,45 @@ async def admin_staff_send_all_get(pid: int):
     return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff", status_code=302)
 
 
+def _run_staff_blast(pid: int, user_id: int, campaign_id: int, ip: str) -> None:
+    """Background worker for /staff/send-all. Opens a fresh DB
+    session because the request-scoped one closes when the
+    response returns."""
+    import time as _time
+    db = SessionLocal()
+    try:
+        pot = db.query(MarketingPotential).filter(MarketingPotential.id == pid).first()
+        if not pot:
+            return
+        campaign = db.query(EmailCampaign).filter(EmailCampaign.id == campaign_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
+        if not campaign or not user:
+            return
+        staff_list = db.query(PotentialStaff).filter(
+            PotentialStaff.potential_id == pid, PotentialStaff.email != ""
+        ).all()
+        staff_list = [s for s in staff_list if _is_eligible_coach_title(s.title)]
+        sent = 0
+        for s in staff_list:
+            if _send_staff_email(db, user, campaign, s, pot):
+                sent += 1
+                _time.sleep(0.5)
+        if sent > 0:
+            pot.status = "contacted"
+            pot.contacted_at = datetime.utcnow()
+            db.commit()
+        log_admin_action(db, user_id, "send_staff_emails", pid, f"school={pot.school} sent={sent}", ip)
+    finally:
+        db.close()
+
+
 @app.post("/admin/marketing/potentials/{pid}/staff/send-all")
-async def admin_staff_send_all(pid: int, request: Request, db: Session = Depends(get_db)):
+async def admin_staff_send_all(
+    pid: int,
+    request: Request,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     user, err = _marketing_require_admin(request, db)
     if err:
         return err
@@ -4404,23 +4441,13 @@ async def admin_staff_send_all(pid: int, request: Request, db: Session = Depends
     ).order_by(EmailCampaign.created_at.desc()).first()
     if not campaign:
         return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
-    staff_list = db.query(PotentialStaff).filter(
-        PotentialStaff.potential_id == pid, PotentialStaff.email != ""
-    ).all()
-    staff_list = [s for s in staff_list if _is_eligible_coach_title(s.title)]
-    sent = 0
-    import time as _time
-    for s in staff_list:
-        if _send_staff_email(db, user, campaign, s, pot):
-            sent += 1
-            _time.sleep(0.5)
-    if sent > 0:
-        pot.status = "contacted"
-        pot.contacted_at = datetime.utcnow()
-        db.commit()
-    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
-    log_admin_action(db, user.id, "send_staff_emails", pid, f"school={pot.school} sent={sent}", _ip)
-    return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?sent={sent}", status_code=302)
+    # Snapshot what the worker needs and queue the actual send.
+    # Returning the redirect immediately means the browser stops
+    # spinning right away — UI no longer locks up while sequential
+    # SMTP sends crawl through dozens of coaches.
+    ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    background.add_task(_run_staff_blast, pid, user.id, campaign.id, ip)
+    return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?queued=1", status_code=302)
 
 
 @app.post("/admin/marketing/potentials/staff/{sid}/update")
