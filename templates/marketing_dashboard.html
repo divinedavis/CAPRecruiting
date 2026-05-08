@@ -213,7 +213,7 @@ function submitPotentialStatus(sel) {
   {% endif %}
 
   <div class="mk-section" id="potentials">
-    <h2>Potentials</h2>
+    <h2>Schools</h2>
     <p class="mk-sub" style="margin-top:-6px;">
       {{ pot_never_total }} never contacted · {{ pot_contacted_total }} contacted · {{ pot_not_interested_total }} not interested · {{ pot_grand_total }} total
     </p>
@@ -235,13 +235,25 @@ function submitPotentialStatus(sel) {
         <option value="D2"{% if pot_div == "D2" %} selected{% endif %}>D2</option>
         <option value="D3"{% if pot_div == "D3" %} selected{% endif %}>D3</option>
       </select>
-      <input type="text" name="pot_q" value="{{ pot_q }}" placeholder="school / conf / state">
+      <select name="pot_conf">
+        <option value=""{% if not pot_conf %} selected{% endif %}>All Conferences</option>
+        {% for c in pot_conf_options %}
+        <option value="{{ c }}"{% if pot_conf == c %} selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <select name="pot_state">
+        <option value=""{% if not pot_state %} selected{% endif %}>All States</option>
+        {% for s in pot_state_options %}
+        <option value="{{ s }}"{% if pot_state == s %} selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="pot_q" value="{{ pot_q }}">
       <button type="submit" class="mk-pot-btn">Apply</button>
       <a href="/admin/marketing#potentials" class="mk-pot-btn secondary" style="text-decoration:none;">Reset</a>
     </form>
 
     {% if potentials %}
-    {% set return_qs = 'pot_page=' ~ pot_page ~ '&pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q %}
+    {% set return_qs = 'pot_page=' ~ pot_page ~ '&pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q ~ '&pot_conf=' ~ pot_conf ~ '&pot_state=' ~ pot_state %}
     <div style="border-top:1px dashed #e5e7eb;">
       <div class="mk-pot-row mk-pot-header-row">
         <div>School</div>
@@ -298,7 +310,7 @@ function submitPotentialStatus(sel) {
 
     {% if pot_total_pages > 1 %}
     <div class="mk-pot-pager">
-      {% set base_qs = 'pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q %}
+      {% set base_qs = 'pot_filter=' ~ pot_filter ~ '&pot_div=' ~ pot_div ~ '&pot_q=' ~ pot_q ~ '&pot_conf=' ~ pot_conf ~ '&pot_state=' ~ pot_state %}
       {% if pot_page > 1 %}<a href="/admin/marketing?{{ base_qs }}&pot_page={{ pot_page - 1 }}#potentials">‹ Prev</a>{% endif %}
       {% for n in pot_pages_visible %}
         {% if n == pot_page %}

@@ -3815,12 +3815,18 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         pot_filter = "never_contacted"
     pot_div = (request.query_params.get("pot_div") or "").strip().upper()
     pot_q = (request.query_params.get("pot_q") or "").strip()
+    pot_conf = (request.query_params.get("pot_conf") or "").strip()
+    pot_state = (request.query_params.get("pot_state") or "").strip().upper()
 
     pot_query = db.query(MarketingPotential)
     if pot_filter in ("never_contacted", "contacted", "not_interested"):
         pot_query = pot_query.filter(MarketingPotential.status == pot_filter)
     if pot_div in ("D2", "D3"):
         pot_query = pot_query.filter(MarketingPotential.division == pot_div)
+    if pot_conf:
+        pot_query = pot_query.filter(MarketingPotential.conference == pot_conf)
+    if pot_state:
+        pot_query = pot_query.filter(MarketingPotential.state == pot_state)
     if pot_q:
         plike = f"%{pot_q}%"
         pot_query = pot_query.filter(
@@ -3844,6 +3850,16 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         .limit(pot_per_page)
         .all()
     )
+    pot_conf_options = [
+        c for (c,) in db.query(distinct(MarketingPotential.conference))
+        .filter(MarketingPotential.conference != None, MarketingPotential.conference != "")
+        .order_by(MarketingPotential.conference.asc()).all()
+    ]
+    pot_state_options = [
+        s for (s,) in db.query(distinct(MarketingPotential.state))
+        .filter(MarketingPotential.state != None, MarketingPotential.state != "")
+        .order_by(MarketingPotential.state.asc()).all()
+    ]
     pot_never_total = db.query(MarketingPotential).filter(MarketingPotential.status == "never_contacted").count()
     pot_contacted_total = db.query(MarketingPotential).filter(MarketingPotential.status == "contacted").count()
     pot_not_interested_total = db.query(MarketingPotential).filter(MarketingPotential.status == "not_interested").count()
@@ -3932,6 +3948,10 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "pot_filter": pot_filter,
         "pot_div": pot_div,
         "pot_q": pot_q,
+        "pot_conf": pot_conf,
+        "pot_state": pot_state,
+        "pot_conf_options": pot_conf_options,
+        "pot_state_options": pot_state_options,
         "pot_never_total": pot_never_total,
         "pot_contacted_total": pot_contacted_total,
         "pot_not_interested_total": pot_not_interested_total,
