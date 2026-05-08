@@ -110,36 +110,6 @@ function submitPotentialStatus(sel) {
     <a href="/admin/marketing/campaigns" class="mk-btn-accent">Email Campaigns</a>
   </div>
 
-  <div class="mk-metrics">
-    <div class="mk-metric">
-      <div class="lbl">Total Leads</div>
-      <div class="val">{{ total_leads }}</div>
-    </div>
-    <div class="mk-metric">
-      <div class="lbl">Activities (7d)</div>
-      <div class="val">{{ activities_this_week }}</div>
-      <div class="sub">outbound + inbound</div>
-    </div>
-    <div class="mk-metric">
-      <div class="lbl">Onboarded (7d)</div>
-      <div class="val">{{ signed_up_this_week }}</div>
-    </div>
-    <div class="mk-metric">
-      <div class="lbl">Response Rate</div>
-      <div class="val">{{ "%.0f"|format(response_rate) }}%</div>
-      <div class="sub">responded ÷ contacted</div>
-    </div>
-    <div class="mk-metric">
-      <div class="lbl">Due Follow-ups</div>
-      <div class="val">{{ due_followups|length }}</div>
-    </div>
-    <div class="mk-metric">
-      <div class="lbl">Teams Contacted</div>
-      <div class="val">{{ teams_contacted }}</div>
-      <div class="sub">via mass email</div>
-    </div>
-  </div>
-
   <div class="mk-section">
     <h2>Pipeline</h2>
     <div class="mk-pipe">
