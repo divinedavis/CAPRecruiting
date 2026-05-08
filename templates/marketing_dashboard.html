@@ -76,7 +76,7 @@ body { background: #f7f7f8; }
 .mk-due { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .mk-due a { color: #92400e; font-weight: 600; text-decoration: none; }
 .mk-due-meta { font-size: 11px; color: #92400e; font-weight: 600; background: #fef3c7; padding: 4px 10px; border-radius: 999px; }
-.mk-pot-row { display: grid; grid-template-columns: 1.6fr 0.6fr 1fr 0.6fr 1fr 80px; gap: 12px; align-items: center; padding: 12px 8px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+.mk-pot-row { display: grid; grid-template-columns: 1.6fr 0.6fr 1fr 0.6fr 1fr 95px 80px; gap: 12px; align-items: center; padding: 12px 8px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
 .mk-pot-row:hover { background: #fafafa; }
 .mk-pot-row .school { font-weight: 600; color: #0a1628; }
 .mk-pot-row .sub { font-size: 11px; color: #9ca3af; }
@@ -229,6 +229,7 @@ function submitPotentialStatus(sel) {
         <div>State</div>
         <div>Status</div>
         <div></div>
+        <div></div>
       </div>
       {% for p in potentials %}
       <div class="mk-pot-row">
@@ -252,8 +253,11 @@ function submitPotentialStatus(sel) {
           </form>
           {% if p.status == 'contacted' and p.contacted_at %}<div class="sub" style="margin-top:4px;">{{ p.contacted_at.strftime('%Y-%m-%d') }}{% if p.contact_name %} · {{ p.contact_name }}{% endif %}</div>{% endif %}
         </div>
-        <div style="display:flex; gap:4px; flex-wrap:wrap;">
-          <form method="post" action="/admin/marketing/potentials/{{ p.id }}/staff/send-all" style="margin:0;" onsubmit="return confirm('Send the latest mass email to every eligible coach at ' + {{ (p.school or 'this team')|tojson }} + '?');"><button type="submit" class="mk-pot-btn">Send Blast</button></form><a href="/admin/marketing/potentials/{{ p.id }}/staff" class="mk-pot-btn secondary" style="text-decoration:none; text-align:center;">More</a>
+        <div>
+          <form method="post" action="/admin/marketing/potentials/{{ p.id }}/staff/send-all" style="margin:0;" onsubmit="return confirm('Send the latest mass email to every eligible coach at ' + {{ (p.school or 'this team')|tojson }} + '?');"><button type="submit" class="mk-pot-btn" style="width:100%;">Send Blast</button></form>
+        </div>
+        <div>
+          <a href="/admin/marketing/potentials/{{ p.id }}/staff" class="mk-pot-btn secondary" style="text-decoration:none; text-align:center; display:block;">More</a>
         </div>
       </div>
       <div class="mk-pot-expand" id="pot-exp-{{ p.id }}">
