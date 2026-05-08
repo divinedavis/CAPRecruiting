@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Marketing CRM — CAP Recruiting{% endblock %}
 {% block content %}
+<script>
+  // Refreshes used to land at the bottom of this page because
+  // Safari restored the previous scroll position from the Leads
+  // section. Force manual + jump-to-top on every load.
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  if (!window.location.hash) {
+    window.addEventListener("DOMContentLoaded", function () {
+      window.scrollTo(0, 0);
+    });
+  }
+</script>
 <style>
 body { background: #f7f7f8; }
 .mk-page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
@@ -240,7 +253,7 @@ function submitPotentialStatus(sel) {
           {% if p.status == 'contacted' and p.contacted_at %}<div class="sub" style="margin-top:4px;">{{ p.contacted_at.strftime('%Y-%m-%d') }}{% if p.contact_name %} · {{ p.contact_name }}{% endif %}</div>{% endif %}
         </div>
         <div style="display:flex; gap:4px; flex-wrap:wrap;">
-          <a href="/admin/marketing/potentials/{{ p.id }}/staff" class="mk-pot-btn secondary" style="text-decoration:none; text-align:center;">More</a>
+          <form method="post" action="/admin/marketing/potentials/{{ p.id }}/staff/send-all" style="margin:0;" onsubmit="return confirm('Send the latest mass email to every eligible coach at ' + {{ (p.school or 'this team')|tojson }} + '?');"><button type="submit" class="mk-pot-btn">Send Blast</button></form><a href="/admin/marketing/potentials/{{ p.id }}/staff" class="mk-pot-btn secondary" style="text-decoration:none; text-align:center;">More</a>
         </div>
       </div>
       <div class="mk-pot-expand" id="pot-exp-{{ p.id }}">
