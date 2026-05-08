@@ -209,46 +209,6 @@ function submitPotentialStatus(sel) {
   {% endif %}
 
   <div class="mk-section">
-    <h2>New Lead</h2>
-    <form method="post" action="/admin/marketing/leads/create">
-      <div class="mk-new-form">
-        <input type="text" name="name" placeholder="Name">
-        <input type="email" name="email" placeholder="Email (required)" required>
-        <input type="text" name="phone" placeholder="Phone">
-        <select name="role">
-          <option value="">Role</option>
-          <option value="coach">College Coach</option>
-          <option value="hs_coach">HS Coach</option>
-          <option value="parent">Parent</option>
-          <option value="player">Player</option>
-          <option value="partner">Partner</option>
-          <option value="other">Other</option>
-        </select>
-        <input type="text" name="school" placeholder="School">
-        <input type="text" name="state" placeholder="State (2-letter)" maxlength="2">
-        <input type="text" name="division" placeholder="Division">
-        <input type="text" name="conference" placeholder="Conference">
-        <select name="stage">
-          {% for s in stages %}<option value="{{ s }}">{{ stage_labels[s] }}</option>{% endfor %}
-        </select>
-        <input type="text" name="source" placeholder="Source (e.g. manual)">
-        <input type="text" name="tags" placeholder="Tags (comma-separated)">
-        <input type="text" name="notes" placeholder="Notes">
-      </div>
-      <button type="submit" class="mk-btn-primary">Add Lead</button>
-    </form>
-  </div>
-
-  <div class="mk-section">
-    <h2>Bulk Import (CSV)</h2>
-    <form method="post" action="/admin/marketing/leads/import">
-      <p style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">Paste CSV with headers. Required: <code>email</code>. Optional: name, phone, role, school, state, division, conference, tags, notes. Upserts by email.</p>
-      <textarea name="csv" rows="6" style="width:100%; padding:12px; border:1px solid #e5e7eb; border-radius:10px; font-family:ui-monospace,SFMono-Regular,monospace; font-size:12px; box-sizing:border-box; background:#fafafa; color:#0a1628;" placeholder="name,email,phone,school,state,division,conference&#10;Jane Doe,jane@example.edu,555-0100,Kent State,OH,D1,MAC"></textarea>
-      <button type="submit" class="mk-btn-primary" style="margin-top:10px;">Import</button>
-    </form>
-  </div>
-
-  <div class="mk-section">
     <h2>Leads</h2>
     <form method="get" class="mk-filters">
       <div class="fg">
