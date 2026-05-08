@@ -3950,17 +3950,20 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
     if err:
         return err
     f = (request.query_params.get("filter") or "active").lower()
-    if f not in ("active", "today"):
+    if f not in ("active", "today", "month"):
         f = "active"
     _now = datetime.utcnow()
     _today_utc = datetime(_now.year, _now.month, _now.day)
+    _month_utc = datetime(_now.year, _now.month, 1)
     q = db.query(TrackedEmail).filter(
         TrackedEmail.potential_id != None, TrackedEmail.last_seen_at != None
     )
     if f == "active":
         q = q.filter(TrackedEmail.last_seen_at >= _now - timedelta(seconds=60))
-    else:
+    elif f == "today":
         q = q.filter(TrackedEmail.last_seen_at >= _today_utc)
+    else:  # month
+        q = q.filter(TrackedEmail.last_seen_at >= _month_utc)
     rows = q.order_by(TrackedEmail.last_seen_at.desc()).all()
     return templates.TemplateResponse("live_visitors.html", {
         "request": request,
