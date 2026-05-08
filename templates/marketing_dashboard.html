@@ -134,7 +134,7 @@ function submitPotentialStatus(sel) {
       {% endfor %}
     </div>
     <div class="mk-pipe-subhead">Live Dashboard Activity</div>
-    <div class="mk-pipe-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="mk-pipe-grid" style="grid-template-columns: repeat(4, 1fr);">
       <a href="/admin/marketing/live-visitors?filter=active" style="position:relative;">
         <div class="n" style="display:flex; align-items:center; justify-content:center; gap:10px;">
           {% if active_now %}<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.18); animation: mk-livepulse 1.6s infinite;"></span>{% endif %}
@@ -152,6 +152,11 @@ function submitPotentialStatus(sel) {
         <div class="n">{{ visitors_this_month }}</div>
         <div class="l">Dashboard Visits This Month</div>
         <div class="sub">since the 1st UTC</div>
+      </a>
+      <a href="/admin/marketing/live-visitors?filter=all">
+        <div class="n">{{ visitors_all_time }}</div>
+        <div class="l">Dashboard Visits All Time</div>
+        <div class="sub">unique viewers ever</div>
       </a>
     </div>
     <style>@keyframes mk-livepulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.45); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }</style>

@@ -3857,6 +3857,10 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         TrackedEmail.last_seen_at != None,
         TrackedEmail.last_seen_at >= _month_utc,
     ).scalar() or 0
+    visitors_all_time = db.query(func.count(func.distinct(func.lower(TrackedEmail.recipient_email)))).filter(
+        TrackedEmail.potential_id != None,
+        TrackedEmail.last_seen_at != None,
+    ).scalar() or 0
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3901,6 +3905,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "active_now": active_now,
         "visitors_today": visitors_today,
         "visitors_this_month": visitors_this_month,
+        "visitors_all_time": visitors_all_time,
     })
 
 
@@ -3957,7 +3962,7 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
     if err:
         return err
     f = (request.query_params.get("filter") or "active").lower()
-    if f not in ("active", "today", "month"):
+    if f not in ("active", "today", "month", "all"):
         f = "active"
     _now = datetime.utcnow()
     _today_utc = datetime(_now.year, _now.month, _now.day)
@@ -3969,8 +3974,9 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
         q = q.filter(TrackedEmail.last_seen_at >= _now - timedelta(seconds=60))
     elif f == "today":
         q = q.filter(TrackedEmail.last_seen_at >= _today_utc)
-    else:  # month
+    elif f == "month":
         q = q.filter(TrackedEmail.last_seen_at >= _month_utc)
+    # else: f == "all" — no time filter beyond last_seen_at being non-null
     rows = q.order_by(TrackedEmail.last_seen_at.desc()).all()
     return templates.TemplateResponse("live_visitors.html", {
         "request": request,
