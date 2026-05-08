@@ -27,7 +27,7 @@ body { background: #f7f7f8; }
 </style>
 <div class="lv-page">
   <a href="/admin/marketing" class="lv-back">← Back to Marketing CRM</a>
-  <h1 class="lv-h1" style="margin-top:8px;">{% if filter == 'active' %}Active Now{% elif filter == 'month' %}Dashboard Visits This Month{% elif filter == 'all' %}Dashboard Visits All Time{% else %}Dashboard Visits Today{% endif %}</h1>
+  <h1 class="lv-h1" style="margin-top:8px;">{% if filter == 'active' %}Active Now{% elif filter == 'month' %}Dashboard Visits This Month{% elif filter == 'all' %}Dashboard Visits All Time{% elif filter == 'claimed' %}Clicked Claim Account{% else %}Dashboard Visits Today{% endif %}</h1>
   <p class="lv-sub">{% if filter == 'active' %}Coaches with the preview dashboard open in the last 60 seconds.{% else %}Coaches who opened the preview dashboard since midnight UTC.{% endif %} Auto-refreshes every 15 seconds.</p>
 
   <div class="lv-tabs">
@@ -35,6 +35,7 @@ body { background: #f7f7f8; }
     <a href="?filter=today" class="lv-tab {% if filter == 'today' %}active{% endif %}">Today</a>
     <a href="?filter=month" class="lv-tab {% if filter == 'month' %}active{% endif %}">This Month</a>
     <a href="?filter=all" class="lv-tab {% if filter == 'all' %}active{% endif %}">All Time</a>
+    <a href="?filter=claimed" class="lv-tab {% if filter == 'claimed' %}active{% endif %}">Clicked Claim</a>
   </div>
 
   <div class="lv-section">

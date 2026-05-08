@@ -135,7 +135,7 @@ body { background: #f7f7f8; }
         <div class="pv-banner-text">
             <strong>This is a live preview of your dashboard.</strong> Drag prospects between lanes — when you're ready, claim your account to load real recruits and share the board with your staff.
         </div>
-        <a href="/signup?invite={{ invite_token }}" class="pv-banner-cta">Claim My Dashboard →</a>
+        <a href="/preview/{{ token }}/claim" class="pv-banner-cta">Claim My Dashboard →</a>
     </div>
 
     <div class="pv-header">
@@ -246,13 +246,13 @@ body { background: #f7f7f8; }
     <div class="pv-footer-cta">
         <h3>Ready to run {{ school }}'s real board?</h3>
         <p>Free for college coaches. Pull your scouts in, share the dashboard with your staff, and move every prospect from Watch to Commit.</p>
-        <a href="/signup?invite={{ invite_token }}">Claim My Coach Account</a>
+        <a href="/preview/{{ token }}/claim">Claim My Coach Account</a>
     </div>
 </div>
 
 <div class="pv-toast" id="pv-toast" role="status">
     <span id="pv-toast-msg"></span>
-    <a href="/signup?invite={{ invite_token }}">Claim Account</a>
+    <a href="/preview/{{ token }}/claim">Claim Account</a>
 </div>
 
 <div class="pv-modal-bg" id="pv-modal-bg" role="dialog" aria-modal="true">

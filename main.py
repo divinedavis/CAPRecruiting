@@ -686,6 +686,8 @@ class TrackedEmail(Base):
     bounced_at = Column(DateTime, nullable=True)
     bounce_reason = Column(String, default="")
     last_seen_at = Column(DateTime, nullable=True, index=True)
+    clicked_claim_at = Column(DateTime, nullable=True, index=True)
+    claim_count = Column(Integer, default=0)
 
 
 class PotentialStaff(Base):
@@ -2062,6 +2064,25 @@ async def track_click(token: str, db: Session = Depends(get_db)):
         if te.invite_token:
             return RedirectResponse(f"{site_url}/preview/{token}", status_code=302)
     return RedirectResponse(f"{site_url}/", status_code=302)
+
+
+@app.get("/preview/{token}/claim")
+async def preview_claim_click(token: str, request: Request, db: Session = Depends(get_db)):
+    """Tracks when a coach clicks any Claim Account / Claim Dashboard
+    link in the live preview. Stamps clicked_claim_at + bumps
+    claim_count, then 302s to /signup?invite=<invite_token>. Failing
+    open is fine — we never want to block a legitimate signup just
+    because tracking glitched."""
+    te = db.query(TrackedEmail).filter(TrackedEmail.token == token).first()
+    if te:
+        te.clicked_claim_at = datetime.utcnow()
+        te.claim_count = (te.claim_count or 0) + 1
+        db.commit()
+        invite = te.invite_token or ""
+    else:
+        invite = ""
+    target = f"/signup?invite={invite}" if invite else "/signup"
+    return RedirectResponse(target, status_code=302)
 
 
 @app.post("/preview/{token}/ping")
@@ -3861,6 +3882,10 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         TrackedEmail.potential_id != None,
         TrackedEmail.last_seen_at != None,
     ).scalar() or 0
+    visitors_claimed_count = db.query(func.count(func.distinct(func.lower(TrackedEmail.recipient_email)))).filter(
+        TrackedEmail.potential_id != None,
+        TrackedEmail.clicked_claim_at != None,
+    ).scalar() or 0
 
     return templates.TemplateResponse("marketing_dashboard.html", {
         "request": request,
@@ -3906,6 +3931,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         "visitors_today": visitors_today,
         "visitors_this_month": visitors_this_month,
         "visitors_all_time": visitors_all_time,
+        "visitors_claimed_count": visitors_claimed_count,
     })
 
 
@@ -3962,22 +3988,33 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
     if err:
         return err
     f = (request.query_params.get("filter") or "active").lower()
-    if f not in ("active", "today", "month", "all"):
+    if f not in ("active", "today", "month", "all", "claimed"):
         f = "active"
     _now = datetime.utcnow()
     _today_utc = datetime(_now.year, _now.month, _now.day)
     _month_utc = datetime(_now.year, _now.month, 1)
-    q = db.query(TrackedEmail).filter(
-        TrackedEmail.potential_id != None, TrackedEmail.last_seen_at != None
-    )
-    if f == "active":
-        q = q.filter(TrackedEmail.last_seen_at >= _now - timedelta(seconds=60))
-    elif f == "today":
-        q = q.filter(TrackedEmail.last_seen_at >= _today_utc)
-    elif f == "month":
-        q = q.filter(TrackedEmail.last_seen_at >= _month_utc)
-    # else: f == "all" — no time filter beyond last_seen_at being non-null
-    rows = q.order_by(TrackedEmail.last_seen_at.desc()).all()
+    if f == "claimed":
+        # Filter by claim-click rather than dashboard-view, since
+        # this tab specifically surfaces deepest-funnel engagement.
+        q = db.query(TrackedEmail).filter(
+            TrackedEmail.potential_id != None,
+            TrackedEmail.clicked_claim_at != None,
+        )
+    else:
+        q = db.query(TrackedEmail).filter(
+            TrackedEmail.potential_id != None, TrackedEmail.last_seen_at != None
+        )
+        if f == "active":
+            q = q.filter(TrackedEmail.last_seen_at >= _now - timedelta(seconds=60))
+        elif f == "today":
+            q = q.filter(TrackedEmail.last_seen_at >= _today_utc)
+        elif f == "month":
+            q = q.filter(TrackedEmail.last_seen_at >= _month_utc)
+        # else: f == "all" — no extra filter
+    if f == "claimed":
+        rows = q.order_by(TrackedEmail.clicked_claim_at.desc()).all()
+    else:
+        rows = q.order_by(TrackedEmail.last_seen_at.desc()).all()
     return templates.TemplateResponse("live_visitors.html", {
         "request": request,
         "user": user,
