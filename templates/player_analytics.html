@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}My Performance — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+.pa-page { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.pa-h1 { font-size: 28px; font-weight: 800; color: #0a1628; margin: 0 0 4px 0; }
+.pa-sub { color: #6b7280; font-size: 14px; margin: 0 0 20px 0; }
+.pa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.pa-card { background: #fff; border: 2px solid #0a1628; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.pa-card .head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pa-card .label { font-size: 12px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+.pa-card .current { font-size: 28px; font-weight: 800; color: #0a1628; font-variant-numeric: tabular-nums; line-height: 1; }
+.pa-card .current .unit { font-size: 13px; color: #6b7280; font-weight: 700; margin-left: 4px; }
+.pa-card .delta { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pa-card .delta.up { background: #d1fae5; color: #065f46; }
+.pa-card .delta.down { background: #fee2e2; color: #991b1b; }
+.pa-card .delta.flat { background: #f3f4f6; color: #6b7280; }
+.pa-chart-wrap { position: relative; height: 140px; }
+.pa-card canvas { width: 100% !important; height: 100% !important; }
+.pa-card .footrow { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #374151; padding-top: 8px; border-top: 1px solid #f3f4f6; }
+.pa-card .footrow .k { color: #6b7280; font-weight: 600; }
+.pa-card .footrow .v { color: #0a1628; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pa-card .empty { color: #9ca3af; font-size: 13px; padding: 12px 0; text-align: center; font-style: italic; }
+.pa-card.no-data { background: #f9fafb; border-color: #e5e7eb; }
+.pa-card.no-data .label { color: #9ca3af; }
+.pa-card.no-data .current { color: #9ca3af; font-size: 18px; }
+.pa-banner { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #374151; }
+.pa-banner strong { color: #0a1628; }
+.pa-pos-badge { display: inline-block; background: #0a1628; color: #f0b429; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em; margin-left: 6px; }
+</style>
+
+<div class="pa-page">
+  <h1 class="pa-h1">My Performance</h1>
+  <p class="pa-sub">
+    Tracking your combine measurables{% if position %} as a <span class="pa-pos-badge">{{ position }}</span>{% endif %}
+  </p>
+
+  {% if not position %}
+  <div class="pa-banner">
+    <strong>Add your position</strong> on your <a href="/profile/edit" style="color:#0a1628; font-weight:700;">profile</a> to compare against other players in the same role.
+  </div>
+  {% endif %}
+
+  <div class="pa-grid">
+    {% for s in stats %}
+    {% set has_history = s.history|length > 0 %}
+    {% set has_trend = s.history|length >= 2 %}
+    <div class="pa-card{% if not has_history %} no-data{% endif %}">
+      <div class="head">
+        <p class="label">{{ s.label }}</p>
+        {% if s.delta is not none %}
+          {% if s.improved is none %}
+            <span class="delta flat">no change</span>
+          {% elif s.improved %}
+            <span class="delta up">▲ {% if s.higher_is_better %}+{% endif %}{{ '%.2f'|format(s.delta) }} {{ s.unit }}</span>
+          {% else %}
+            <span class="delta down">▼ {{ '%.2f'|format(s.delta) }} {{ s.unit }}</span>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      {% if has_history %}
+      <div class="current">
+        {{ '%.2f'|format(s.current) }}<span class="unit">{{ s.unit }}</span>
+      </div>
+      {% else %}
+      <div class="current">— <span class="unit">no entry yet</span></div>
+      {% endif %}
+
+      {% if has_trend %}
+      <div class="pa-chart-wrap">
+        <canvas id="pa-chart-{{ s.field }}"
+          data-history='{{ s.history|tojson }}'
+          data-median='{{ s.cohort_median if s.cohort_median is not none else "" }}'
+          data-higher-better="{{ '1' if s.higher_is_better else '0' }}"
+          data-unit="{{ s.unit }}"></canvas>
+      </div>
+      {% elif has_history %}
+      <p class="empty">Update your {{ s.label|lower }} again to start your trend line</p>
+      {% else %}
+      <p class="empty">Add your {{ s.label|lower }} on your profile to start tracking</p>
+      {% endif %}
+
+      <div class="footrow">
+        <div>
+          <div class="k">{{ position or 'Position' }} median</div>
+          <div class="v">
+            {% if s.cohort_median is not none %}
+              {{ '%.2f'|format(s.cohort_median) }} {{ s.unit }}
+              <span style="color:#9ca3af; font-weight:600;">(n={{ s.cohort_count }})</span>
+            {% else %}
+              <span style="color:#9ca3af;">not enough peers</span>
+            {% endif %}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="k">Your percentile</div>
+          <div class="v">
+            {% if s.percentile is not none %}
+              top {{ 100 - s.percentile }}%
+            {% else %}
+              <span style="color:#9ca3af;">—</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === 'undefined') return;
+  document.querySelectorAll('canvas[id^="pa-chart-"]').forEach(function (canvas) {
+    var history = JSON.parse(canvas.dataset.history || '[]');
+    var medianRaw = canvas.dataset.median;
+    var median = (medianRaw === '' || medianRaw === null) ? null : parseFloat(medianRaw);
+    var higherIsBetter = canvas.dataset.higherBetter === '1';
+    var unit = canvas.dataset.unit || '';
+    var labels = history.map(function (h) { return h.date_label; });
+    var values = history.map(function (h) { return h.value_num; });
+    var medianLine = median !== null ? labels.map(function () { return median; }) : null;
+
+    var datasets = [{
+      label: 'You',
+      data: values,
+      borderColor: '#0a1628',
+      backgroundColor: 'rgba(10,22,40,0.08)',
+      borderWidth: 2.5,
+      tension: 0.25,
+      pointRadius: 4,
+      pointBackgroundColor: '#f0b429',
+      pointBorderColor: '#0a1628',
+      pointBorderWidth: 1.5,
+      fill: true,
+    }];
+    if (medianLine) {
+      datasets.push({
+        label: 'Position median',
+        data: medianLine,
+        borderColor: '#9ca3af',
+        borderDash: [5, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      });
+    }
+
+    new Chart(canvas, {
+      type: 'line',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' ' + unit;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 10 }, color: '#6b7280' }, grid: { display: false } },
+          y: {
+            reverse: !higherIsBetter,
+            ticks: { font: { size: 10 }, color: '#6b7280', maxTicksLimit: 4 },
+            grid: { color: '#f3f4f6' }
+          }
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

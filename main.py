@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, 
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, distinct, func, or_
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float, distinct, func, or_
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from starlette.middleware.sessions import SessionMiddleware
 import re
@@ -731,6 +731,47 @@ class MarketingActivity(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+class StatHistory(Base):
+    __tablename__ = "stat_history"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    stat_field = Column(String, nullable=False, index=True)
+    value_text = Column(String, default="")
+    value_num = Column(Float, nullable=True)
+    recorded_at = Column(DateTime, default=datetime.utcnow, index=True)
+    source = Column(String, default="profile_edit")
+
+class MetaSetting(Base):
+    __tablename__ = "meta_settings"
+    key = Column(String, primary_key=True)
+    value = Column(String, default="")
+
+# Combine measurables tracked for player progression analytics.
+# broad_jump uses height format (e.g. 10'2"); the rest are plain floats.
+TRACKED_STATS = (
+    "forty_yard", "bench_press", "vertical", "squat", "clean",
+    "broad_jump", "pro_agility", "wingspan",
+)
+
+def _stat_to_num(field: str, raw):
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    if field == "broad_jump" and "'" in s:
+        parts = s.replace('"', '').split("'")
+        try:
+            ft = int(parts[0]) if parts[0] else 0
+            inches = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+            return float(ft * 12 + inches)
+        except (TypeError, ValueError):
+            return None
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
 Base.metadata.create_all(bind=engine)
 
 # Idempotent column adds for SQLite (Base.metadata.create_all doesn't add columns to existing tables)
@@ -743,6 +784,46 @@ def _add_column_if_missing(table: str, column: str, ddl: str):
 _add_column_if_missing("tracked_emails", "bounced_at", "DATETIME")
 _add_column_if_missing("tracked_emails", "bounce_reason", "TEXT DEFAULT ''")
 _add_column_if_missing("tracked_emails", "last_seen_at", "DATETIME")
+
+# One-time backfill of stat_history from current player_profiles values.
+# Provides every player with a baseline data point so progression starts
+# tracking from their first post-deploy stat update, not their first ever.
+# Uses meta_settings PK as a write-once lock so concurrent uvicorn workers
+# can't both run the backfill (which would create duplicate rows).
+def _backfill_stat_history():
+    from sqlalchemy import text as _t
+    from sqlalchemy.exc import IntegrityError
+    try:
+        with engine.begin() as conn:
+            try:
+                conn.execute(
+                    _t("INSERT INTO meta_settings (key, value) VALUES ('stat_history_backfill_v1', :ts)"),
+                    {"ts": datetime.utcnow().isoformat()},
+                )
+            except IntegrityError:
+                return
+            cols = ", ".join(TRACKED_STATS)
+            rows = conn.execute(
+                _t(f"SELECT user_id, {cols} FROM player_profiles WHERE user_id IS NOT NULL")
+            ).fetchall()
+            now = datetime.utcnow()
+            for r in rows:
+                uid = r[0]
+                for idx, field in enumerate(TRACKED_STATS, start=1):
+                    raw = r[idx]
+                    if raw is None or not str(raw).strip():
+                        continue
+                    conn.execute(
+                        _t(
+                            "INSERT INTO stat_history (player_id, stat_field, value_text, value_num, recorded_at, source) "
+                            "VALUES (:pid, :f, :vt, :vn, :ts, 'backfill')"
+                        ),
+                        {"pid": uid, "f": field, "vt": str(raw), "vn": _stat_to_num(field, raw), "ts": now},
+                    )
+    except IntegrityError:
+        # Lost the marker race after acquiring connection — another worker did the work.
+        pass
+_backfill_stat_history()
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -2526,6 +2607,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
             p = PlayerProfile(user_id=user_id)
             db.add(p)
             db.flush()
+        _stats_before = {f: (getattr(p, f, "") or "").strip() for f in TRACKED_STATS}
         p.first_name = form.get("first_name", "")[:100]
         p.last_name = form.get("last_name", "")[:100]
         p.position = form.get("position", "")[:100]
@@ -2593,6 +2675,18 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
             _allowed_factors = {"location", "winning_tradition", "education", "player_development", "opportunity_to_play", "cost", "school_size", "job_placement", "facilities"}
             _selected = [v for v in form.getlist("biggest_factors") if v in _allowed_factors]
             p.biggest_factors = ",".join(_selected)
+        # Capture stat changes for /player/analytics progression
+        for _f in TRACKED_STATS:
+            _av = (getattr(p, _f, "") or "").strip()
+            if _av and _av != _stats_before.get(_f, ""):
+                db.add(StatHistory(
+                    player_id=user_id,
+                    stat_field=_f,
+                    value_text=_av,
+                    value_num=_stat_to_num(_f, _av),
+                    recorded_at=datetime.utcnow(),
+                    source="profile_edit",
+                ))
         # Sync profile changes to questionnaire if it exists
         q = db.query(PlayerQuestionnaire).filter(PlayerQuestionnaire.user_id == user_id).first()
         if q:
@@ -8598,6 +8692,110 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
         "all_states": all_states,
         "all_positions": all_positions,
         "format_height": _analytics_format_height,
+    })
+
+# Stat metadata for the player-progression view: (field, label, unit, higher_is_better).
+PLAYER_ANALYTICS_STATS = (
+    ("forty_yard",  "40-Yard Dash", "sec",    False),
+    ("pro_agility", "Pro Agility",  "sec",    False),
+    ("bench_press", "Bench Press",  "reps",   True),
+    ("vertical",    "Vertical",     "in",     True),
+    ("squat",       "Squat",        "lbs",    True),
+    ("clean",       "Power Clean",  "lbs",    True),
+    ("broad_jump",  "Broad Jump",   "in",     True),
+    ("wingspan",    "Wingspan",     "in",     True),
+)
+
+@app.get("/player/analytics", response_class=HTMLResponse)
+async def player_analytics_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.role != "player":
+        return RedirectResponse("/dashboard", status_code=302)
+    if not tier_gte(user.subscription_tier or "free", "essentials"):
+        return RedirectResponse("/upgrade", status_code=302)
+
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+    position = ((profile.position if profile else "") or "").strip()
+
+    cohort_profiles = []
+    if position:
+        cohort_profiles = db.query(PlayerProfile).filter(
+            PlayerProfile.position == position,
+            PlayerProfile.user_id != user_id,
+        ).all()
+
+    history_rows = (
+        db.query(StatHistory)
+        .filter(StatHistory.player_id == user_id)
+        .order_by(StatHistory.recorded_at.asc())
+        .all()
+    )
+    history_by_field = {}
+    for h in history_rows:
+        if h.value_num is None:
+            continue
+        history_by_field.setdefault(h.stat_field, []).append({
+            "value_num": h.value_num,
+            "value_text": h.value_text or "",
+            "recorded_at": h.recorded_at.isoformat() if h.recorded_at else "",
+            "date_label": h.recorded_at.strftime("%b %d") if h.recorded_at else "",
+        })
+
+    stats = []
+    for field, label, unit, higher_is_better in PLAYER_ANALYTICS_STATS:
+        my_history = history_by_field.get(field, [])
+        my_current = my_history[-1]["value_num"] if my_history else None
+        my_previous = my_history[-2]["value_num"] if len(my_history) >= 2 else None
+
+        cohort_vals = []
+        for cp in cohort_profiles:
+            v = _stat_to_num(field, getattr(cp, field, ""))
+            if v is not None:
+                cohort_vals.append(v)
+        cohort_median = _analytics_median(cohort_vals)
+        cohort_count = len(cohort_vals)
+
+        percentile = None
+        if my_current is not None and cohort_vals:
+            if higher_is_better:
+                below = sum(1 for v in cohort_vals if v < my_current)
+            else:
+                below = sum(1 for v in cohort_vals if v > my_current)
+            percentile = round(100 * below / len(cohort_vals))
+
+        delta = None
+        improved = None
+        if my_current is not None and my_previous is not None:
+            delta = my_current - my_previous
+            if abs(delta) < 1e-9:
+                improved = None
+            else:
+                improved = (delta > 0) if higher_is_better else (delta < 0)
+
+        stats.append({
+            "field": field,
+            "label": label,
+            "unit": unit,
+            "higher_is_better": higher_is_better,
+            "current": my_current,
+            "previous": my_previous,
+            "delta": delta,
+            "improved": improved,
+            "history": my_history,
+            "cohort_median": cohort_median,
+            "cohort_count": cohort_count,
+            "percentile": percentile,
+        })
+
+    return templates.TemplateResponse("player_analytics.html", {
+        "request": request,
+        "user": user,
+        "profile": profile,
+        "position": position,
+        "stats": stats,
     })
 
 @app.get("/analytics/export.csv")
