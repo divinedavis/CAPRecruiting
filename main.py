@@ -4445,7 +4445,8 @@ async def admin_staff_send_one(pid: int, request: Request, db: Session = Depends
     if not staff or not pot:
         raise HTTPException(status_code=404)
     campaign = db.query(EmailCampaign).filter(
-        EmailCampaign.body_html != "", EmailCampaign.subject != ""
+        EmailCampaign.body_html != "", EmailCampaign.subject != "",
+        EmailCampaign.status != "archived",
     ).order_by(EmailCampaign.created_at.desc()).first()
     if not campaign:
         return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
@@ -4629,7 +4630,8 @@ async def admin_staff_send_all(
     if not pot:
         raise HTTPException(status_code=404)
     campaign = db.query(EmailCampaign).filter(
-        EmailCampaign.body_html != "", EmailCampaign.subject != ""
+        EmailCampaign.body_html != "", EmailCampaign.subject != "",
+        EmailCampaign.status != "archived",
     ).order_by(EmailCampaign.created_at.desc()).first()
     if not campaign:
         return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
