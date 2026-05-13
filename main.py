@@ -2196,6 +2196,17 @@ async def preview_dashboard(token: str, request: Request, db: Session = Depends(
     })
 
 
+@app.get("/preview-demo", response_class=HTMLResponse)
+async def preview_demo(request: Request, school: str = "Your Team", name: str = "Coach"):
+    last_name = name.split(" ")[-1] if name else ""
+    return templates.TemplateResponse("preview_dashboard_demo.html", {
+        "request": request,
+        "school": school,
+        "coach_name": name,
+        "coach_last": last_name,
+    })
+
+
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_get(request: Request):
     return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": False, "error": None})
