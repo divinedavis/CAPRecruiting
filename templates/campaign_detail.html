@@ -51,12 +51,14 @@ body { background: #f7f7f8; }
   <p class="sub">
     Status: <strong>{{ campaign.status | upper }}</strong>
     {% if campaign.sent_at %} · Sent {{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+    {% if campaign.is_active_template %} · <strong style="color:#065f46;">★ ACTIVE TEMPLATE</strong>{% endif %}
   </p>
 
   {% set saved = request.query_params.get('saved') %}
   {% set sent_msg = request.query_params.get('sent') %}
   {% set err_msg = request.query_params.get('error') %}
   {% if saved %}<div class="cd-alert success">Template saved.</div>{% endif %}
+  {% if request.query_params.get('activated') %}<div class="cd-alert success">This is now the active outreach template — all staff emails use it.</div>{% endif %}
   {% if sent_msg %}<div class="cd-alert success">Campaign sent! {{ sent_msg }} emails delivered.</div>{% endif %}
   {% set test_sent = request.query_params.get('test_sent') %}
   {% if test_sent %}<div class="cd-alert success">Test sent to {{ test_sent }} admin{{ 's' if test_sent != '1' else '' }}. Check your inbox.</div>{% endif %}
@@ -97,6 +99,7 @@ body { background: #f7f7f8; }
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="submit" class="cd-btn">Save Template</button>
         <button type="submit" class="cd-btn secondary" formaction="/admin/marketing/campaigns/{{ campaign.id }}/test" onclick="return confirm('Send a test of this campaign to all admins?')">Send Test to Admins</button>
+        {% if not campaign.is_active_template %}<button type="submit" class="cd-btn secondary" formaction="/admin/marketing/campaigns/{{ campaign.id }}/set-active" onclick="return confirm('Make this the active outreach template? All staff emails will use this campaign.')">Set as Active Template</button>{% endif %}
         <button type="button" class="cd-btn secondary" onclick="showPreview('desktop')">Preview Desktop</button>
         <button type="button" class="cd-btn secondary" onclick="showPreview('mobile')">Preview Mobile</button>
       </div>

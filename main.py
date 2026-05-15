@@ -654,6 +654,7 @@ class EmailCampaign(Base):
     sent_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     sent_at = Column(DateTime, nullable=True)
+    is_active_template = Column(Boolean, default=False)
 
 
 class CampaignTestSend(Base):
@@ -784,6 +785,7 @@ def _add_column_if_missing(table: str, column: str, ddl: str):
 _add_column_if_missing("tracked_emails", "bounced_at", "DATETIME")
 _add_column_if_missing("tracked_emails", "bounce_reason", "TEXT DEFAULT ''")
 _add_column_if_missing("tracked_emails", "last_seen_at", "DATETIME")
+_add_column_if_missing("email_campaigns", "is_active_template", "BOOLEAN DEFAULT 0")
 
 # One-time backfill of stat_history from current player_profiles values.
 # Provides every player with a baseline data point so progression starts
@@ -4656,6 +4658,8 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
         school=potential.school, invite_token=invite,
     )
     db.add(te)
+    campaign.sent_count = (campaign.sent_count or 0) + 1
+    campaign.sent_at = datetime.utcnow()
     db.commit()
     return True
 
@@ -4672,9 +4676,9 @@ async def admin_staff_send_one(pid: int, request: Request, db: Session = Depends
     if not staff or not pot:
         raise HTTPException(status_code=404)
     campaign = db.query(EmailCampaign).filter(
+        EmailCampaign.is_active_template == True,
         EmailCampaign.body_html != "", EmailCampaign.subject != "",
-        EmailCampaign.status != "archived",
-    ).order_by(EmailCampaign.created_at.desc()).first()
+    ).first()
     if not campaign:
         return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
     ok = _send_staff_email(db, user, campaign, staff, pot)
@@ -4857,9 +4861,9 @@ async def admin_staff_send_all(
     if not pot:
         raise HTTPException(status_code=404)
     campaign = db.query(EmailCampaign).filter(
+        EmailCampaign.is_active_template == True,
         EmailCampaign.body_html != "", EmailCampaign.subject != "",
-        EmailCampaign.status != "archived",
-    ).order_by(EmailCampaign.created_at.desc()).first()
+    ).first()
     if not campaign:
         return RedirectResponse(f"/admin/marketing/potentials/{pid}/staff?error=no_template", status_code=302)
     # Snapshot what the worker needs and queue the actual send.
@@ -5064,6 +5068,29 @@ async def admin_campaign_create(request: Request, db: Session = Depends(get_db))
     db.commit()
     db.refresh(campaign)
     return RedirectResponse(f"/admin/marketing/campaigns/{campaign.id}", status_code=302)
+
+
+@app.post("/admin/marketing/campaigns/{cid}/set-active")
+async def admin_campaign_set_active(cid: int, request: Request, db: Session = Depends(get_db)):
+    """Mark one campaign as the active outreach template. The /staff send-one
+    and send-all routes use whichever campaign carries this flag — exactly one
+    at a time, chosen deliberately rather than by created_at recency."""
+    user, err = _marketing_require_admin(request, db)
+    if err:
+        return err
+    campaign = db.query(EmailCampaign).filter(EmailCampaign.id == cid).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if not campaign.subject or not campaign.body_html:
+        return RedirectResponse(f"/admin/marketing/campaigns/{cid}?error=empty", status_code=302)
+    db.query(EmailCampaign).filter(EmailCampaign.is_active_template == True).update(
+        {EmailCampaign.is_active_template: False}
+    )
+    campaign.is_active_template = True
+    db.commit()
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, user.id, "set_active_campaign", cid, f"name={campaign.name}", _ip)
+    return RedirectResponse(f"/admin/marketing/campaigns/{cid}?activated=1", status_code=302)
 
 
 @app.get("/admin/marketing/campaigns/{cid}", response_class=HTMLResponse)
