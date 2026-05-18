@@ -44,6 +44,10 @@ def _smtp_login_if_needed(server):
 SITE_URL      = os.environ.get("SITE_URL", "https://bearcatrecruiting.com")
 GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+APPLE_TEAM_ID        = os.environ.get("APPLE_TEAM_ID", "")
+APPLE_KEY_ID         = os.environ.get("APPLE_KEY_ID", "")
+APPLE_SERVICES_ID    = os.environ.get("APPLE_SERVICES_ID", "")
+APPLE_KEY_PATH       = os.environ.get("APPLE_KEY_PATH", "apple_signin_key.p8")
 SPACES_BASE_URL = SPACES_CDN_URL if SPACES_CDN_URL else f"https://{SPACES_BUCKET}.{SPACES_REGION}.digitaloceanspaces.com"
 
 s3 = boto3.client(
@@ -114,7 +118,9 @@ app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=Tru
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as _StarletteResponse
 
-CSRF_EXEMPT_PATHS = {"/stripe/webhook"}
+# /auth/apple/callback is Apple's cross-site form_post — it has its own
+# signed-state + nonce-cookie CSRF guard, so it bypasses the origin check.
+CSRF_EXEMPT_PATHS = {"/stripe/webhook", "/auth/apple/callback"}
 
 class _CSRFMiddleware(BaseHTTPMiddleware):
     _SAFE = {"GET", "HEAD", "OPTIONS", "TRACE"}
@@ -2707,6 +2713,229 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
     request.session.clear()
     request.session["pending_oauth_uuid"] = pending.uuid
     return RedirectResponse("/signup/finish-oauth", status_code=302)
+
+# ── Sign in with Apple ────────────────────────────────────────────────────────
+import json as _json
+from jose import jwt as _jose_jwt
+from itsdangerous import URLSafeTimedSerializer as _URLSafeTimedSerializer, BadData as _BadData
+
+_APPLE_AUTHORIZE_URL = "https://appleid.apple.com/auth/authorize"
+_APPLE_TOKEN_URL     = "https://appleid.apple.com/auth/token"
+_APPLE_KEYS_URL      = "https://appleid.apple.com/auth/keys"
+_APPLE_ISSUER        = "https://appleid.apple.com"
+
+# Apple's callback is a cross-site POST, so the SameSite=Lax session cookie is
+# NOT sent — we can't stash `state` in the session like the Google flow does.
+# Instead `state` is a signed+timed token, cross-checked against a nonce in a
+# dedicated SameSite=None cookie for CSRF safety.
+_apple_state_serializer = _URLSafeTimedSerializer(_session_secret, salt="apple-oauth-state")
+
+
+def _apple_client_secret() -> str:
+    """Apple has no static client secret — build a short-lived ES256 JWT
+    signed with the Sign in with Apple .p8 private key."""
+    with open(APPLE_KEY_PATH) as f:
+        private_key = f.read()
+    now = datetime.utcnow()
+    payload = {
+        "iss": APPLE_TEAM_ID,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=30)).timestamp()),
+        "aud": _APPLE_ISSUER,
+        "sub": APPLE_SERVICES_ID,
+    }
+    return _jose_jwt.encode(payload, private_key, algorithm="ES256",
+                            headers={"kid": APPLE_KEY_ID})
+
+
+async def _verify_apple_id_token(id_token: str) -> dict:
+    """Verify Apple's identity-token JWT against Apple's published public keys."""
+    if not id_token:
+        raise ValueError("missing id_token")
+    async with httpx.AsyncClient(timeout=10) as client:
+        jwks = (await client.get(_APPLE_KEYS_URL)).json()
+    header = _jose_jwt.get_unverified_header(id_token)
+    key = next((k for k in jwks.get("keys", []) if k["kid"] == header.get("kid")), None)
+    if key is None:
+        raise ValueError("Apple signing key not found")
+    return _jose_jwt.decode(id_token, key, algorithms=["RS256"],
+                            audience=APPLE_SERVICES_ID, issuer=_APPLE_ISSUER)
+
+
+@app.get("/auth/apple")
+async def apple_auth_redirect(request: Request, invite: str = "", db: Session = Depends(get_db)):
+    """Redirect user to Apple's Sign in with Apple consent screen."""
+    if not APPLE_SERVICES_ID:
+        raise HTTPException(status_code=500, detail="Sign in with Apple not configured")
+    nonce = _secrets.token_urlsafe(24)
+    # Preserve a valid coach invite token through the OAuth round trip.
+    valid_invite = ""
+    if invite:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite, CoachInvite.used == False).first()
+        if inv and inv.expires_at > datetime.utcnow():
+            valid_invite = invite
+    state = _apple_state_serializer.dumps({"n": nonce, "invite": valid_invite})
+    params = _urlparse.urlencode({
+        "client_id": APPLE_SERVICES_ID,
+        "redirect_uri": f"{SITE_URL}/auth/apple/callback",
+        "response_type": "code",
+        "response_mode": "form_post",
+        "scope": "name email",
+        "state": state,
+    })
+    resp = RedirectResponse(f"{_APPLE_AUTHORIZE_URL}?{params}")
+    # SameSite=None so this cookie survives Apple's cross-site POST callback.
+    resp.set_cookie("apple_nonce", nonce, max_age=600, httponly=True,
+                    secure=True, samesite="none")
+    return resp
+
+
+@app.post("/auth/apple/callback")
+async def apple_auth_callback(request: Request, db: Session = Depends(get_db)):
+    """Handle Apple's form_post redirect back with the authorization code."""
+    form = await request.form()
+    code = (form.get("code") or "").strip()
+    state = form.get("state") or ""
+    err = form.get("error") or ""
+    user_payload = form.get("user") or ""
+    if err or not code:
+        return RedirectResponse("/login?error=apple_denied", status_code=302)
+
+    # Validate state: signature + freshness + nonce-cookie match (CSRF guard).
+    try:
+        state_data = _apple_state_serializer.loads(state, max_age=600)
+    except _BadData:
+        return RedirectResponse("/login?error=apple_state", status_code=302)
+    cookie_nonce = request.cookies.get("apple_nonce", "")
+    if not cookie_nonce or cookie_nonce != state_data.get("n"):
+        return RedirectResponse("/login?error=apple_state", status_code=302)
+
+    # Exchange the code for tokens and verify the returned identity token.
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_resp = await client.post(_APPLE_TOKEN_URL, data={
+                "client_id": APPLE_SERVICES_ID,
+                "client_secret": _apple_client_secret(),
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": f"{SITE_URL}/auth/apple/callback",
+            })
+        if token_resp.status_code != 200:
+            _logger.error(f"Apple token exchange failed: {token_resp.status_code} {token_resp.text}")
+            return RedirectResponse("/login?error=apple_token", status_code=302)
+        claims = await _verify_apple_id_token(token_resp.json().get("id_token", ""))
+    except Exception as exc:
+        _logger.error(f"Apple OAuth exception: {exc}")
+        return RedirectResponse("/login?error=apple_exception", status_code=302)
+
+    apple_email = (claims.get("email") or "").strip().lower()
+    if not apple_email:
+        return RedirectResponse("/login?error=apple_failed", status_code=302)
+
+    # Apple sends the user's name only on the FIRST authorization, in the body.
+    first_name = last_name = ""
+    if user_payload:
+        try:
+            name = _json.loads(user_payload).get("name", {})
+            first_name = (name.get("firstName") or "").strip()
+            last_name = (name.get("lastName") or "").strip()
+        except Exception:
+            pass
+
+    # Existing user — log straight in.
+    user = db.query(User).filter(User.email == apple_email).first()
+    if user:
+        request.session.clear()
+        request.session["user_id"] = user.id
+        request.session["is_admin"] = bool(user.is_admin)
+        request.session["role"] = user.role
+        request.session["subscription_tier"] = user.subscription_tier or "free"
+        request.session["session_version"] = user.session_version or 0
+        resp = RedirectResponse("/dashboard", status_code=302)
+        resp.delete_cookie("apple_nonce")
+        return resp
+
+    # New user — check for a coach invite, then build a unique username.
+    invite_token = state_data.get("invite") or ""
+    inv = None
+    is_coach = False
+    if invite_token:
+        inv = db.query(CoachInvite).filter(CoachInvite.token == invite_token, CoachInvite.used == False).first()
+        is_coach = bool(inv and inv.expires_at > datetime.utcnow())
+
+    base_username = re.sub(r'[^a-zA-Z0-9_]', '', apple_email.split("@")[0])[:20] or "user"
+    username = base_username
+    suffix = 1
+    while db.query(User).filter(User.username == username).first():
+        username = f"{base_username}{suffix}"
+        suffix += 1
+
+    # ── Coach path (invite-required, no payment) ──────────────────────────
+    if is_coach:
+        new_user = User(
+            username=username,
+            email=apple_email,
+            password_hash=hash_password(_secrets.token_urlsafe(32)),
+            role="coach",
+            subscription_tier="free",
+            public_id=uuid.uuid4().hex[:12],
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        try:
+            db.add(CoachProfile(user_id=new_user.id, first_name=first_name, last_name=last_name))
+            inv.used = True
+            inv.used_by = new_user.id
+            te = db.query(TrackedEmail).filter(TrackedEmail.invite_token == invite_token).first()
+            if te:
+                te.signed_up = True
+            db.commit()
+        except Exception:
+            db.rollback()
+            try:
+                db.add(CoachProfile(user_id=new_user.id))
+                db.commit()
+            except Exception:
+                db.rollback()
+                return RedirectResponse("/login?error=apple_failed", status_code=302)
+        request.session.clear()
+        request.session["user_id"] = new_user.id
+        request.session["is_admin"] = False
+        request.session["role"] = "coach"
+        request.session["subscription_tier"] = "free"
+        request.session["session_version"] = 0
+        resp = RedirectResponse("/profile/edit", status_code=302)
+        resp.delete_cookie("apple_nonce")
+        return resp
+
+    # ── Player path: no User row yet — stash pending, send to finish page ──
+    _cleanup_expired_pending_signups(db)
+    pending = db.query(PendingSignup).filter(
+        PendingSignup.email == apple_email,
+        PendingSignup.expires_at > datetime.utcnow(),
+    ).first()
+    if not pending:
+        pending = PendingSignup(
+            uuid=uuid.uuid4().hex,
+            username=username,
+            email=apple_email,
+            password_hash="",       # OAuth users have no local password
+            oauth_google=True,      # generic "OAuth signup, no password" flag (shared w/ Apple)
+            tier="essentials",
+            billing="monthly",
+            expires_at=datetime.utcnow() + timedelta(hours=24),
+        )
+        db.add(pending)
+        db.commit()
+        db.refresh(pending)
+
+    request.session.clear()
+    request.session["pending_oauth_uuid"] = pending.uuid
+    resp = RedirectResponse("/signup/finish-oauth", status_code=302)
+    resp.delete_cookie("apple_nonce")
+    return resp
+
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, school: Optional[str] = None, year: Optional[str] = None, position: Optional[str] = None, state: Optional[str] = None, city: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db)):
