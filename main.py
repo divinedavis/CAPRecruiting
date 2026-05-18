@@ -2758,8 +2758,12 @@ async def _verify_apple_id_token(id_token: str) -> dict:
     key = next((k for k in jwks.get("keys", []) if k["kid"] == header.get("kid")), None)
     if key is None:
         raise ValueError("Apple signing key not found")
+    # verify_at_hash is disabled: Apple's id_token carries an at_hash claim, but
+    # we receive the token directly from Apple's token endpoint over TLS and
+    # don't pass the access_token, so the binding check is unnecessary.
     return _jose_jwt.decode(id_token, key, algorithms=["RS256"],
-                            audience=APPLE_SERVICES_ID, issuer=_APPLE_ISSUER)
+                            audience=APPLE_SERVICES_ID, issuer=_APPLE_ISSUER,
+                            options={"verify_at_hash": False})
 
 
 @app.get("/auth/apple")
