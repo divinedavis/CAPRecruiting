@@ -282,16 +282,16 @@
             {% endif %}
 
             <!-- Scholarship Offers -->
-            {% if can_view_offers and target.role == "player" and profile and (profile.offer1 or profile.offer2 or profile.offer3 or profile.offer4 or profile.offer5) %}
+            {% set _all_offers = [] %}
+            {% if profile %}{% for _i in range(1, 26) %}{% set _o = profile['offer' ~ _i] if profile['offer' ~ _i] is defined else '' %}{% if _o %}{% set _ = _all_offers.append(_o) %}{% endif %}{% endfor %}{% endif %}
+            {% if can_view_offers and target.role == "player" and _all_offers %}
             <div class="profile-section">
                 <h2>Scholarship Offers</h2>
                 <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                    {% for offer in [profile.offer1, profile.offer2, profile.offer3, profile.offer4, profile.offer5] %}
-                    {% if offer %}
+                    {% for offer in _all_offers %}
                     <span style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--navy); background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:20px; padding:5px 14px;">
                         🎓 {{ offer }}
                     </span>
-                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -324,18 +324,17 @@
             {% endif %}
 
             <!-- News / Media Articles -->
-            {% if target.role == "player" and profile and (profile.news_link1 or profile.news_link2 or profile.news_link3 or profile.news_link4 or profile.news_link5) %}
+            {% set _all_news = [] %}
+            {% if profile %}{% for _i in range(1, 26) %}{% set _l = profile['news_link' ~ _i] if profile['news_link' ~ _i] is defined else '' %}{% if _l %}{% set _ = _all_news.append(_l) %}{% endif %}{% endfor %}{% endif %}
+            {% if target.role == "player" and _all_news %}
             <div class="profile-section">
                 <h2>News & Media</h2>
                 <div class="links-list">
-                    {% for i in range(1, 6) %}
-                    {% set link = profile['news_link' ~ i] if profile['news_link' ~ i] is defined else '' %}
-                    {% if link %}
+                    {% for link in _all_news %}
                     <a href="{{ link }}" target="_blank" rel="noopener" class="ext-link">
                         {{ link | replace('https://', '') | replace('http://', '') | truncate(60) }}
                         <span class="ext-arrow">↗</span>
                     </a>
-                    {% endif %}
                     {% endfor %}
                 </div>
             </div>

@@ -267,6 +267,26 @@ class PlayerProfile(Base):
     offer3 = Column(String, default="")
     offer4 = Column(String, default="")
     offer5 = Column(String, default="")
+    offer6 = Column(String, default="")
+    offer7 = Column(String, default="")
+    offer8 = Column(String, default="")
+    offer9 = Column(String, default="")
+    offer10 = Column(String, default="")
+    offer11 = Column(String, default="")
+    offer12 = Column(String, default="")
+    offer13 = Column(String, default="")
+    offer14 = Column(String, default="")
+    offer15 = Column(String, default="")
+    offer16 = Column(String, default="")
+    offer17 = Column(String, default="")
+    offer18 = Column(String, default="")
+    offer19 = Column(String, default="")
+    offer20 = Column(String, default="")
+    offer21 = Column(String, default="")
+    offer22 = Column(String, default="")
+    offer23 = Column(String, default="")
+    offer24 = Column(String, default="")
+    offer25 = Column(String, default="")
     visit1_school = Column(String, default="")
     visit1_date   = Column(String, default="")
     visit2_school = Column(String, default="")
@@ -300,6 +320,26 @@ class PlayerProfile(Base):
     news_link3 = Column(String, default="")
     news_link4 = Column(String, default="")
     news_link5 = Column(String, default="")
+    news_link6 = Column(String, default="")
+    news_link7 = Column(String, default="")
+    news_link8 = Column(String, default="")
+    news_link9 = Column(String, default="")
+    news_link10 = Column(String, default="")
+    news_link11 = Column(String, default="")
+    news_link12 = Column(String, default="")
+    news_link13 = Column(String, default="")
+    news_link14 = Column(String, default="")
+    news_link15 = Column(String, default="")
+    news_link16 = Column(String, default="")
+    news_link17 = Column(String, default="")
+    news_link18 = Column(String, default="")
+    news_link19 = Column(String, default="")
+    news_link20 = Column(String, default="")
+    news_link21 = Column(String, default="")
+    news_link22 = Column(String, default="")
+    news_link23 = Column(String, default="")
+    news_link24 = Column(String, default="")
+    news_link25 = Column(String, default="")
 
 class CoachProfile(Base):
     __tablename__ = "coach_profiles"
@@ -1624,7 +1664,8 @@ def _offer_div_counts(profile):
     counts = {"D1": 0, "D2": 0, "D3": 0}
     if not profile:
         return counts
-    for field in (profile.offer1, profile.offer2, profile.offer3, profile.offer4, profile.offer5):
+    for _i in range(1, 26):
+        field = getattr(profile, f"offer{_i}", "") or ""
         if field:
             div = _OFFER_DIV.get(field.strip())
             if div:
@@ -3107,7 +3148,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.home_address_city = form.get("home_address_city", "")[:100]
         p.home_address_state = form.get("home_address_state", "")[:10]
         p.home_address_zip = form.get("home_address_zip", "")[:20]
-        for _ni in range(1, 6):
+        for _ni in range(1, 26):
             setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
         p.link1_label = form.get("link1_label", "")[:100]
@@ -3116,11 +3157,8 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.link2_url = form.get("link2_url", "")[:500]
         p.link3_label = form.get("link3_label", "")[:100]
         p.link3_url = form.get("link3_url", "")[:500]
-        p.offer1 = form.get("offer1", "")[:100]
-        p.offer2 = form.get("offer2", "")[:100]
-        p.offer3 = form.get("offer3", "")[:100]
-        p.offer4 = form.get("offer4", "")[:100]
-        p.offer5 = form.get("offer5", "")[:100]
+        for _oi in range(1, 26):
+            setattr(p, f"offer{_oi}", form.get(f"offer{_oi}", "")[:100])
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", "")[:200])
             setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   "")[:50])
@@ -4129,7 +4167,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.home_address_city = form.get("home_address_city", "")[:100]
         p.home_address_state = form.get("home_address_state", "")[:10]
         p.home_address_zip = form.get("home_address_zip", "")[:20]
-        for _ni in range(1, 6):
+        for _ni in range(1, 26):
             setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
         p.bio = form.get("bio", "")[:2000]
         p.hudl_url = form.get("hudl_url", "")[:100]
@@ -4137,11 +4175,8 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.instagram_url = form.get("instagram_url", "")[:100]
         p.phone = form.get("phone", "")[:100]
         p.contact_email = form.get("contact_email", "")[:100]
-        p.offer1 = form.get("offer1", "")[:100]
-        p.offer2 = form.get("offer2", "")[:100]
-        p.offer3 = form.get("offer3", "")[:100]
-        p.offer4 = form.get("offer4", "")[:100]
-        p.offer5 = form.get("offer5", "")[:100]
+        for _oi in range(1, 26):
+            setattr(p, f"offer{_oi}", form.get(f"offer{_oi}", "")[:100])
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", "")[:200])
             setattr(p, f"visit{i}_date", form.get(f"visit{i}_date", "")[:50])

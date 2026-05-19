@@ -559,8 +559,8 @@
 
             <div class="form-section">
                 <h2>Scholarship Offers</h2>
-                <p class="section-hint">Add up to 5 schools that have offered you a scholarship</p>
-                {% for n in [1, 2, 3, 4, 5] %}
+                <p class="section-hint">Add up to 25 schools that have offered you a scholarship</p>
+                {% for n in range(1, 26) %}
                 <div id="offer-row-{{ n }}" style="margin-bottom:14px;{% if n > 1 %} display:none;{% endif %}">
                     <label style="display:block; font-size:13px; font-weight:600; color:var(--gray-700); margin-bottom:6px;">Offer {{ n }}</label>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -608,37 +608,16 @@
 
             <div class="form-section">
                 <h2>News Articles</h2>
-                <p class="section-hint">Add links to news articles or press coverage about you</p>
-                <div id="news-row-1" style="margin-bottom:10px;">
+                <p class="section-hint">Add links to news articles or press coverage about you (up to 25)</p>
+                {% for n in range(1, 26) %}
+                {% set _nl = profile['news_link' ~ n] if profile and profile['news_link' ~ n] is defined else '' %}
+                <div id="news-row-{{ n }}" style="margin-bottom:10px;{% if n > 1 and not _nl %} display:none;{% endif %}">
                     <div class="form-group">
-                        <label>Article 1</label>
-                        <input type="url" name="news_link1" id="news_link1" value="{{ profile.news_link1 if profile and profile.news_link1 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(1)">
+                        <label>Article {{ n }}</label>
+                        <input type="url" name="news_link{{ n }}" id="news_link{{ n }}" value="{{ _nl }}" placeholder="https://example.com/article" oninput="newsLinkChanged({{ n }})">
                     </div>
                 </div>
-                <div id="news-row-2" style="margin-bottom:10px; display:none;">
-                    <div class="form-group">
-                        <label>Article 2</label>
-                        <input type="url" name="news_link2" id="news_link2" value="{{ profile.news_link2 if profile and profile.news_link2 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(2)">
-                    </div>
-                </div>
-                <div id="news-row-3" style="margin-bottom:10px; display:none;">
-                    <div class="form-group">
-                        <label>Article 3</label>
-                        <input type="url" name="news_link3" id="news_link3" value="{{ profile.news_link3 if profile and profile.news_link3 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(3)">
-                    </div>
-                </div>
-                <div id="news-row-4" style="margin-bottom:10px; display:none;">
-                    <div class="form-group">
-                        <label>Article 4</label>
-                        <input type="url" name="news_link4" id="news_link4" value="{{ profile.news_link4 if profile and profile.news_link4 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(4)">
-                    </div>
-                </div>
-                <div id="news-row-5" style="margin-bottom:10px; display:none;">
-                    <div class="form-group">
-                        <label>Article 5</label>
-                        <input type="url" name="news_link5" id="news_link5" value="{{ profile.news_link5 if profile and profile.news_link5 else '' }}" placeholder="https://example.com/article" oninput="newsLinkChanged(5)">
-                    </div>
-                </div>
+                {% endfor %}
             </div>
 
             <div class="form-section">
@@ -1189,8 +1168,9 @@ function newsLinkChanged(n) {
     nextRow.style.display = 'block';
   }
 }
-// Show news rows that already have saved values
-for (var _ni = 1; _ni <= 5; _ni++) {
+// Show news rows that already have saved values, plus the next empty slot
+var MAX_NEWS = 25;
+for (var _ni = 1; _ni <= MAX_NEWS; _ni++) {
   var _el = document.getElementById('news_link' + _ni);
   if (_el && _el.value.trim()) {
     document.getElementById('news-row-' + _ni).style.display = 'block';
@@ -1307,12 +1287,10 @@ function preloadOffer(n, school) {
 
 const SAVED_OFFERS = [
   "",
-  "{{ (profile.offer1 or '') | e if profile else '' }}",
-  "{{ (profile.offer2 or '') | e if profile else '' }}",
-  "{{ (profile.offer3 or '') | e if profile else '' }}",
-  "{{ (profile.offer4 or '') | e if profile else '' }}",
-  "{{ (profile.offer5 or '') | e if profile else '' }}"
+  {% for n in range(1, 26) %}"{{ (profile['offer' ~ n] or '') | e if profile else '' }}"{% if not loop.last %},{% endif %}
+  {% endfor %}
 ];
+const MAX_OFFERS = 25;
 
 function visitDivChange(n) {
   const div = document.getElementById('visit'+n+'_div').value;
@@ -1359,12 +1337,12 @@ const SAVED_VISITS = [
 
 function offerSchoolChanged(n) {
   const school = document.getElementById('offer'+n+'_school').value;
-  if (n < 5) {
+  if (n < MAX_OFFERS) {
     const nextRow = document.getElementById('offer-row-'+(n+1));
     if (school) {
       nextRow.style.display = 'block';
     } else {
-      for (let i = n + 1; i <= 5; i++) {
+      for (let i = n + 1; i <= MAX_OFFERS; i++) {
         const row = document.getElementById('offer-row-'+i);
         row.style.display = 'none';
         document.getElementById('offer'+i+'_div').value = '';
@@ -1396,11 +1374,14 @@ function visitSchoolChanged(n) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  for (let n = 1; n <= 5; n++) {
+  for (let n = 1; n <= MAX_OFFERS; n++) {
     if (SAVED_OFFERS[n]) {
       preloadOffer(n, SAVED_OFFERS[n]);
-      if (n < 5) document.getElementById('offer-row-'+(n+1)).style.display = 'block';
+      document.getElementById('offer-row-'+n).style.display = 'block';
+      if (n < MAX_OFFERS) document.getElementById('offer-row-'+(n+1)).style.display = 'block';
     }
+  }
+  for (let n = 1; n <= 5; n++) {
     if (SAVED_VISITS[n] && SAVED_VISITS[n].school) {
       preloadVisit(n, SAVED_VISITS[n].school, SAVED_VISITS[n].date);
       if (n < 5) document.getElementById('visit-row-'+(n+1)).style.display = 'block';
