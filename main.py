@@ -168,6 +168,74 @@ class _SessionRefreshMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(_SessionRefreshMiddleware)
 
+class _ContractGateMiddleware(BaseHTTPMiddleware):
+    """Block new player accounts from using the app until they've signed their
+    auto-generated CAP Recruiting Agreement.
+
+    Only applies to contracts created with gate_access=True (set by
+    _create_and_send_contract on post-signup). Existing players whose contract
+    rows were created before this gate shipped have gate_access=0 and are
+    unaffected. Admin-issued contracts also stay False so admins can't
+    accidentally lock out an existing player.
+    """
+
+    # Path prefixes the gated player IS allowed to hit while pending.
+    _ALLOW_PREFIXES = (
+        "/sign/",           # the signing page + POST
+        "/static/",
+        "/.well-known/",
+        "/logout",
+        "/favicon",
+        "/robots.txt",
+        "/sitemap",
+    )
+
+    def _is_allowed(self, path: str) -> bool:
+        return any(path == p or path.startswith(p) for p in self._ALLOW_PREFIXES)
+
+    async def dispatch(self, request, call_next):
+        # Cheap early-outs to keep this off the hot path for static + anonymous.
+        if request.method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
+            return await call_next(request)
+        path = request.url.path
+        _debug = path.startswith(("/dashboard", "/profile", "/messages"))
+        if self._is_allowed(path):
+            if _debug: print(f"[GATE] {path} ALLOWLIST", flush=True)
+            return await call_next(request)
+        if "session" not in request.scope:
+            if _debug: print(f"[GATE] {path} no-session-scope", flush=True)
+            return await call_next(request)
+        user_id = request.session.get("user_id")
+        if not user_id:
+            if _debug: print(f"[GATE] {path} no-user-id", flush=True)
+            return await call_next(request)
+        if _debug:
+            print(f"[GATE] {path} user_id={user_id} role={request.session.get('role')!r} is_admin={request.session.get('is_admin')!r}", flush=True)
+        # Players only — coaches/admins are never gated.
+        if request.session.get("role") != "player" or request.session.get("is_admin"):
+            if _debug: print(f"[GATE] {path} non-player-bypass", flush=True)
+            return await call_next(request)
+
+        db = SessionLocal()
+        try:
+            pending = (
+                db.query(LegalContract)
+                .filter(LegalContract.user_id == user_id,
+                        LegalContract.gate_access == True,
+                        LegalContract.status == "pending")
+                .order_by(LegalContract.created_at.desc())
+                .first()
+            )
+        finally:
+            db.close()
+        if _debug:
+            print(f"[GATE] {path} pending_contract={getattr(pending,'id',None)} token={getattr(pending,'token',None)}", flush=True)
+        if pending:
+            return RedirectResponse(f"/sign/{pending.token}", status_code=302)
+        return await call_next(request)
+
+app.add_middleware(_ContractGateMiddleware)
+
 class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
     """Reject non-upload POST requests with bodies larger than 1MB."""
     _UPLOAD_PATHS = {"/profile/upload-photo", "/profile/videos/upload",
@@ -473,6 +541,12 @@ class LegalContract(Base):
     signed_at = Column(DateTime, nullable=True)
     signer_ip = Column(String, nullable=True)
     hidden = Column(Boolean, default=False)
+    # FK to the player this contract belongs to. Older rows have NULL here.
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    # When True, the player is gated out of the app until status == "signed".
+    # Only set on auto-created post-signup contracts; admin-issued contracts
+    # stay False so admins can't accidentally lock an existing player out.
+    gate_access = Column(Boolean, default=False, nullable=False)
 
 
 class InPersonPaymentToken(Base):
@@ -832,6 +906,8 @@ _add_column_if_missing("tracked_emails", "bounced_at", "DATETIME")
 _add_column_if_missing("tracked_emails", "bounce_reason", "TEXT DEFAULT ''")
 _add_column_if_missing("tracked_emails", "last_seen_at", "DATETIME")
 _add_column_if_missing("email_campaigns", "is_active_template", "BOOLEAN DEFAULT 0")
+_add_column_if_missing("legal_contracts", "user_id", "INTEGER")
+_add_column_if_missing("legal_contracts", "gate_access", "BOOLEAN DEFAULT 0")
 
 # One-time backfill of stat_history from current player_profiles values.
 # Provides every player with a baseline data point so progression starts
@@ -1020,13 +1096,20 @@ def _finalize_pending_signup(db: Session, pending: "PendingSignup", stripe_custo
 
 
 def _create_and_send_contract(db: Session, user):
-    """Auto-create a LegalContract for a new player and email them the signing link."""
+    """Auto-create a LegalContract for a new player and email them the signing link.
+
+    Returns the persisted contract so callers can redirect to /sign/{token}.
+    The contract is marked gate_access=True so the player is blocked from the
+    rest of the app until it's signed (see _ContractGateMiddleware).
+    """
     site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
     token = uuid.uuid4().hex + uuid.uuid4().hex[:8]
     contract = LegalContract(
         token=token,
         player_name=user.username,
         created_by_id=None,  # auto-generated, not admin-created
+        user_id=user.id,
+        gate_access=True,
     )
     db.add(contract)
     db.commit()
@@ -1059,6 +1142,7 @@ def _create_and_send_contract(db: Session, user):
             server.sendmail(SMTP_USER, user.email, msg.as_string())
     except Exception as exc:
         _logger.warning("Contract email to %s failed: %s", user.email, type(exc).__name__)
+    return contract
 
 
 def log_admin_action(db: Session, admin_id: int, action: str, target_id: int = None, detail: str = "", ip: str = ""):
@@ -2025,14 +2109,14 @@ async def signup_post(
                 _asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
             except Exception:
                 pass
-            _create_and_send_contract(db, user)
+            _new_contract = _create_and_send_contract(db, user)
             request.session.clear()
             request.session["user_id"] = user.id
             request.session["is_admin"] = bool(user.is_admin)
             request.session["role"] = user.role
             request.session["subscription_tier"] = "premium"
             request.session["session_version"] = user.session_version or 0
-            return RedirectResponse("/dashboard?activated=1", status_code=302)
+            return RedirectResponse(f"/sign/{_new_contract.token}", status_code=302)
 
         # Stripe path: stash PendingSignup, redirect to Stripe checkout.
         # NO User row is created until the webhook (or success page) confirms payment.
@@ -6938,6 +7022,20 @@ async def upgrade_success(request: Request, session_id: str = "", db: Session = 
 
     if not user:
         return RedirectResponse("/login", status_code=302)
+
+    # If this brand-new player has a pending gated contract, force them to sign
+    # before they see anything else. The middleware would catch them later, but
+    # routing here is the nicer UX (no detour through the success page).
+    pending_contract = (
+        db.query(LegalContract)
+        .filter(LegalContract.user_id == user.id,
+                LegalContract.gate_access == True,
+                LegalContract.status == "pending")
+        .order_by(LegalContract.created_at.desc())
+        .first()
+    )
+    if pending_contract:
+        return RedirectResponse(f"/sign/{pending_contract.token}", status_code=302)
 
     unread_count = unread_sender_count(db, user.id)
     request.session["subscription_tier"] = user.subscription_tier or "free"

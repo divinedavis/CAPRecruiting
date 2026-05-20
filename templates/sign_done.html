@@ -12,6 +12,8 @@
         h1 { font-size: 26px; font-weight: 800; color: #0a1628; margin-bottom: 12px; }
         p { color: #6b7280; font-size: 15px; line-height: 1.6; }
         .name { font-weight: 700; color: #059669; }
+        .cta { display: inline-block; margin-top: 28px; background: #0a1628; color: #f0b429; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 15px; }
+        .cta:hover { background: #142a4d; }
         .footer { margin-top: 32px; font-size: 12px; color: #9ca3af; }
     </style>
 </head>
@@ -24,6 +26,7 @@
     {% if contract.signed_at %}
     <p style="margin-top:12px; font-size:13px; color:#9ca3af;">Signed {{ contract.signed_at.strftime("%B %d, %Y at %I:%M %p") }} UTC</p>
     {% endif %}
+    <a href="/dashboard" class="cta">Continue to your dashboard</a>
     <div class="footer">Collegiate Athletic Planning · caprecruiting.com</div>
 </div>
 </body>
