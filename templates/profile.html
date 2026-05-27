@@ -117,6 +117,15 @@
                 {% elif can_message %}
                 <div class="profile-actions">
                     <a href="/messages/{{ target.username }}" class="btn btn-primary">Message</a>
+                    {% if current_user and current_user.role == "coach" and target.role == "player" %}
+                    <form method="post" action="/profile/{{ target.username }}/interest" style="display:inline;">
+                        {% if viewer_has_interest %}
+                        <button type="submit" class="btn btn-outline" title="Remove your interest in this player">Interested ✓</button>
+                        {% else %}
+                        <button type="submit" class="btn btn-primary" style="background:#f0b429; color:#0a1628;" title="Mark this player as one you're interested in">Interested</button>
+                        {% endif %}
+                    </form>
+                    {% endif %}
                 </div>
                 {% elif current_user %}
                 <div class="profile-actions">

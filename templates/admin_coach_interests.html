@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Coach Interest — Admin{% endblock %}
+{% block content %}
+<style>
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-table thead tr { background: var(--gray-50); border-bottom: 1.5px solid var(--gray-200); }
+.admin-table th { text-align: left; padding: 12px 16px; font-weight: 700; color: var(--gray-600); font-size: 11px; text-transform: uppercase; }
+.admin-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+.admin-table tr:last-child td { border-bottom: none; }
+@media (max-width: 768px) {
+  .admin-table thead { display: none; }
+  .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; box-sizing: border-box; }
+  .admin-table tr { background: #fff; border: 1.5px solid var(--gray-200); border-radius: 12px; margin-bottom: 12px; padding: 10px 14px; }
+  .admin-table td { padding: 8px 0 !important; border: none !important; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: right; }
+  .admin-table td::before { content: attr(data-label); font-size: 10px; font-weight: 800; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; text-align: left; }
+}
+</style>
+<div class="container page-top">
+    <div class="page-header">
+        <div>
+            <h1>Coach Interest</h1>
+            <p class="page-sub">Players that coaches have marked as interesting</p>
+        </div>
+        <a href="/admin/teams" class="btn btn-outline">← Back to Admin</a>
+    </div>
+
+    <div style="background:var(--white); border-radius:var(--radius-lg); padding:32px; box-shadow:var(--shadow);">
+        <form method="get" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:11px; font-weight:700; color:var(--gray-400); text-transform:uppercase;">Coach username</label>
+                <input type="text" name="coach" value="{{ coach_q }}" placeholder="coach username" style="padding:8px 12px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; min-width:200px;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:11px; font-weight:700; color:var(--gray-400); text-transform:uppercase;">Player username</label>
+                <input type="text" name="player" value="{{ player_q }}" placeholder="player username" style="padding:8px 12px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; min-width:200px;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="padding:8px 18px;">Filter</button>
+            <a href="/admin/coach-interests" class="btn btn-outline btn-sm" style="padding:8px 18px;">Reset</a>
+        </form>
+
+        {% if rows %}
+        <div style="font-size:13px; color:var(--gray-500); margin-bottom:12px;">
+            Showing {{ rows|length }} coach → player interest{{ '' if rows|length == 1 else 's' }} (most recent first, max 500).
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Coach</th>
+                        <th>School</th>
+                        <th>Player</th>
+                        <th>Marked interested</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td data-label="Coach">
+                            <a href="/profile/{{ r.coach_username }}" style="text-decoration:none; font-weight:700; color:var(--navy);">{{ r.coach_name }}</a>
+                            <div style="font-size:12px; color:var(--gray-400);">@{{ r.coach_username }}</div>
+                        </td>
+                        <td data-label="School" style="color:var(--gray-700);">{{ r.coach_school or '—' }}</td>
+                        <td data-label="Player">
+                            <a href="/profile/{{ r.player_username }}" style="text-decoration:none; font-weight:700; color:var(--navy);">{{ r.player_name }}</a>
+                            <div style="font-size:12px; color:var(--gray-400);">@{{ r.player_username }}</div>
+                        </td>
+                        <td data-label="Marked interested" style="color:var(--gray-600); font-size:13px;">{{ r.created_at.strftime('%b %d, %Y %H:%M') if r.created_at else '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color:var(--gray-500); padding:24px 0;">No coach interest declarations yet{% if coach_q or player_q %} for this filter{% endif %}.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

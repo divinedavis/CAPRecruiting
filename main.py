@@ -7,8 +7,8 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, 
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float, distinct, func, or_
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float, distinct, func, or_, UniqueConstraint
+from sqlalchemy.orm import declarative_base, sessionmaker, Session, aliased
 from starlette.middleware.sessions import SessionMiddleware
 import re
 import os
@@ -734,6 +734,25 @@ class Notification(Base):
     actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_read = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class ProfileView(Base):
+    __tablename__ = "profile_views"
+    id = Column(Integer, primary_key=True)
+    coach_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    player_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    view_count = Column(Integer, default=1)
+    first_viewed_at = Column(DateTime, default=datetime.utcnow)
+    last_viewed_at = Column(DateTime, default=datetime.utcnow, index=True)
+    __table_args__ = (UniqueConstraint("coach_user_id", "player_user_id", name="uq_profile_views_coach_player"),)
+
+class CoachInterest(Base):
+    __tablename__ = "coach_interests"
+    id = Column(Integer, primary_key=True)
+    coach_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    player_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    note = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    __table_args__ = (UniqueConstraint("coach_user_id", "player_user_id", name="uq_coach_interests_coach_player"),)
 
 class MarketingLead(Base):
     __tablename__ = "marketing_leads"
@@ -3439,6 +3458,37 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         has_more_videos = False
         total_video_count = 0
 
+    # Log coach -> player profile view for admin reporting (every coach, every player)
+    if is_coach_viewer and not is_owner and target.role == "player":
+        try:
+            pv = db.query(ProfileView).filter(
+                ProfileView.coach_user_id == current_user.id,
+                ProfileView.player_user_id == target.id,
+            ).first()
+            _now = datetime.utcnow()
+            if pv:
+                pv.view_count = (pv.view_count or 0) + 1
+                pv.last_viewed_at = _now
+            else:
+                db.add(ProfileView(
+                    coach_user_id=current_user.id,
+                    player_user_id=target.id,
+                    view_count=1,
+                    first_viewed_at=_now,
+                    last_viewed_at=_now,
+                ))
+            db.commit()
+        except Exception:
+            db.rollback()
+
+    # Has the viewing coach already expressed interest in this player?
+    viewer_has_interest = False
+    if is_coach_viewer and not is_owner and target.role == "player":
+        viewer_has_interest = bool(db.query(CoachInterest).filter(
+            CoachInterest.coach_user_id == current_user.id,
+            CoachInterest.player_user_id == target.id,
+        ).first())
+
     # Notify premium players when a coach views their profile
     if (is_coach_viewer and not is_owner and target.role == "player"
             and tier_gte(pt, "premium")):
@@ -3490,8 +3540,47 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "can_message": can_message,
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target.id).all()} if target.role == "player" else set(),
         "scout_board_count": db.query(func.count(ScoutBoardCard.id)).filter(ScoutBoardCard.player_user_id == target.id, ScoutBoardCard.archived_at == None).scalar() if target.role == "player" else 0,
+        "viewer_has_interest": viewer_has_interest if (is_coach_viewer and not is_owner and target.role == "player") else False,
         "monthly_profile_views": db.query(func.count(Notification.id)).filter(Notification.user_id == target.id, Notification.type == "profile_view", Notification.created_at >= datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)).scalar() if (target.role == "player" and tier_gte(pt, "premium")) else 0,
     })
+
+@app.post("/profile/{username}/interest")
+async def toggle_coach_interest(username: str, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user or current_user.role != "coach":
+        raise HTTPException(status_code=403, detail="Only coaches can express interest.")
+    target = db.query(User).filter(User.username == username).first()
+    if not target or target.role != "player":
+        raise HTTPException(status_code=404, detail="Player not found")
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot express interest in your own profile")
+
+    existing = db.query(CoachInterest).filter(
+        CoachInterest.coach_user_id == current_user.id,
+        CoachInterest.player_user_id == target.id,
+    ).first()
+    if existing:
+        db.delete(existing)
+        db.commit()
+    else:
+        db.add(CoachInterest(
+            coach_user_id=current_user.id,
+            player_user_id=target.id,
+        ))
+        # Notify the player that a coach is interested
+        db.add(Notification(
+            user_id=target.id,
+            type="coach_interest",
+            title="A coach is interested in you",
+            body="A college coach marked you as a player they are interested in.",
+            link=f"/profile/{target.username}",
+            actor_user_id=current_user.id,
+        ))
+        db.commit()
+    return RedirectResponse(f"/profile/{target.username}", status_code=302)
 
 @app.get("/videos/{username}", response_class=HTMLResponse)
 async def all_videos(username: str, request: Request, db: Session = Depends(get_db)):
@@ -4051,6 +4140,108 @@ async def admin_set_tier(target_id: int, request: Request, db: Session = Depends
     if return_to == "teams":
         return RedirectResponse("/admin/teams#players", status_code=302)
     return RedirectResponse(f"/admin/users/{target_id}/edit-profile", status_code=302)
+
+@app.get("/admin/profile-views", response_class=HTMLResponse)
+async def admin_profile_views(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+
+    coach_q = (request.query_params.get("coach") or "").strip()
+    player_q = (request.query_params.get("player") or "").strip()
+
+    Coach = aliased(User)
+    Player = aliased(User)
+    q = (
+        db.query(ProfileView, Coach, Player)
+        .join(Coach, ProfileView.coach_user_id == Coach.id)
+        .join(Player, ProfileView.player_user_id == Player.id)
+    )
+    if coach_q:
+        q = q.filter(Coach.username.ilike(f"%{coach_q}%"))
+    if player_q:
+        q = q.filter(Player.username.ilike(f"%{player_q}%"))
+    rows_raw = q.order_by(ProfileView.last_viewed_at.desc()).limit(500).all()
+
+    rows = []
+    for pv, coach_u, player_u in rows_raw:
+        cp = db.query(CoachProfile).filter(CoachProfile.user_id == coach_u.id).first()
+        pp = db.query(PlayerProfile).filter(PlayerProfile.user_id == player_u.id).first()
+        coach_name = f"{cp.first_name} {cp.last_name}".strip() if cp and (cp.first_name or cp.last_name) else coach_u.username
+        coach_school = (cp.school or "") if cp else ""
+        player_name = f"{pp.first_name} {pp.last_name}".strip() if pp and (pp.first_name or pp.last_name) else player_u.username
+        rows.append({
+            "coach_username": coach_u.username,
+            "coach_name": coach_name,
+            "coach_school": coach_school,
+            "player_username": player_u.username,
+            "player_name": player_name,
+            "view_count": pv.view_count or 1,
+            "first_viewed_at": pv.first_viewed_at,
+            "last_viewed_at": pv.last_viewed_at,
+        })
+
+    return templates.TemplateResponse("admin_profile_views.html", {
+        "request": request,
+        "current_user": user,
+        "rows": rows,
+        "coach_q": coach_q,
+        "player_q": player_q,
+        "unread_count": unread_sender_count(db, user_id),
+    })
+
+@app.get("/admin/coach-interests", response_class=HTMLResponse)
+async def admin_coach_interests(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+
+    coach_q = (request.query_params.get("coach") or "").strip()
+    player_q = (request.query_params.get("player") or "").strip()
+
+    Coach = aliased(User)
+    Player = aliased(User)
+    q = (
+        db.query(CoachInterest, Coach, Player)
+        .join(Coach, CoachInterest.coach_user_id == Coach.id)
+        .join(Player, CoachInterest.player_user_id == Player.id)
+    )
+    if coach_q:
+        q = q.filter(Coach.username.ilike(f"%{coach_q}%"))
+    if player_q:
+        q = q.filter(Player.username.ilike(f"%{player_q}%"))
+    rows_raw = q.order_by(CoachInterest.created_at.desc()).limit(500).all()
+
+    rows = []
+    for ci, coach_u, player_u in rows_raw:
+        cp = db.query(CoachProfile).filter(CoachProfile.user_id == coach_u.id).first()
+        pp = db.query(PlayerProfile).filter(PlayerProfile.user_id == player_u.id).first()
+        coach_name = f"{cp.first_name} {cp.last_name}".strip() if cp and (cp.first_name or cp.last_name) else coach_u.username
+        coach_school = (cp.school or "") if cp else ""
+        player_name = f"{pp.first_name} {pp.last_name}".strip() if pp and (pp.first_name or pp.last_name) else player_u.username
+        rows.append({
+            "coach_username": coach_u.username,
+            "coach_name": coach_name,
+            "coach_school": coach_school,
+            "player_username": player_u.username,
+            "player_name": player_name,
+            "created_at": ci.created_at,
+        })
+
+    return templates.TemplateResponse("admin_coach_interests.html", {
+        "request": request,
+        "current_user": user,
+        "rows": rows,
+        "coach_q": coach_q,
+        "player_q": player_q,
+        "unread_count": unread_sender_count(db, user_id),
+    })
 
 @app.get("/admin/teams", response_class=HTMLResponse)
 async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
