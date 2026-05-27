@@ -3595,6 +3595,33 @@ async def toggle_coach_interest(username: str, request: Request, db: Session = D
             actor_user_id=current_user.id,
         ))
         db.commit()
+
+        # Auto-add the player to the coach's scout board in the first lane
+        # (typically "Watching") if they aren't already on the board.
+        college = _coach_college(current_user, db)
+        if college:
+            _ensure_default_lanes(college, db)
+            existing_card = db.query(ScoutBoardCard).filter(
+                ScoutBoardCard.college == college,
+                ScoutBoardCard.player_user_id == target.id,
+                ScoutBoardCard.archived_at.is_(None),
+            ).first()
+            if not existing_card:
+                first_lane = db.query(ScoutBoardLane).filter(
+                    ScoutBoardLane.college == college
+                ).order_by(ScoutBoardLane.sort_order).first()
+                if first_lane:
+                    count = db.query(ScoutBoardCard).filter(
+                        ScoutBoardCard.lane_id == first_lane.id
+                    ).count()
+                    db.add(ScoutBoardCard(
+                        college=college,
+                        lane_id=first_lane.id,
+                        sort_order=count,
+                        player_user_id=target.id,
+                        created_by=current_user.id,
+                    ))
+                    db.commit()
     return RedirectResponse(f"/profile/{target.username}", status_code=302)
 
 @app.get("/videos/{username}", response_class=HTMLResponse)
