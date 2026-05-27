@@ -81,19 +81,22 @@
                         {% endif %}
                     </div>
                     {% endif %}
-                    {% if profile and (profile.x_url or profile.instagram_url or profile.hudl_url) %}
+                    {% set _show_x = profile and profile.x_url and (target.role != "player" or player_can_show_social) %}
+                    {% set _show_ig = profile and profile.instagram_url and (target.role != "player" or player_can_show_social) %}
+                    {% set _show_hudl = profile and profile.hudl_url and (target.role != "player" or player_can_show_hudl) %}
+                    {% if _show_x or _show_ig or _show_hudl %}
                     <div style="display:flex; gap:10px; margin-top:8px; align-items:center;">
-                        {% if profile.x_url %}
+                        {% if _show_x %}
                         <a href="{{ profile.x_url if profile.x_url.startswith('http') else 'https://x.com/' ~ profile.x_url.replace('@','') }}" target="_blank" rel="noopener" title="X / Twitter" style="display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; overflow:hidden; transition:opacity .15s;">
                             <img src="/static/x_logo.svg" style="width:38px; height:38px; object-fit:cover; display:block;" alt="X">
                         </a>
                         {% endif %}
-                        {% if profile.instagram_url %}
+                        {% if _show_ig %}
                         <a href="{{ profile.instagram_url if profile.instagram_url.startswith('http') else 'https://instagram.com/' ~ profile.instagram_url.replace('@','') }}" target="_blank" rel="noopener" title="Instagram" style="display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; overflow:hidden; transition:opacity .15s;">
                             <img src="/static/instagram_logo.svg" style="width:38px; height:38px; object-fit:cover; display:block;" alt="Instagram">
                         </a>
                         {% endif %}
-                        {% if profile.hudl_url %}
+                        {% if _show_hudl %}
                         <a href="{{ profile.hudl_url if profile.hudl_url.startswith('http') else 'https://www.hudl.com/' ~ profile.hudl_url }}" target="_blank" rel="noopener" title="HUDL" style="display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; overflow:hidden; transition:opacity .15s;">
                             <img src="/static/hudl.png" style="width:38px; height:38px; object-fit:cover; display:block;" alt="Hudl">
                         </a>

@@ -1233,6 +1233,19 @@ def can_edit_premium_fields(user) -> bool:
     return tier_gte(user.subscription_tier or "free", "premium")
 
 
+def can_edit_hudl(user) -> bool:
+    """True if the profile owner may edit/keep a Hudl URL.
+
+    Essentials and above (any paid tier) unlocks Hudl. Free players cannot.
+    Non-player roles (coaches) and admins always bypass.
+    """
+    if user is None:
+        return False
+    if getattr(user, "is_admin", False) or getattr(user, "role", "") != "player":
+        return True
+    return tier_gte(user.subscription_tier or "free", "essentials")
+
+
 def _safe_redirect(url: str, fallback: str = "/profile/edit") -> str:
     """Only allow relative redirects to prevent open redirect attacks."""
     if url and url.startswith("/") and not url.startswith("//"):
@@ -3190,7 +3203,7 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
     transcript_error = request.query_params.get("transcript_error")
     success = request.query_params.get("success") == "1"
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == user_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if user.role == "player" else []
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": success, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user)})
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": success, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user), "is_hudl_allowed": can_edit_hudl(user)})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -3258,7 +3271,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         for i in range(1, 6):
             setattr(p, f"visit{i}_school", form.get(f"visit{i}_school", "")[:200])
             setattr(p, f"visit{i}_date",   form.get(f"visit{i}_date",   "")[:50])
-        if can_edit_premium_fields(user):
+        if can_edit_hudl(user):
             p.hudl_url = form.get("hudl_url", "")[:100]
         if can_edit_advanced_fields(user):
             p.x_url = form.get("x_url", "")[:100]
@@ -3361,7 +3374,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
     transcripts = db.query(Transcript).filter(Transcript.user_id == user_id).order_by(Transcript.created_at.desc()).all() if user.role == "player" else []
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == user_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if user.role == "player" else []
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user)})
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user), "is_hudl_allowed": can_edit_hudl(user)})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
@@ -3541,6 +3554,8 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target.id).all()} if target.role == "player" else set(),
         "scout_board_count": db.query(func.count(ScoutBoardCard.id)).filter(ScoutBoardCard.player_user_id == target.id, ScoutBoardCard.archived_at == None).scalar() if target.role == "player" else 0,
         "viewer_has_interest": viewer_has_interest if (is_coach_viewer and not is_owner and target.role == "player") else False,
+        "player_can_show_hudl": target.role == "player" and tier_gte(pt, "essentials"),
+        "player_can_show_social": target.role == "player" and tier_gte(pt, "advanced"),
         "monthly_profile_views": db.query(func.count(Notification.id)).filter(Notification.user_id == target.id, Notification.type == "profile_view", Notification.created_at >= datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)).scalar() if (target.role == "player" and tier_gte(pt, "premium")) else 0,
     })
 
@@ -4382,6 +4397,7 @@ async def admin_edit_profile_get(target_id: int, request: Request, db: Session =
         "unread_count": unread_count,
         "is_advanced": can_edit_advanced_fields(target),
         "is_premium": can_edit_premium_fields(target),
+        "is_hudl_allowed": can_edit_hudl(target),
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id).all()} if target.role == "player" else set(),
     })
 
@@ -4481,6 +4497,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         "unread_count": unread_count,
         "is_advanced": can_edit_advanced_fields(target),
         "is_premium": can_edit_premium_fields(target),
+        "is_hudl_allowed": can_edit_hudl(target),
         "verified_stats": {vs.stat_field for vs in db.query(VerifiedStat).filter(VerifiedStat.player_id == target_id).all()} if target.role == "player" else set(),
     })
 
