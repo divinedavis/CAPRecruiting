@@ -63,19 +63,28 @@
                 {% if request.session.get("role") == "player" and request.session.get("subscription_tier") == "premium" %}
                 <a href="/questionnaires" class="btn btn-outline" style="border-color:#f0b429; color:#f0b429;">College Prep</a>
                 {% endif %}
-                {% if request.session.get("is_admin") %}
-                <a href="/admin/teams" class="btn btn-outline">Admin</a>
-                <a href="/admin/marketing" class="btn btn-outline">Marketing</a>
-                <a href="/admin/profile-views" class="btn btn-outline">Views</a>
-                <a href="/admin/coach-interests" class="btn btn-outline">Interests</a>
-                <a href="/legal" class="btn btn-outline">Legal</a>
-                <a href="/admin/invites" class="btn btn-outline">Invites</a>
-                {% else %}
-                {% if request.session.get("role") == "player" %}
+                {% if request.session.get("role") == "player" and not request.session.get("is_admin") %}
                 <a href="/upgrade" class="btn btn-primary" style="background:#f0b429;color:#0a1628;border-color:#f0b429;">Upgrade</a>
                 {% endif %}
-                {% endif %}
-                <form method="post" action="/logout" style="display:inline;margin:0;"><button type="submit" class="btn btn-ghost" style="border:none;cursor:pointer;">Logout</button></form>
+                <div class="admin-menu" id="admin-menu">
+                    <button type="button" class="admin-menu-toggle" id="admin-menu-toggle" onclick="toggleAdminMenu(event)" aria-haspopup="true" aria-expanded="false" aria-label="Open menu">
+                        <span></span><span></span><span></span>
+                    </button>
+                    <div class="admin-menu-panel" id="admin-menu-panel" role="menu">
+                        {% if request.session.get("is_admin") %}
+                        <a href="/admin/teams" role="menuitem">Admin</a>
+                        <a href="/admin/marketing" role="menuitem">Marketing</a>
+                        <a href="/admin/profile-views" role="menuitem">Views</a>
+                        <a href="/admin/coach-interests" role="menuitem">Interests</a>
+                        <a href="/legal" role="menuitem">Legal</a>
+                        <a href="/admin/invites" role="menuitem">Invites</a>
+                        <div class="admin-menu-divider"></div>
+                        {% endif %}
+                        <form method="post" action="/logout" style="margin:0;">
+                            <button type="submit" role="menuitem" class="admin-menu-logout">Logout</button>
+                        </form>
+                    </div>
+                </div>
             {% else %}
                 <a href="/dashboard">Browse Players</a>
                 <a href="/privacy">Privacy</a>
@@ -157,6 +166,14 @@ function toggleNav() {
     btn.classList.toggle('open');
     links.classList.toggle('mobile-open');
 }
+function toggleAdminMenu(e) {
+    if (e) { e.stopPropagation(); }
+    const wrap = document.getElementById('admin-menu');
+    const tog = document.getElementById('admin-menu-toggle');
+    if (!wrap || !tog) return;
+    const isOpen = wrap.classList.toggle('open');
+    tog.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('#nav-links a').forEach(function(a) {
         a.addEventListener('click', function() {
@@ -179,6 +196,18 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('hamburger').classList.remove('open');
             document.getElementById('nav-links').classList.remove('mobile-open');
         }
+        const am = document.getElementById('admin-menu');
+        if (am && !am.contains(e.target)) {
+            am.classList.remove('open');
+            const tog = document.getElementById('admin-menu-toggle');
+            if (tog) tog.setAttribute('aria-expanded', 'false');
+        }
+    });
+    document.querySelectorAll('#admin-menu-panel a, #admin-menu-panel button').forEach(function(el) {
+        el.addEventListener('click', function() {
+            const am = document.getElementById('admin-menu');
+            if (am) am.classList.remove('open');
+        });
     });
 });
 </script>
