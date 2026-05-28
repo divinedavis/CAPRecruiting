@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/static/scout.css?v=1">
+<link rel="stylesheet" href="/static/scout.css?v=20260528-laneedit">
 
 <script>
 (function(){
@@ -60,7 +60,12 @@
       {% endif %}
       <div class="sb-lane" data-lane-id="{{ lane.id }}">
         <div class="sb-lane-header">
-          <div class="sb-lane-title" data-lane-id="{{ lane.id }}" ondblclick="renameLane({{ lane.id }}, this)">{{ lane.name }}</div>
+          <div class="sb-lane-title" data-lane-id="{{ lane.id }}">
+            <span class="sb-lane-name">{{ lane.name }}</span>
+            <button type="button" class="sb-lane-edit" onclick="renameLane({{ lane.id }}, this)" aria-label="Rename lane" title="Rename lane">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
+            </button>
+          </div>
           <div class="sb-lane-right">
             <span class="sb-lane-count">{{ cards_by_lane[lane.id]|length }}</span>
             <button onclick="deleteLane({{ lane.id }})" title="Delete lane" class="sb-lane-delete" aria-label="Delete lane">×</button>
@@ -811,12 +816,15 @@ function addLane() {
 }
 
 function renameLane(laneId, el) {
-  var name = prompt('Rename swimlane:', el.textContent);
+  var titleEl = el.closest ? el.closest('.sb-lane-title') : null;
+  var nameSpan = titleEl ? titleEl.querySelector('.sb-lane-name') : null;
+  var current = nameSpan ? nameSpan.textContent : (el && el.textContent) || '';
+  var name = prompt('Rename swimlane:', current);
   if (!name) return;
   fetch('/dashboard/scout/lane/' + laneId + '/rename', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: name}) })
     .then(function(r) { return r.json(); })
     .then(function(res) {
-      if (res.ok) { el.textContent = name; }
+      if (res.ok && nameSpan) { nameSpan.textContent = name; }
     });
 }
 
