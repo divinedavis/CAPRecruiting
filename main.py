@@ -7390,6 +7390,21 @@ async def questionnaires_page(request: Request, db: Session = Depends(get_db)):
         "is_premium": tier_gte(user.subscription_tier or "free", "premium"),
     })
 
+@app.get("/academics", response_class=HTMLResponse)
+async def academics_page(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = None
+    unread_count = 0
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            unread_count = unread_sender_count(db, user_id)
+    return templates.TemplateResponse("academics.html", {
+        "request": request,
+        "user": user,
+        "unread_count": unread_count,
+    })
+
 @app.get("/my-questionnaire", response_class=HTMLResponse)
 async def my_questionnaire_page(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")

@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Academics — CAP Recruiting{% endblock %}
+{% block content %}
+<style>
+  .acad-wrap { max-width: 820px; margin: 0 auto; padding: 0 16px; }
+  .acad-wrap h1 { font-size: 36px; font-weight: 800; color: #0a1628; margin: 0 0 6px; }
+  .acad-wrap .lede { color: #6b7280; font-size: 16px; line-height: 1.55; margin: 0 0 28px; }
+  .acad-card {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    border-radius: 14px;
+    padding: 28px 28px 24px;
+    margin-bottom: 22px;
+    color: #fff;
+  }
+  .acad-card h2 {
+    color: #f0b429;
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 12px;
+  }
+  .acad-card h3 {
+    color: #f0b429;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 18px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .acad-card p { color: #e5edf7; font-size: 15px; line-height: 1.65; margin: 0 0 12px; }
+  .acad-card ul { color: #e5edf7; font-size: 15px; line-height: 1.7; margin: 0 0 12px 22px; padding: 0; }
+  .acad-card li { margin-bottom: 4px; }
+  .acad-card strong { color: #fff; font-weight: 700; }
+  .acad-figure {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 10px;
+    padding: 12px;
+    margin: 14px 0 18px;
+    text-align: center;
+  }
+  .acad-figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    display: block;
+    margin: 0 auto;
+  }
+  .acad-figure .caption {
+    font-size: 12px;
+    color: #cbd5e1;
+    margin-top: 8px;
+    font-style: italic;
+  }
+  .acad-divider {
+    border: 0;
+    border-top: 1px solid rgba(240,180,41,.25);
+    margin: 18px 0;
+  }
+  .acad-pill {
+    display: inline-block;
+    background: #f0b429;
+    color: #0a1628;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .back-link {
+    display: inline-block;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+  .back-link:hover { text-decoration: underline; }
+</style>
+
+<div class="acad-wrap page-top">
+  <a href="/questionnaires" class="back-link">&larr; Back to College Prep</a>
+
+  <h1>Academics</h1>
+  <p class="lede">
+    Academics play a major role in the recruiting process. College coaches are not only evaluating athletes on the field, they also want to know if a student-athlete can succeed in the classroom. One of the first things coaches will ask for is your academic information, including your GPA, transcript, and test scores if available.
+  </p>
+
+  <!-- Transcript vs Report Card -->
+  <div class="acad-card">
+    <h2>What's the Difference Between a Transcript and a Report Card?</h2>
+    <p>Many student-athletes confuse transcripts and report cards, but they are not the same thing.</p>
+
+    <h3>Report Card</h3>
+    <p>A report card shows your grades for a specific marking period, quarter, or semester. It is mainly used to track short-term academic progress during the school year.</p>
+    <p>A report card usually includes:</p>
+    <ul>
+      <li>Current classes</li>
+      <li>Quarter or semester grades</li>
+      <li>Teacher comments</li>
+      <li>Attendance information</li>
+    </ul>
+    <p>Think of a report card as a progress update for one part of the school year.</p>
+
+    <div class="acad-figure">
+      <img src="/static/academics/report-card.png" alt="Example of a high school report card">
+      <div class="caption">What a report card looks like</div>
+    </div>
+
+    <hr class="acad-divider">
+
+    <h3>Transcript</h3>
+    <p>A transcript is an official academic record created by your high school. It shows your complete academic history throughout high school and is the document college coaches and admissions offices care about most.</p>
+    <p>A transcript usually includes:</p>
+    <ul>
+      <li>All classes taken</li>
+      <li>Final grades earned</li>
+      <li>Cumulative GPA</li>
+      <li>Class rank (if applicable)</li>
+      <li>Credits earned</li>
+      <li>Graduation status</li>
+      <li>School information</li>
+    </ul>
+    <p>Unlike a report card, a transcript shows your long-term academic performance, not just one semester or quarter.</p>
+  </div>
+
+  <!-- What does a transcript look like -->
+  <div class="acad-card">
+    <h2>What Does a Transcript Look Like?</h2>
+    <p>Every school formats transcripts differently, but most transcripts include the same basic information.</p>
+    <p>A typical transcript contains:</p>
+    <ul>
+      <li>Student name and graduation year</li>
+      <li>High school name</li>
+      <li>Course names by school year</li>
+      <li>Final grades</li>
+      <li>GPA information</li>
+      <li>Credits earned</li>
+      <li>Official school seal or counselor signature</li>
+    </ul>
+    <p>Transcripts are usually printed in a clean table format and may be labeled as either:</p>
+    <ul>
+      <li><strong>Official Transcript</strong> – sent directly from the school</li>
+      <li><strong>Unofficial Transcript</strong> – student copy used for recruiting purposes</li>
+    </ul>
+    <p>For recruiting, many coaches will accept an unofficial transcript early in the process.</p>
+
+    <div class="acad-figure">
+      <img src="/static/academics/transcript.png" alt="Example of a high school transcript">
+      <div class="caption">What a transcript looks like</div>
+    </div>
+  </div>
+
+  <!-- How to get transcript -->
+  <div class="acad-card">
+    <h2>How Do You Get Your Transcript?</h2>
+    <p>Getting your transcript is usually simple. Here are the most common ways:</p>
+
+    <h3>1. Contact Your School Counselor</h3>
+    <p>The easiest way is to email or visit your guidance counselor and request a copy of your transcript.</p>
+
+    <h3>2. Use Your School's Student Portal</h3>
+    <p>Some high schools allow students to download unofficial transcripts through platforms like:</p>
+    <ul>
+      <li>Naviance</li>
+      <li>PowerSchool</li>
+      <li>Skyward</li>
+      <li>Infinite Campus</li>
+    </ul>
+
+    <h3>3. Request an Official Transcript</h3>
+    <p>If a college or NCAA requirement asks for an official transcript, your counselor or school registrar can send it directly to the college.</p>
+  </div>
+
+  <!-- Why academics matter -->
+  <div class="acad-card">
+    <h2>Why Academics Matter in Recruiting</h2>
+    <p>Strong academics can create more recruiting opportunities. Coaches want reliable student-athletes who are eligible to compete and represent their program well. Good grades can also help athletes qualify for:</p>
+    <ul>
+      <li>Academic scholarships</li>
+      <li>Admissions acceptance</li>
+      <li>NCAA eligibility requirements</li>
+      <li>More recruiting interest from colleges</li>
+    </ul>
+    <p>Athletic talent may open the door, but academics can help keep those opportunities available.</p>
+  </div>
+
+  <!-- NCAA Core Class Requirements -->
+  <div class="acad-card">
+    <h2>NCAA Core Class Requirements</h2>
+    <p>NCAA Division I and II student-athletes must complete <strong>16 approved high school core courses</strong> to be academically eligible, along with graduating and meeting minimum GPA requirements. You must lock in 10 of these classes before your senior year.</p>
+
+    <hr class="acad-divider">
+
+    <span class="acad-pill">Division I</span>
+    <h3>Division I Core Course Breakdown</h3>
+    <ul>
+      <li>Graduate high school</li>
+      <li>Earn a core course GPA of 2.3 or higher</li>
+      <li>Complete 16 core courses:
+        <ul>
+          <li>4 years of English</li>
+          <li>3 years of math (Algebra 1 or higher)</li>
+          <li>2 years of natural/physical science (1 year must be lab science if your school offers it)</li>
+          <li>1 additional year of English, math or natural/physical science</li>
+          <li>2 years of social science</li>
+          <li>4 additional years of English, math, natural/physical science, social science, foreign language, comparative religion or philosophy</li>
+        </ul>
+      </li>
+    </ul>
+    <p>You must complete <strong>10 of the core courses by the end of your junior year</strong> (before the start of your seventh semester). Seven of the 10 core courses need to be in English, math or natural/physical science. The grades in these seven courses will be "locked in," meaning you will not be allowed to retake them to improve your grades.</p>
+
+    <hr class="acad-divider">
+
+    <span class="acad-pill">Division II</span>
+    <h3>Division II Core Course Breakdown</h3>
+    <ul>
+      <li>Graduate high school</li>
+      <li>Earn a core course GPA of 2.2 or higher</li>
+      <li>Complete 16 core courses:
+        <ul>
+          <li>3 years of English</li>
+          <li>2 years of math (Algebra 1 or higher)</li>
+          <li>2 years of natural/physical science (1 year must be lab science if your school offers it)</li>
+          <li>3 additional years of English, math or natural/physical science</li>
+          <li>2 years of social science</li>
+          <li>4 additional years of English, math, natural/physical science, social science, foreign language, comparative religion or philosophy</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Sample schedule -->
+  <div class="acad-card">
+    <h2>Sample Schedule</h2>
+    <div class="acad-figure">
+      <img src="/static/academics/sample-schedule.png" alt="Sample high school course schedule meeting NCAA core requirements">
+      <div class="caption">Sample four-year course schedule</div>
+    </div>
+  </div>
+
+  <!-- 10/7 Rule -->
+  <div class="acad-card">
+    <h2>The "10/7" Rule</h2>
+    <p>At least <strong>10 of your 16 core courses</strong> must be completed prior to the start of your seventh semester (the beginning of your senior year). Out of those 10 classes, <strong>7 must be in English, Math, or Natural/Physical Science</strong>.</p>
+
+    <h3>Grade and GPA Requirements</h3>
+    <ul>
+      <li><strong>Division I:</strong> Requires a minimum core-course GPA of 2.300. Grades earned in the 10 "locked in" classes prior to senior year cannot be retaken or replaced for GPA purposes.</li>
+      <li><strong>Division II:</strong> Requires a minimum core-course GPA of 2.200.</li>
+    </ul>
+  </div>
+
+  <!-- Core classes -->
+  <div class="acad-card">
+    <h2>Core Classes</h2>
+
+    <h3>What are core classes?</h3>
+    <p>To meet NCAA eligibility requirements to compete at the college level, athletes must complete <strong>16 core courses</strong> identified by the NCAA. These courses include: English 1–4, American Literature, Creative Writing, Algebra 1–3, Geometry, Statistics, Biology, Chemistry, Physics, American History, Civics, Government, Comparative Religion, and Spanish 1–4.</p>
+
+    <h3>What core classes are required in college?</h3>
+    <p>The core classes required in college are English, Math, Social Sciences, Humanities, and Science.</p>
+
+    <h3>What are the core courses in high school?</h3>
+    <p>Most high schools in the U.S. have a list of approved core courses with the NCAA. This list allows the NCAA to quickly evaluate an athlete's eligibility by simply checking that the class is on the approved list and seeing what the student-athlete's grade was in the course.</p>
+    <p>Use the NCAA website to look up your high school's NCAA-approved courses. Meet with your counselor and make sure the course plan you have matches up with the approved courses.</p>
+  </div>
+
+  <!-- Honors and AP -->
+  <div class="acad-card">
+    <h2>Honors and AP Classes</h2>
+    <p>Honors and AP classes can strengthen a transcript, but they are not the only factor college admissions and coaches evaluate during the admissions process and recruiting.</p>
+    <ul>
+      <li>Every student-athlete's academic path is different, and success is not determined solely by the number of AP or Honors courses on a schedule.</li>
+      <li>Not every high school offers the same number of Honors or AP opportunities, so colleges evaluate students within the context of what their school provides.</li>
+      <li>Depending on what you plan to major in or a certain school you'd like to attend, a solid GPA, consistent grades, and meeting core academic requirements are usually more important than simply stacking advanced-level classes.</li>
+    </ul>
+  </div>
+
+  <!-- Core GPA -->
+  <div class="acad-card">
+    <h2>What is a Core GPA?</h2>
+    <p>Your core GPA is the <strong>unweighted average of the grades you receive in all core classes attempted in grades 9–12</strong>. The NCAA core-course GPA is calculated using only the NCAA-approved core courses in the required number of core units.</p>
+  </div>
+
+  <div style="text-align:center; margin: 32px 0 48px;">
+    <a href="/questionnaires" class="back-link">&larr; Back to College Prep</a>
+  </div>
+</div>
+{% endblock %}
