@@ -1199,9 +1199,12 @@ STRIPE_PRICE_PREMIUM_YEARLY_SALE = os.environ.get("STRIPE_PRICE_PREMIUM_YEARLY_S
 
 
 def june_sale_active() -> bool:
-    """True for the entire month of June 2026 in US Eastern time."""
+    """Active from launch (May 31) through the end of June 2026, US Eastern.
+    Reverts automatically at 00:00 ET on July 1."""
     now = datetime.now(_ZoneInfo("America/New_York"))
-    return now.year == 2026 and now.month == 6
+    start = datetime(2026, 5, 31, tzinfo=_ZoneInfo("America/New_York"))
+    end = datetime(2026, 7, 1, tzinfo=_ZoneInfo("America/New_York"))
+    return start <= now < end
 
 
 def prices_for(billing: str) -> dict:
