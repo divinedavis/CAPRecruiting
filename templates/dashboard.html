@@ -81,7 +81,7 @@
   <div style="background:#fff; border-radius:16px; padding:36px 32px; max-width:420px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
     <div style="font-size:40px; margin-bottom:12px;">&#128274;</div>
     <h2 style="color:#0a1628; font-size:22px; margin-bottom:10px;">Upgrade to View Profiles</h2>
-    <p style="color:#6b7280; font-size:14px; margin-bottom:24px;">Get full access to player profiles, transcripts, contact info, and more.<br><br><strong>Essentials &#8211; $10/mo</strong> &mdash; profiles &amp; stats<br><strong>Advanced &#8211; $25/mo</strong> &mdash; + transcripts, photos, offers<br><strong>Premium &#8211; $50/mo</strong> &mdash; + messaging, videos, contact</p>
+    <p style="color:#6b7280; font-size:14px; margin-bottom:24px;">Get full access to player profiles, transcripts, contact info, and more.<br><br><strong>Essentials &#8211; $10/mo</strong> &mdash; profiles &amp; stats<br><strong>Advanced &#8211; $25/mo</strong> &mdash; + transcripts, photos, offers<br><strong>Premium &#8211; {% if june_sale_active() %}<span style="text-decoration:line-through; color:#9ca3af;">$50</span> $20/mo <span style="color:#dc2626; font-weight:800;">(June Sale)</span>{% else %}$50/mo{% endif %}</strong> &mdash; + messaging, videos, contact</p>
     <a href="/upgrade" style="display:inline-block; background:#0a1628; color:#f0b429; font-weight:700; padding:12px 28px; border-radius:8px; text-decoration:none; font-size:15px; margin-bottom:12px;">Contact Us to Upgrade</a><br>
     <button onclick="document.getElementById(&#39;upgrade-modal&#39;).style.display=&#39;none&#39;" style="background:none; border:none; color:#6b7280; font-size:13px; cursor:pointer; margin-top:8px;">Close</button>
   </div>

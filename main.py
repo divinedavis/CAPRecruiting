@@ -1187,6 +1187,38 @@ STRIPE_PRICES_YEARLY = {
 }
 
 # ── Subscription Tier Helpers ──────────────────────────────────────────────────
+# ── June 2026 Premium Sale ───────────────────────────────
+# Premium drops to $20/mo ($200/yr) for all of June 2026 (US Eastern). Checkouts
+# started during the window use dedicated Stripe sale Price objects, so anyone
+# who subscribes at the sale rate stays locked in at that price until they change
+# plans. Both checkout and on-page pricing gate on june_sale_active(), so the
+# promo reverts automatically at 00:00 ET on July 1 with no further action.
+from zoneinfo import ZoneInfo as _ZoneInfo
+STRIPE_PRICE_PREMIUM_SALE        = os.environ.get("STRIPE_PRICE_PREMIUM_SALE", "")
+STRIPE_PRICE_PREMIUM_YEARLY_SALE = os.environ.get("STRIPE_PRICE_PREMIUM_YEARLY_SALE", "")
+
+
+def june_sale_active() -> bool:
+    """True for the entire month of June 2026 in US Eastern time."""
+    now = datetime.now(_ZoneInfo("America/New_York"))
+    return now.year == 2026 and now.month == 6
+
+
+def prices_for(billing: str) -> dict:
+    """tier -> Stripe price id for the billing cycle, swapping in the Premium
+    sale price while the June sale is active."""
+    base = dict(STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES)
+    if june_sale_active():
+        sale = STRIPE_PRICE_PREMIUM_YEARLY_SALE if billing == "yearly" else STRIPE_PRICE_PREMIUM_SALE
+        if sale:
+            base["premium"] = sale
+    return base
+
+
+# Expose the sale flag to every template for marketing display.
+templates.env.globals["june_sale_active"] = june_sale_active
+
+
 TIER_ORDER = {"free": 0, "essentials": 1, "advanced": 2, "premium": 3}
 
 def tier_gte(tier: str, required: str) -> bool:
@@ -2145,7 +2177,7 @@ async def signup_post(
 
         # Stripe path: stash PendingSignup, redirect to Stripe checkout.
         # NO User row is created until the webhook (or success page) confirms payment.
-        _price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
+        _price_map = prices_for(billing)
         _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
         if _tier not in _price_map or not _price_map[_tier]:
             _price_map = STRIPE_PRICES
@@ -2251,7 +2283,7 @@ async def signup_finish_oauth_post(
             "request": request, "pending": pending, "teams": teams,
             "error": "Please select your high school.",
         })
-    _price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
+    _price_map = prices_for(billing)
     _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
     if _tier not in _price_map or not _price_map[_tier]:
         _price_map = STRIPE_PRICES
@@ -4143,7 +4175,7 @@ async def admin_set_tier(target_id: int, request: Request, db: Session = Depends
                 _logger.warning("Stripe cancel failed for user %s: %s", target_id, type(exc).__name__)
                 detail_extra = f" (stripe cancel FAILED: {type(exc).__name__})"
         else:
-            price_map = STRIPE_PRICES  # default to monthly; admin override doesn't expose billing toggle
+            price_map = prices_for("monthly")  # admin override is monthly-only; honors June sale while active
             new_price = price_map.get(tier, "")
             if not new_price:
                 detail_extra = " (no price configured for tier; DB only)"
@@ -7178,7 +7210,7 @@ async def create_checkout(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     tier = form.get("tier", "")
     billing = form.get("billing", "monthly")
-    price_map = STRIPE_PRICES_YEARLY if billing == "yearly" else STRIPE_PRICES
+    price_map = prices_for(billing)
     if tier not in price_map or not price_map[tier]:
         return RedirectResponse("/upgrade", status_code=302)
 
