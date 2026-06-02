@@ -3733,23 +3733,36 @@ async def upload_video(
     content_type = video.content_type or f"video/{ext}"
     file_data = video.file
 
-    # Transcode non-mp4 formats (mov, avi, mkv, webm) to mp4 for browser compatibility
+    # Browser compatibility: always buffer to disk and probe the real video codec.
+    # Browsers (Chrome/Firefox) can't decode HEVC/H.265, which iPhones record by
+    # default inside .mov AND .mp4 containers, so checking the extension is not
+    # enough. Transcode anything that isn't already H.264 (and any non-mp4 container).
     _transcode_cleanup = []
-    needs_transcode = ext in ("mov", "avi", "mkv", "webm")
-    if needs_transcode:
-        import tempfile, subprocess, shutil
-        tmp_in = tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False)
-        tmp_out = tmp_in.name.rsplit(".", 1)[0] + ".mp4"
-        _transcode_cleanup = [tmp_in.name, tmp_out]
-        try:
-            shutil.copyfileobj(file_data, tmp_in)
-            tmp_in.close()
+    import tempfile, subprocess, shutil
+    tmp_in = tempfile.NamedTemporaryFile(suffix=f".{ext or 'mp4'}", delete=False)
+    _transcode_cleanup.append(tmp_in.name)
+    try:
+        shutil.copyfileobj(file_data, tmp_in)
+        tmp_in.close()
+        vcodec = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "stream=codec_name", "-of", "csv=p=0", tmp_in.name],
+                capture_output=True, text=True, timeout=60
+            ).stdout.strip()
+        )
+        needs_transcode = (ext != "mp4") or (vcodec != "h264")
+        if needs_transcode:
+            tmp_out = tmp_in.name.rsplit(".", 1)[0] + "_h264.mp4"
+            _transcode_cleanup.append(tmp_out)
             proc = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: subprocess.run(
                     ["ffmpeg", "-i", tmp_in.name, "-c:v", "libx264", "-preset", "fast",
-                     "-crf", "23", "-c:a", "aac", "-movflags", "+faststart", "-y", tmp_out],
-                    capture_output=True, timeout=300
+                     "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
+                     "-movflags", "+faststart", "-y", tmp_out],
+                    capture_output=True, timeout=900
                 )
             )
             if proc.returncode != 0:
@@ -3757,8 +3770,10 @@ async def upload_video(
             key = f"videos/{upload_user_id}/{video_id_hex}.mp4"
             content_type = "video/mp4"
             file_data = open(tmp_out, "rb")
-        except Exception:
-            return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
+        else:
+            file_data = open(tmp_in.name, "rb")
+    except Exception:
+        return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
 
     try:
         loop = asyncio.get_event_loop()
