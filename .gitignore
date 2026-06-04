@@ -56,3 +56,8 @@ signed_docs/
 # Backup files
 *.bak
 *.bak.*
+
+# Generated payment report (contains member PII) and local DB/code backups
+caprecruiting_payments.pdf
+recruiting.db.bak-*
+main.py.bak-*
