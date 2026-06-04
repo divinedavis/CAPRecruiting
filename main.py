@@ -2520,6 +2520,61 @@ async def send_player_signup_notification(player_username: str, player_email: st
         pass  # Don't fail signup if email fails
 
 
+async def send_payment_failed_alert(invoice: dict, user):
+    """Immediately email the payment-alert recipients when a member's charge fails."""
+    try:
+        import aiosmtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        recipients = [e.strip() for e in os.environ.get(
+            "PAYMENT_ALERT_EMAILS", "ben@aflyork.com,justwin2424@yahoo.com").split(",") if e.strip()]
+        if not recipients:
+            return
+        amount = invoice.get("amount_due")
+        amount_str = (f"${amount/100:.2f} {(invoice.get('currency') or '').upper()}"
+                      if amount else "unknown amount")
+        attempt = invoice.get("attempt_count") or "?"
+        invoice_url = invoice.get("hosted_invoice_url") or ""
+        cust_email = invoice.get("customer_email") or (user.email if user else "") or "unknown"
+        uname = user.username if user else "(no matching app account)"
+        uid = user.id if user else "-"
+        tier = (user.subscription_tier if user else "") or "n/a"
+        when = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+        link_html = (f'<p style="margin:18px 0;"><a href="{invoice_url}" '
+                     f'style="background:#0a1628;color:#fff;padding:10px 22px;border-radius:8px;'
+                     f'text-decoration:none;font-weight:700;font-size:14px;">View invoice in Stripe</a></p>'
+                     if invoice_url else "")
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;padding:28px;">
+          <h2 style="color:#c0392b;margin:0 0 6px;">&#9888; Payment failed</h2>
+          <p style="color:#374151;margin:0 0 16px;">A member's payment did not go through. They will be
+          moved to the free tier unless the charge succeeds on a Stripe retry.</p>
+          <table style="border-collapse:collapse;font-size:14px;color:#0a1628;">
+            <tr><td style="padding:4px 14px 4px 0;color:#6b7280;">Member</td><td><b>{uname}</b> (id {uid})</td></tr>
+            <tr><td style="padding:4px 14px 4px 0;color:#6b7280;">Email</td><td>{cust_email}</td></tr>
+            <tr><td style="padding:4px 14px 4px 0;color:#6b7280;">Tier at failure</td><td>{tier}</td></tr>
+            <tr><td style="padding:4px 14px 4px 0;color:#6b7280;">Amount</td><td>{amount_str}</td></tr>
+            <tr><td style="padding:4px 14px 4px 0;color:#6b7280;">Attempt #</td><td>{attempt}</td></tr>
+            <tr><td style="padding:4px 14px 4px 0;color:#6b7280;">When</td><td>{when}</td></tr>
+          </table>
+          {link_html}
+          <p style="color:#9ca3af;font-size:12px;margin-top:20px;">Automated alert from CAP Recruiting · recruiting.db</p>
+        </div>"""
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"\u26a0\ufe0f Payment failed \u2014 {uname} ({amount_str})"
+        msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+        msg["To"] = ", ".join(recipients)
+        msg.attach(MIMEText(html, "html"))
+        await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT,
+                              username=(SMTP_USER or None), password=(SMTP_PASSWORD or None),
+                              start_tls=True, recipients=recipients)
+    except Exception as e:
+        try:
+            print(f"[payment-alert] send failed: {e}")
+        except Exception:
+            pass
+
+
 # ── Email Tracking (public, no auth) ──────────────────────────────────────────
 
 # 1x1 transparent PNG
@@ -7410,6 +7465,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         obj = event["data"]["object"]
         cust_id = obj.get("customer", "")
         user = db.query(User).filter(User.stripe_customer_id == cust_id).first()
+        # Alert admins immediately that a payment did not go through (before downgrade).
+        await send_payment_failed_alert(obj, user)
         if user:
             user.subscription_tier = "free"
             user.stripe_subscription_id = ""
