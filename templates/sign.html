@@ -28,6 +28,8 @@
         canvas { display: block; width: 100%; height: 140px; cursor: crosshair; touch-action: none; }
         .sig-clear { position: absolute; top: 8px; right: 10px; background: #fff; border: 1px solid #e5e7eb; padding: 4px 10px; border-radius: 6px; color: #6b7280; font-size: 12px; cursor: pointer; font-weight: 700; }
         .sig-clear:hover { color: #dc2626; border-color: #dc2626; }
+        .or-divider { text-align: center; font-size: 12px; font-weight: 700; color: #9ca3af; letter-spacing: 1px; margin: 14px 0 10px; }
+        .typed-hint { font-size: 12px; color: #9ca3af; margin-top: 4px; }
         .btn-done { width: 100%; padding: 14px; background: #0a1628; color: #f0b429; border: none; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 8px; letter-spacing: 0.5px; transition: opacity 0.15s; }
         .btn-done:hover { opacity: 0.88; }
         .err { background: #fee2e2; color: #dc2626; border-radius: 8px; padding: 10px 14px; font-size: 14px; margin-bottom: 16px; }
@@ -53,11 +55,11 @@
     {% if request.query_params.get("error") %}
     <div class="err">
         {% if request.query_params.get("error") == "sig" %}
-            We didn't receive your signature. Please draw your signature in the box and tap Submit again.
+            We didn't receive your signature. Please draw your signature, or type your full name in the signature box, and tap Submit again.
         {% elif request.query_params.get("error") == "parent" %}
             A parent/guardian signature is required for athletes under 18. Please complete the parent/guardian section, or check the box confirming the athlete is 18 or older.
         {% else %}
-            Please draw your signature and fill in your name before submitting.
+            Please draw or type your signature and fill in your name before submitting.
         {% endif %}
     </div>
     {% endif %}
@@ -81,7 +83,7 @@
                 </div>
                 <div>
                     <label>Today's Date</label>
-                    <input type="date" name="date_top" required>
+                    <input type="date" name="date_top" value="{{ today }}" required>
                 </div>
             </div>
         </div>
@@ -121,11 +123,14 @@
         <!-- Athlete Signature section -->
         <div class="card">
             <h2>Athlete Signature</h2>
-            <p style="font-size:13px; color:#6b7280; margin-bottom:14px;">Draw the athlete's signature below using a mouse or finger.</p>
+            <p style="font-size:13px; color:#6b7280; margin-bottom:14px;">Draw the athlete's signature below, <strong>or</strong> simply type the full name in the box to sign.</p>
             <div class="sig-canvas-wrap">
                 <canvas id="sig-canvas"></canvas>
                 <button type="button" class="sig-clear" data-clear="sig-canvas">Clear</button>
             </div>
+            <div class="or-divider">— OR TYPE YOUR SIGNATURE —</div>
+            <input type="text" name="typed_signature" id="typed_signature" placeholder="Type the athlete's full name">
+            <p class="typed-hint">Typing your full name here counts as your legal electronic signature.</p>
             <div style="margin-top:20px;" class="row-2">
                 <div>
                     <label>Print Name</label>
@@ -133,7 +138,7 @@
                 </div>
                 <div>
                     <label>Date Signed</label>
-                    <input type="date" name="sign_date" required>
+                    <input type="date" name="sign_date" value="{{ today }}" required>
                 </div>
             </div>
         </div>
@@ -159,11 +164,13 @@
                         <input type="text" name="parent_relationship" id="parent_relationship" placeholder="e.g. Mother, Father, Guardian">
                     </div>
                 </div>
-                <p style="font-size:13px; color:#6b7280; margin-bottom:14px;">Parent/guardian, draw your signature below.</p>
+                <p style="font-size:13px; color:#6b7280; margin-bottom:14px;">Parent/guardian, draw your signature below, <strong>or</strong> type your full name in the box to sign.</p>
                 <div class="sig-canvas-wrap">
                     <canvas id="parent-sig-canvas"></canvas>
                     <button type="button" class="sig-clear" data-clear="parent-sig-canvas">Clear</button>
                 </div>
+                <div class="or-divider">— OR TYPE SIGNATURE —</div>
+                <input type="text" name="parent_typed_signature" id="parent_typed_signature" placeholder="Type the parent/guardian's full name">
                 <div style="margin-top:20px;" class="row-2">
                     <div>
                         <label>Parent / Guardian Print Name</label>
@@ -171,7 +178,7 @@
                     </div>
                     <div>
                         <label>Date Signed</label>
-                        <input type="date" name="parent_sign_date" id="parent_sign_date">
+                        <input type="date" name="parent_sign_date" id="parent_sign_date" value="{{ today }}">
                     </div>
                 </div>
             </div>
@@ -181,95 +188,69 @@
     </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<!-- Self-hosted (CSP allows 'self'; the jsdelivr CDN was blocked by script-src). -->
+<script src="/static/js/signature_pad.umd.min.js"></script>
 <script>
-// Wire up a canvas as a robust signature pad that continuously mirrors its
-// contents into a hidden input. Capturing on every stroke (instead of only at
-// submit) is what makes this work reliably on mobile: focusing a text field
-// pops the on-screen keyboard which fires `resize`, and the old code only
-// serialized the canvas once at submit — after a resize that often produced an
-// empty image, so the server rejected the signature with ?error=1.
-function makeSignaturePad(canvasId, hiddenId) {
-    const canvas = document.getElementById(canvasId);
-    const hidden = hiddenId ? document.getElementById(hiddenId) : null;
-    // Cap pixel ratio at 2 — retina phones report 3, which makes the backing
-    // canvas needlessly large and has historically broken toDataURL on iOS.
-    const ratio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+// Progressive enhancement: typing a name in the typed_signature box always
+// works with zero JavaScript. If the library loaded, we also wire up drawing.
+(function () {
+    if (typeof SignaturePad === "undefined") return;  // typed fallback still works
 
-    const pad = new SignaturePad(canvas, { minWidth: 1.5, maxWidth: 3, penColor: "#0a1628" });
+    function makeSignaturePad(canvasId, hiddenId) {
+        const canvas = document.getElementById(canvasId);
+        const hidden = hiddenId ? document.getElementById(hiddenId) : null;
+        const ratio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+        const pad = new SignaturePad(canvas, { minWidth: 1.5, maxWidth: 3, penColor: "#0a1628" });
 
-    function serialize() {
-        if (!hidden) return;
-        try {
-            hidden.value = pad.isEmpty() ? "" : pad.toDataURL('image/png');
-        } catch (e) {
-            // Leave whatever we last captured rather than blanking it.
+        function serialize() {
+            if (!hidden) return;
+            try { hidden.value = pad.isEmpty() ? "" : pad.toDataURL('image/png'); }
+            catch (e) { /* keep last captured value */ }
         }
-    }
-
-    let lastWidth = 0;
-    function resize() {
-        const rect = canvas.parentElement.getBoundingClientRect();
-        const width = Math.round(rect.width);
-        if (width === lastWidth) return;   // ignore keyboard/address-bar height changes
-        lastWidth = width;
-        const data = pad.toData();
-        canvas.width = rect.width * ratio;
-        canvas.height = 140 * ratio;
-        canvas.getContext('2d').scale(ratio, ratio);
-        pad.clear();
-        if (data && data.length) { pad.fromData(data); }
-        serialize();
-    }
-
-    pad.addEventListener('endStroke', serialize);
-    window.addEventListener('resize', resize);
-    window.addEventListener('orientationchange', resize);
-    resize();
-
-    return { pad, serialize, clear() { pad.clear(); serialize(); } };
-}
-
-const athletePad = makeSignaturePad('sig-canvas', 'signature_data');
-const parentPad  = makeSignaturePad('parent-sig-canvas', 'parent_signature_data');
-const pads = { 'sig-canvas': athletePad, 'parent-sig-canvas': parentPad };
-
-document.querySelectorAll('.sig-clear').forEach(btn => {
-    btn.addEventListener('click', () => pads[btn.dataset.clear].clear());
-});
-
-// Default both date fields to today.
-const today = new Date().toISOString().split('T')[0];
-document.querySelectorAll('input[type=date]').forEach(el => el.value = today);
-
-// Toggle parent/guardian requirement based on the "18 or older" checkbox.
-const adultBox = document.getElementById('athlete_is_adult');
-const parentFields = document.getElementById('parent-fields');
-function syncAdult() {
-    parentFields.style.display = adultBox.checked ? 'none' : 'block';
-}
-adultBox.addEventListener('change', syncAdult);
-syncAdult();
-
-document.getElementById('sign-form').addEventListener('submit', function(e) {
-    // Make sure the hidden fields reflect the latest canvas state.
-    athletePad.serialize();
-    parentPad.serialize();
-
-    if (!document.getElementById('signature_data').value) {
-        e.preventDefault();
-        alert('Please draw the athlete signature before submitting.');
-        return;
-    }
-    if (!adultBox.checked) {
-        const pn = document.getElementById('parent_full_name').value.trim();
-        if (!document.getElementById('parent_signature_data').value || !pn) {
-            e.preventDefault();
-            alert('A parent/guardian signature and name are required for athletes under 18. If the athlete is 18 or older, check the box confirming that.');
-            return;
+        let lastWidth = 0;
+        function resize() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const width = Math.round(rect.width);
+            if (width === lastWidth) return;
+            lastWidth = width;
+            const data = pad.toData();
+            canvas.width = rect.width * ratio;
+            canvas.height = 140 * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+            pad.clear();
+            if (data && data.length) pad.fromData(data);
+            serialize();
         }
+        pad.addEventListener('endStroke', serialize);
+        window.addEventListener('resize', resize);
+        window.addEventListener('orientationchange', resize);
+        resize();
+        return { pad, serialize, clear() { pad.clear(); serialize(); } };
     }
-});
+
+    const athletePad = makeSignaturePad('sig-canvas', 'signature_data');
+    const parentPad  = makeSignaturePad('parent-sig-canvas', 'parent_signature_data');
+    const pads = { 'sig-canvas': athletePad, 'parent-sig-canvas': parentPad };
+
+    document.querySelectorAll('.sig-clear').forEach(btn => {
+        btn.addEventListener('click', () => pads[btn.dataset.clear].clear());
+    });
+
+    document.getElementById('sign-form').addEventListener('submit', function () {
+        athletePad.serialize();
+        parentPad.serialize();
+    });
+})();
+
+// Toggle the parent block based on the "18 or older" checkbox (no-op if JS off).
+(function () {
+    const adultBox = document.getElementById('athlete_is_adult');
+    const parentFields = document.getElementById('parent-fields');
+    if (!adultBox || !parentFields) return;
+    function sync() { parentFields.style.display = adultBox.checked ? 'none' : 'block'; }
+    adultBox.addEventListener('change', sync);
+    sync();
+})();
 </script>
 </body>
 </html>

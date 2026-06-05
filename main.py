@@ -6653,7 +6653,8 @@ async def sign_page(token: str, request: Request, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="Signing link not found or has expired.")
     if contract.status == "signed":
         return templates.TemplateResponse("sign_done.html", {"request": request, "contract": contract})
-    return templates.TemplateResponse("sign.html", {"request": request, "contract": contract})
+    _today = datetime.utcnow().strftime("%Y-%m-%d")
+    return templates.TemplateResponse("sign.html", {"request": request, "contract": contract, "today": _today})
 
 
 @app.post("/sign/{token}", response_class=HTMLResponse)
@@ -6676,6 +6677,10 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     parent_print_name    = form.get("parent_print_name", "").strip()[:200]
     parent_sign_date     = form.get("parent_sign_date", "").strip()[:50]
     parent_signature_data = form.get("parent_signature_data", "").strip()
+
+    # Typed-signature fallbacks (work even when the drawing canvas / JS does not).
+    typed_signature        = form.get("typed_signature", "").strip()[:200]
+    parent_typed_signature = form.get("parent_typed_signature", "").strip()[:200]
 
     MAX_SIG_B64 = 2 * 1024 * 1024 * 4 // 3  # ~2MB decoded per signature
 
@@ -6702,13 +6707,14 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
         return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
 
     sig_bytes = _decode_sig(signature_data)
-    if sig_bytes is None:
-        print(f"[sign] contract={contract.id} rejected: signature_data empty/invalid (len={len(signature_data)})")
+    if sig_bytes is None and not typed_signature:
+        print(f"[sign] contract={contract.id} rejected: no signature (drawn len={len(signature_data)}, typed empty)")
         return RedirectResponse(f"/sign/{token}?error=sig", status_code=302)
 
-    # Parent/guardian signature required for minors.
+    # Parent/guardian signature required for minors (drawn OR typed).
     parent_sig_bytes = _decode_sig(parent_signature_data)
-    if not athlete_is_adult and (parent_sig_bytes is None or not parent_full_name):
+    parent_has_sig = parent_sig_bytes is not None or bool(parent_typed_signature)
+    if not athlete_is_adult and (not parent_has_sig or not parent_full_name):
         print(f"[sign] contract={contract.id} rejected: missing parent/guardian signature")
         return RedirectResponse(f"/sign/{token}?error=parent", status_code=302)
 
@@ -6725,9 +6731,12 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
 
     # ── Page 3 (index 2): CLIENT SIGNATURE, DATE, Print Name ────────────
     p2 = doc[2]
-    # Signature image — in the space below "CLIENT SIGNATURE:" (y=217) and above "DATE:" (y=267)
-    sig_rect = fitz.Rect(72, 222, 380, 262)
-    p2.insert_image(sig_rect, stream=sig_bytes)
+    # Signature — drawn image if provided, otherwise the typed name in script font.
+    if sig_bytes is not None:
+        sig_rect = fitz.Rect(72, 222, 380, 262)
+        p2.insert_image(sig_rect, stream=sig_bytes)
+    else:
+        p2.insert_text((74, 250), typed_signature, fontsize=20, fontname="tiit", color=(0,0,0))
     # Date signed — after "DATE:" at y=267
     p2.draw_rect(fitz.Rect(110, 255, 400, 275), color=(1,1,1), fill=(1,1,1))
     p2.insert_text((112, 269), sign_date, fontsize=11, color=(0,0,0))
@@ -6735,10 +6744,13 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     p2.insert_text((72, 290), f"Print Name: {print_name}", fontsize=11, color=(0,0,0))
 
     # Parent / guardian block (below the CAP signature block on page 3)
-    if parent_sig_bytes is not None:
+    if parent_has_sig:
         p2.insert_text((72, 430), "PARENT / GUARDIAN SIGNATURE:", fontsize=11, color=(0,0,0))
-        parent_sig_rect = fitz.Rect(72, 438, 380, 478)
-        p2.insert_image(parent_sig_rect, stream=parent_sig_bytes)
+        if parent_sig_bytes is not None:
+            parent_sig_rect = fitz.Rect(72, 438, 380, 478)
+            p2.insert_image(parent_sig_rect, stream=parent_sig_bytes)
+        else:
+            p2.insert_text((74, 468), parent_typed_signature, fontsize=20, fontname="tiit", color=(0,0,0))
         p2.insert_text((72, 498), f"DATE: {parent_sign_date}", fontsize=11, color=(0,0,0))
         _rel = f" ({parent_relationship})" if parent_relationship else ""
         p2.insert_text((72, 516), f"Print Name: {parent_print_name or parent_full_name}{_rel}", fontsize=11, color=(0,0,0))
