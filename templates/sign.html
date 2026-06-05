@@ -132,21 +132,33 @@
 <script>
 const canvas = document.getElementById('sig-canvas');
 
-function resizeCanvas() {
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width * ratio;
-    canvas.height = 140 * ratio;
-    canvas.getContext('2d').scale(ratio, ratio);
-    signaturePad.clear();
-}
-
 const signaturePad = new SignaturePad(canvas, {
     minWidth: 1.5, maxWidth: 3,
     penColor: "#0a1628"
 });
 
+// On iOS, scrolling shows/hides the address bar and fires `resize` constantly.
+// Resize (and the implicit clear) only when the WIDTH actually changes, and
+// preserve any drawn strokes across a legitimate resize so the signature is
+// never wiped out from under the user.
+let lastWidth = 0;
+function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const width = Math.round(rect.width);
+    if (width === lastWidth) return;
+    lastWidth = width;
+
+    const data = signaturePad.toData();
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = rect.width * ratio;
+    canvas.height = 140 * ratio;
+    canvas.getContext('2d').scale(ratio, ratio);
+    signaturePad.clear();
+    if (data && data.length) signaturePad.fromData(data);
+}
+
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
 resizeCanvas();
 
 function clearSig() { signaturePad.clear(); }
