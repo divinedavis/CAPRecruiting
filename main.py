@@ -232,7 +232,8 @@ app.add_middleware(_SessionRefreshMiddleware)
 class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
     """Reject non-upload POST requests with bodies larger than 1MB."""
     _UPLOAD_PATHS = {"/profile/upload-photo", "/profile/videos/upload",
-                     "/profile/images/upload", "/profile/transcripts/upload"}
+                     "/profile/images/upload", "/profile/transcripts/upload",
+                     "/sign/"}
     _MAX_BODY = 1 * 1024 * 1024  # 1MB
 
     async def dispatch(self, request, call_next):
@@ -6668,28 +6669,48 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     sign_date    = form.get("sign_date", "").strip()[:50]
     signature_data = form.get("signature_data", "").strip()
 
-    if not signature_data or not full_name:
+    # Parent / guardian fields (required unless the athlete is 18+).
+    athlete_is_adult     = bool(form.get("athlete_is_adult"))
+    parent_full_name     = form.get("parent_full_name", "").strip()[:200]
+    parent_relationship  = form.get("parent_relationship", "").strip()[:100]
+    parent_print_name    = form.get("parent_print_name", "").strip()[:200]
+    parent_sign_date     = form.get("parent_sign_date", "").strip()[:50]
+    parent_signature_data = form.get("parent_signature_data", "").strip()
+
+    MAX_SIG_B64 = 2 * 1024 * 1024 * 4 // 3  # ~2MB decoded per signature
+
+    def _decode_sig(raw):
+        """Strip the data-URI prefix, size-check, and validate an image.
+        Returns the decoded PNG bytes, or None if missing/invalid."""
+        if not raw:
+            return None
+        if "base64," in raw:
+            raw = raw.split("base64,", 1)[1]
+        if len(raw) > MAX_SIG_B64:
+            return None
+        try:
+            b = base64.b64decode(raw)
+            import io as _io
+            from PIL import Image as _PIL_Image
+            _PIL_Image.open(_io.BytesIO(b)).verify()
+            return b
+        except Exception:
+            return None
+
+    if not full_name:
+        print(f"[sign] contract={contract.id} rejected: missing full_name")
         return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
 
-    # Strip data URI prefix
-    if "base64," in signature_data:
-        signature_data = signature_data.split("base64,", 1)[1]
+    sig_bytes = _decode_sig(signature_data)
+    if sig_bytes is None:
+        print(f"[sign] contract={contract.id} rejected: signature_data empty/invalid (len={len(signature_data)})")
+        return RedirectResponse(f"/sign/{token}?error=sig", status_code=302)
 
-    # Limit signature image to 2MB decoded (base64 is ~4/3 of raw size)
-    MAX_SIG_B64 = 2 * 1024 * 1024 * 4 // 3
-    if len(signature_data) > MAX_SIG_B64:
-        return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
-
-    sig_bytes = base64.b64decode(signature_data)
-
-    # Validate it's actually an image before passing to PDF renderer
-    try:
-        import io as _io
-        from PIL import Image as _PIL_Image
-        _img = _PIL_Image.open(_io.BytesIO(sig_bytes))
-        _img.verify()
-    except Exception:
-        return RedirectResponse(f"/sign/{token}?error=1", status_code=302)
+    # Parent/guardian signature required for minors.
+    parent_sig_bytes = _decode_sig(parent_signature_data)
+    if not athlete_is_adult and (parent_sig_bytes is None or not parent_full_name):
+        print(f"[sign] contract={contract.id} rejected: missing parent/guardian signature")
+        return RedirectResponse(f"/sign/{token}?error=parent", status_code=302)
 
     doc = fitz.open(TEMPLATE_PDF)
 
@@ -6712,6 +6733,17 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     p2.insert_text((112, 269), sign_date, fontsize=11, color=(0,0,0))
     # Print name — below date
     p2.insert_text((72, 290), f"Print Name: {print_name}", fontsize=11, color=(0,0,0))
+
+    # Parent / guardian block (below the CAP signature block on page 3)
+    if parent_sig_bytes is not None:
+        p2.insert_text((72, 430), "PARENT / GUARDIAN SIGNATURE:", fontsize=11, color=(0,0,0))
+        parent_sig_rect = fitz.Rect(72, 438, 380, 478)
+        p2.insert_image(parent_sig_rect, stream=parent_sig_bytes)
+        p2.insert_text((72, 498), f"DATE: {parent_sign_date}", fontsize=11, color=(0,0,0))
+        _rel = f" ({parent_relationship})" if parent_relationship else ""
+        p2.insert_text((72, 516), f"Print Name: {parent_print_name or parent_full_name}{_rel}", fontsize=11, color=(0,0,0))
+    elif athlete_is_adult:
+        p2.insert_text((72, 430), "Athlete certified as 18 years of age or older; no parent/guardian signature required.", fontsize=9, color=(0.4,0.4,0.4))
 
     os.makedirs(SIGNED_DOCS_DIR, exist_ok=True)
     filename = f"signed_{contract.id}_{uuid.uuid4().hex[:10]}.pdf"
