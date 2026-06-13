@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Mass DM — Collegiate Athletic Planning{% endblock %}
+{% block content %}
+<div class="container page-top">
+    <div class="page-header">
+        <div>
+            <h1>Mass DM Athletes</h1>
+            <p class="page-sub">Send a direct message to every athlete at once</p>
+        </div>
+        <a href="/admin/teams" class="btn btn-outline">← Admin</a>
+    </div>
+
+    {% if sent %}
+    <div style="margin-bottom:24px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:14px 18px; max-width:560px;">
+        <p style="margin:0; font-size:14px; font-weight:700; color:#166534;">
+            Message delivered to {{ sent }} athlete{{ '' if sent == '1' else 's' }}.
+        </p>
+        <p style="margin:6px 0 0; font-size:13px; color:#166534;">
+            It appears in each athlete's inbox as a direct message from you.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="admin-form-card" style="max-width:560px;">
+        <h2>Compose Message</h2>
+        <p style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">
+            This sends an individual DM to <strong>{{ athlete_count }}</strong> athlete{{ '' if athlete_count == 1 else 's' }}.
+            Each athlete replies to you privately in their own thread.
+        </p>
+        <form method="post" action="/admin/mass-dm/send"
+              onsubmit="return confirm('Send this message to all {{ athlete_count }} athletes?');">
+            <div class="form-group">
+                <label>Message <span class="field-hint">Up to 2000 characters</span></label>
+                <textarea name="content" rows="6" maxlength="2000" required
+                    placeholder="Write your announcement to all athletes…"
+                    style="width:100%; padding:12px 14px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:15px; font-family:inherit; resize:vertical;"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"{% if athlete_count == 0 %} disabled{% endif %}>
+                Send to {{ athlete_count }} Athlete{{ '' if athlete_count == 1 else 's' }}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

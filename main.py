@@ -6332,6 +6332,83 @@ async def admin_invites_revoke(token: str, request: Request, db: Session = Depen
         db.commit()
     return RedirectResponse("/admin/invites", status_code=302)
 
+
+@app.get("/admin/mass-dm", response_class=HTMLResponse)
+async def admin_mass_dm_get(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    athlete_count = db.query(func.count(User.id)).filter(
+        User.role == "player", User.is_admin == False
+    ).scalar() or 0
+    sent = request.query_params.get("sent", "")
+    return templates.TemplateResponse("admin_mass_dm.html", {
+        "request": request,
+        "athlete_count": athlete_count,
+        "sent": sent,
+    })
+
+
+@app.post("/admin/mass-dm/send", response_class=HTMLResponse)
+async def admin_mass_dm_send(request: Request, content: str = Form(""), db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    text = (content or "").strip()[:2000]
+    if not text:
+        return RedirectResponse("/admin/mass-dm", status_code=302)
+
+    athletes = db.query(User).filter(
+        User.role == "player", User.is_admin == False
+    ).all()
+    encrypted = encrypt_message(text)
+    now = datetime.utcnow()
+    new_messages = []
+    for athlete in athletes:
+        msg = Message(
+            sender_id=admin.id,
+            receiver_id=athlete.id,
+            content=encrypted,
+            timestamp=now,
+        )
+        db.add(msg)
+        new_messages.append((athlete.id, msg))
+    db.commit()
+
+    # Push live to any online recipients (best-effort).
+    for athlete_id, msg in new_messages:
+        try:
+            db.refresh(msg)
+            payload = {
+                "type": "message",
+                "id": msg.id,
+                "sender_id": admin.id,
+                "sender_username": admin.username,
+                "receiver_id": athlete_id,
+                "content": text,
+                "timestamp": msg.timestamp.strftime("%b %d, %I:%M %p"),
+            }
+            await manager.send_to_user(athlete_id, payload)
+            await manager.send_to_user(
+                athlete_id, {"type": "unread", "count": unread_sender_count(db, athlete_id)}
+            )
+        except Exception:
+            pass
+
+    log_admin_action(
+        db, admin.id, "mass_dm",
+        detail=f"Sent mass DM to {len(new_messages)} athletes",
+        ip=(request.client.host if request.client else ""),
+    )
+    return RedirectResponse(f"/admin/mass-dm?sent={len(new_messages)}", status_code=302)
+
+
 @app.post("/admin/users/{target_id}/delete", response_class=HTMLResponse)
 async def admin_delete_user(target_id: int, request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
