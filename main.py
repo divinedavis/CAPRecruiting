@@ -313,6 +313,8 @@ class PlayerProfile(Base):
     city = Column(String, default="")
     state = Column(String, default="")
     county = Column(String, default="")
+    committed_school = Column(String, default="")
+    committed_school_logo = Column(String, default="")
     bio = Column(Text, default="")
     link1_label = Column(String, default="")
     link1_url = Column(String, default="")
@@ -921,6 +923,8 @@ _add_column_if_missing("tracked_emails", "last_seen_at", "DATETIME")
 _add_column_if_missing("email_campaigns", "is_active_template", "BOOLEAN DEFAULT 0")
 _add_column_if_missing("legal_contracts", "user_id", "INTEGER")
 _add_column_if_missing("legal_contracts", "gate_access", "BOOLEAN DEFAULT 0")
+_add_column_if_missing("player_profiles", "committed_school", "TEXT DEFAULT ''")
+_add_column_if_missing("player_profiles", "committed_school_logo", "TEXT DEFAULT ''")
 
 # One-time backfill of stat_history from current player_profiles values.
 # Provides every player with a baseline data point so progression starts
@@ -3335,6 +3339,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
         p.county = form.get("school_county", "")[:100]
+        p.committed_school = form.get("committed_school", "")[:120]
         if can_edit_premium_fields(user):
             p.mother_first_name = form.get("mother_first_name", "")[:100]
             p.mother_last_name = form.get("mother_last_name", "")[:100]
@@ -4572,6 +4577,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.city = form.get("school_city", "")[:100]
         p.state = form.get("school_state", "")[:10]
         p.county = form.get("school_county", "")[:100]
+        p.committed_school = form.get("committed_school", "")[:120]
         p.mother_first_name = form.get("mother_first_name", "")[:100]
         p.mother_last_name = form.get("mother_last_name", "")[:100]
         p.mother_email = form.get("mother_email", "")[:200]
@@ -7009,6 +7015,102 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
     db.commit()
 
     # Redirect admin back to the target user's admin edit page, others to their own edit page
+    if logged_in_user and logged_in_user.is_admin and target_user_id != user_id:
+        return RedirectResponse(f"/admin/users/{target_user_id}/edit-profile", status_code=302)
+    return RedirectResponse("/profile/edit", status_code=302)
+
+
+@app.post("/profile/upload-committed-logo")
+async def upload_committed_logo(request: Request, logo: UploadFile = File(...), target_user_id: str = Form(default=""), db: Session = Depends(get_db)):
+    """Upload a committed-school logo image. Mirrors /profile/upload-photo:
+    validates the image with PIL, stores it on Spaces, and saves the public
+    URL on the player's profile."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+
+    ext = logo.filename.rsplit(".", 1)[-1].lower() if logo.filename and "." in logo.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        return RedirectResponse("/profile/edit?logo_error=type", status_code=302)
+
+    contents = await logo.read()
+    if len(contents) > 5 * 1024 * 1024:
+        return RedirectResponse("/profile/edit?logo_error=size", status_code=302)
+
+    # Resolve target (admin may edit another player's profile)
+    logged_in_user = db.query(User).filter(User.id == user_id).first()
+    if target_user_id.strip().isdigit() and logged_in_user and logged_in_user.is_admin:
+        target_user_id = int(target_user_id.strip())
+    else:
+        target_user_id = user_id
+
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    if not target_user or target_user.role != "player":
+        return RedirectResponse("/profile/edit", status_code=302)
+
+    # Validate + normalize the image. Logos are kept on a transparent-friendly
+    # PNG so school marks with transparency render cleanly on any background.
+    try:
+        import io as _io
+        from PIL import Image as _PIL, ImageOps as _ImageOps
+        img = _PIL.open(_io.BytesIO(contents))
+        img = _ImageOps.exif_transpose(img)
+        img = img.convert("RGBA")
+        img.thumbnail((512, 512), _PIL.LANCZOS)
+        buf = _io.BytesIO()
+        img.save(buf, format="PNG", optimize=True)
+        buf.seek(0)
+    except Exception:
+        return RedirectResponse("/profile/edit?logo_error=invalid", status_code=302)
+
+    s3_key = f"committed-logos/{target_user_id}/{uuid.uuid4().hex}.png"
+    try:
+        s3.upload_fileobj(
+            buf, SPACES_BUCKET, s3_key,
+            ExtraArgs={"ContentType": "image/png", "ACL": "public-read"}
+        )
+    except Exception:
+        return RedirectResponse("/profile/edit?logo_error=upload", status_code=302)
+
+    p = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_user_id).first()
+    if p is None:
+        p = PlayerProfile(user_id=target_user_id)
+        db.add(p)
+    # Remove the previous logo from Spaces if it lived there
+    if p.committed_school_logo and SPACES_BASE_URL in p.committed_school_logo:
+        try:
+            old_key = p.committed_school_logo.replace(f"{SPACES_BASE_URL}/", "")
+            s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
+        except Exception:
+            pass
+    p.committed_school_logo = f"{SPACES_BASE_URL}/{s3_key}"
+    db.commit()
+
+    if logged_in_user and logged_in_user.is_admin and target_user_id != user_id:
+        return RedirectResponse(f"/admin/users/{target_user_id}/edit-profile", status_code=302)
+    return RedirectResponse("/profile/edit", status_code=302)
+
+
+@app.post("/profile/remove-committed-logo")
+async def remove_committed_logo(request: Request, target_user_id: str = Form(default=""), db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    logged_in_user = db.query(User).filter(User.id == user_id).first()
+    if target_user_id.strip().isdigit() and logged_in_user and logged_in_user.is_admin:
+        target_user_id = int(target_user_id.strip())
+    else:
+        target_user_id = user_id
+    p = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_user_id).first()
+    if p and p.committed_school_logo:
+        if SPACES_BASE_URL in p.committed_school_logo:
+            try:
+                old_key = p.committed_school_logo.replace(f"{SPACES_BASE_URL}/", "")
+                s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
+            except Exception:
+                pass
+        p.committed_school_logo = ""
+        db.commit()
     if logged_in_user and logged_in_user.is_admin and target_user_id != user_id:
         return RedirectResponse(f"/admin/users/{target_user_id}/edit-profile", status_code=302)
     return RedirectResponse("/profile/edit", status_code=302)

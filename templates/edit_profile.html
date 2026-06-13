@@ -42,6 +42,38 @@
             </div>
         </div>
 
+        {% if user.role == "player" %}
+        <div class="form-section" id="committed-section">
+            <h2>School Commitment</h2>
+            <p class="section-hint">If you've committed to a college, add the school name in the form below and upload its logo here. It shows on your profile and in the player directory.</p>
+            <div class="photo-upload-area">
+                <div class="photo-preview" id="committed-logo-preview" style="background:#f3f4f6;">
+                    {% if profile and profile.committed_school_logo %}
+                        <img src="{{ profile.committed_school_logo }}" alt="Committed school logo" style="width:100%; height:100%; object-fit:contain;">
+                    {% else %}
+                        <div class="photo-placeholder" style="font-size:30px;">🎓</div>
+                    {% endif %}
+                </div>
+                <div class="photo-upload-controls">
+                    <form method="post" action="/profile/upload-committed-logo" enctype="multipart/form-data">
+                        <label for="committed-logo-input" class="btn btn-outline btn-upload">
+                            🏟 {% if profile and profile.committed_school_logo %}Change Logo{% else %}Upload School Logo{% endif %}
+                        </label>
+                        <input type="hidden" name="target_user_id" value="{{ user.id }}">
+                        <input type="file" name="logo" id="committed-logo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="this.form.submit()">
+                        <p class="photo-hint">JPG, PNG, GIF or WebP — max 5MB</p>
+                    </form>
+                    {% if profile and profile.committed_school_logo %}
+                    <form method="post" action="/profile/remove-committed-logo" onsubmit="return confirm('Remove the commitment logo?')">
+                        <input type="hidden" name="target_user_id" value="{{ user.id }}">
+                        <button type="submit" class="btn btn-outline btn-sm" style="margin-top:6px;">Remove Logo</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <form id="profile-form" method="post" action="{{ profile_form_action | default('/profile/edit') }}">
             {% if user.role == "player" %}
             <!-- PLAYER FORM -->
@@ -79,6 +111,10 @@
                         </select>
                         <span class="field-hint" style="font-size:12px;color:#6b7280;">Select the high school you attend</span>
                         <input type="hidden" name="school_county" id="edit-school-county" value="{{ profile.county if profile and profile.county else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Committed To <span class="field-hint" style="font-size:12px;color:#6b7280;">College commitment (optional)</span></label>
+                        <input type="text" name="committed_school" maxlength="120" value="{{ profile.committed_school if profile and profile.committed_school else '' }}" placeholder="e.g. Maryland Terrapins">
                     </div>
                     <div class="form-group">
                         <label>Class Year</label>

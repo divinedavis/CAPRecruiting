@@ -131,6 +131,16 @@
             {% if p and p.school %}
             <div class="player-location" style="text-align:center;">{{ p.school }}{% if p.school == "William Penn SHS" %} (York High){% endif %}</div>
             {% endif %}
+            {% if p and (p.committed_school or p.committed_school_logo) %}
+            <div style="text-align:center; margin-top:8px;">
+                <span style="display:inline-flex; align-items:center; gap:6px; background:#0a1628; color:#fff; padding:4px 12px; border-radius:20px; max-width:100%;">
+                    {% if p.committed_school_logo %}
+                    <img src="{{ p.committed_school_logo }}" alt="" style="width:18px; height:18px; object-fit:contain; background:#fff; border-radius:3px; padding:1px; flex-shrink:0;">
+                    {% endif %}
+                    <span style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✓ {{ p.committed_school or 'Committed' }}</span>
+                </span>
+            </div>
+            {% endif %}
             {% if p and (p.city or p.state) %}
             <div style="text-align:center; font-size:12px; color:var(--gray-400); margin-top:2px;">{% if p.city %}{{ p.city }}{% endif %}{% if p.city and p.state %}, {% endif %}{% if p.state %}{{ p.state }}{% endif %}</div>
             {% endif %}

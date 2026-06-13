@@ -337,3 +337,14 @@ git diff --cached | grep -iE "(sk_live|sk_test|pk_live|pk_test|gho_|ghp_|AKIA|se
 If ANY match is found, **do NOT commit**. Remove the secret from the file, add it to `.env` instead, and make sure `.env` is in `.gitignore`.
 
 Never commit files containing API keys, tokens, passwords, or credentials. All secrets must live in `.env` and be loaded at runtime.
+
+### Verify EVERY feature actually works (not just HTTP codes)
+
+A `200`/`302` only proves the route renders — it does NOT prove the feature works. After **every** change, confirm the actual functionality end-to-end, including (at minimum):
+
+- **Videos** — upload plays in-browser (watch the HEVC/codec gotcha), pin/delete work, CDN URL loads.
+- **Photos** — profile photo + gallery upload, display, and delete work; images actually render (not broken links).
+- **Links** — every external/social link (Hudl, X, Instagram, news links, custom links) opens and points to the right URL; internal nav links and buttons all work.
+- **Every other feature touched or nearby** — messaging send/receive, commitment school + logo, offers, visits, stats, questionnaire, payments/upgrade, admin tools (mass DM, edit profile, invites).
+
+Prefer a real authenticated walkthrough (log in as a test player/coach/admin and click through) or set real data in the DB and confirm the rendered HTML contains it. Never assume a green status code means the feature works. If anything is broken, fix it before committing.
