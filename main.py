@@ -2532,7 +2532,7 @@ async def send_payment_failed_alert(invoice: dict, user):
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         recipients = [e.strip() for e in os.environ.get(
-            "PAYMENT_ALERT_EMAILS", "ben@aflyork.com,justwin2424@yahoo.com").split(",") if e.strip()]
+            "PAYMENT_ALERT_EMAILS", "ben@aflyork.org,justwin2424@yahoo.com").split(",") if e.strip()]
         if not recipients:
             return
         amount = invoice.get("amount_due")
