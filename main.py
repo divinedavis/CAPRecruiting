@@ -2580,6 +2580,53 @@ async def send_payment_failed_alert(invoice: dict, user):
             pass
 
 
+async def send_payment_failed_member(invoice: dict, user, first_name: str = ""):
+    """Email the athlete/member directly when their payment fails, so they can
+    update their card and keep their subscription before the downgrade sticks."""
+    try:
+        import aiosmtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        to_email = (user.email if user and user.email else "") or invoice.get("customer_email") or ""
+        if not to_email:
+            return
+        greeting = first_name or (user.username if user else "there")
+        amount = invoice.get("amount_due")
+        amount_str = (f"${amount/100:.2f} {(invoice.get('currency') or '').upper()}"
+                      if amount else "your subscription amount")
+        invoice_url = invoice.get("hosted_invoice_url") or ""
+        site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+        cta_url = invoice_url or f"{site_url}/account"
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;padding:28px;">
+          <h2 style="color:#0a1628;margin:0 0 6px;">Your payment didn't go through</h2>
+          <p style="color:#374151;margin:0 0 16px;">Hi {greeting}, we tried to charge
+          {amount_str} for your CAP Recruiting subscription, but the payment failed.</p>
+          <p style="color:#374151;margin:0 0 16px;">To keep your account active and avoid losing
+          access to your dashboard, please update your payment details and complete the charge.
+          If we can't collect payment, your account will be moved to the free tier.</p>
+          <p style="margin:22px 0;">
+            <a href="{cta_url}" style="background:#0a1628;color:#fff;padding:12px 26px;border-radius:8px;
+            text-decoration:none;font-weight:700;font-size:15px;">Update payment</a>
+          </p>
+          <p style="color:#9ca3af;font-size:12px;margin-top:20px;">If you already updated your card,
+          you can ignore this email. &mdash; CAP Recruiting</p>
+        </div>"""
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Action needed: your CAP Recruiting payment failed"
+        msg["From"] = f"CAP Recruiting <{SMTP_USER}>"
+        msg["To"] = to_email
+        msg.attach(MIMEText(html, "html"))
+        await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT,
+                              username=(SMTP_USER or None), password=(SMTP_PASSWORD or None),
+                              start_tls=True, recipients=[to_email])
+    except Exception as e:
+        try:
+            print(f"[payment-member] send failed: {e}")
+        except Exception:
+            pass
+
+
 # ── Email Tracking (public, no auth) ──────────────────────────────────────────
 
 # 1x1 transparent PNG
@@ -7690,6 +7737,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.stripe_customer_id == cust_id).first()
         # Alert admins immediately that a payment did not go through (before downgrade).
         await send_payment_failed_alert(obj, user)
+        # Also notify the athlete directly so they can update their card.
+        member_first = ""
+        if user:
+            prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == user.id).first()
+            if prof and prof.first_name:
+                member_first = prof.first_name
+        await send_payment_failed_member(obj, user, member_first)
         if user:
             user.subscription_tier = "free"
             user.stripe_subscription_id = ""
