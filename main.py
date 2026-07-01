@@ -1204,11 +1204,11 @@ STRIPE_PRICE_PREMIUM_YEARLY_SALE = os.environ.get("STRIPE_PRICE_PREMIUM_YEARLY_S
 
 
 def june_sale_active() -> bool:
-    """Active from launch (May 31) through the end of June 2026, US Eastern.
-    Reverts automatically at 00:00 ET on July 1."""
+    """Active from launch (May 31) through 11:59 PM ET Sunday, July 5, 2026.
+    Reverts automatically at 00:00 ET on July 6."""
     now = datetime.now(_ZoneInfo("America/New_York"))
     start = datetime(2026, 5, 31, tzinfo=_ZoneInfo("America/New_York"))
-    end = datetime(2026, 7, 1, tzinfo=_ZoneInfo("America/New_York"))
+    end = datetime(2026, 7, 6, tzinfo=_ZoneInfo("America/New_York"))
     return start <= now < end
 
 
