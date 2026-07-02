@@ -21,7 +21,10 @@ from typing import Optional, Dict, List
 import logging
 _logger = logging.getLogger("bearcats")
 
-app = FastAPI()
+# docs_url/redoc_url/openapi_url disabled: the interactive OpenAPI schema would
+# otherwise publish the full endpoint map (admin, payment, webhook routes) to
+# anonymous users as free recon.
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # ── DigitalOcean Spaces (S3-compatible) ────────────────────────────────────────
 SPACES_KEY    = os.environ.get("SPACES_KEY", "")
@@ -173,6 +176,41 @@ class _ContractGateMiddleware(_BaseHTTPMiddleware_for_gate):
         return await call_next(request)
 
 app.add_middleware(_ContractGateMiddleware)
+
+class _SessionRefreshMiddleware(_BaseHTTPMiddleware_for_gate):
+    """Re-verify is_admin and role from DB on every request so revoked
+    privileges take effect immediately without requiring logout, and enforce
+    session_version so 'log out all devices' and password resets invalidate
+    existing sessions.
+
+    NOTE: registered BEFORE SessionMiddleware on purpose (same trick as
+    _ContractGateMiddleware) so it runs AFTER SessionMiddleware has populated
+    request.scope['session']. Registering it after SessionMiddleware — as it
+    was originally — makes it outermost, so it runs before the session exists
+    and the whole body is dead code (the session_version kill-switch never
+    fires)."""
+
+    async def dispatch(self, request, call_next):
+        user_id = request.session.get("user_id") if "session" in request.scope else None
+        if user_id:
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == user_id).first()
+                if user:
+                    # Check session version — if mismatched, force logout
+                    if request.session.get("session_version", 0) != (user.session_version or 0):
+                        request.session.clear()
+                    else:
+                        request.session["is_admin"] = bool(user.is_admin)
+                        request.session["role"] = user.role
+                        request.session["subscription_tier"] = user.subscription_tier or "free"
+                else:
+                    request.session.clear()
+            finally:
+                db.close()
+        return await call_next(request)
+
+app.add_middleware(_SessionRefreshMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=_session_secret, https_only=True, same_site="lax", max_age=SESSION_MAX_AGE)
 
 
@@ -202,32 +240,6 @@ class _CSRFMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 app.add_middleware(_CSRFMiddleware)
-
-class _SessionRefreshMiddleware(BaseHTTPMiddleware):
-    """Re-verify is_admin and role from DB on every request so revoked
-    privileges take effect immediately without requiring logout."""
-
-    async def dispatch(self, request, call_next):
-        user_id = request.session.get("user_id") if "session" in request.scope else None
-        if user_id:
-            db = SessionLocal()
-            try:
-                user = db.query(User).filter(User.id == user_id).first()
-                if user:
-                    # Check session version — if mismatched, force logout
-                    if request.session.get("session_version", 0) != (user.session_version or 0):
-                        request.session.clear()
-                    else:
-                        request.session["is_admin"] = bool(user.is_admin)
-                        request.session["role"] = user.role
-                        request.session["subscription_tier"] = user.subscription_tier or "free"
-                else:
-                    request.session.clear()
-            finally:
-                db.close()
-        return await call_next(request)
-
-app.add_middleware(_SessionRefreshMiddleware)
 
 class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
     """Reject non-upload POST requests with bodies larger than 1MB."""
@@ -666,6 +678,13 @@ class LoginAttempt(Base):
     success = Column(Boolean, default=False)
 
 
+class RateLimitHit(Base):
+    __tablename__ = "rate_limit_hits"
+    id = Column(Integer, primary_key=True)
+    key = Column(String, nullable=False, index=True)
+    hit_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class ScoutBoardLane(Base):
     __tablename__ = "scout_board_lanes"
     id = Column(Integer, primary_key=True)
@@ -988,6 +1007,10 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
+# Constant bcrypt hash used to run a real verify even when the account doesn't
+# exist, so login timing doesn't reveal whether a username/email is registered.
+_DUMMY_PW_HASH = hash_password("timing-equalizer-never-matches")
+
 
 
 
@@ -1007,6 +1030,10 @@ def validate_password_strength(password: str) -> str:
 
 MAX_LOGIN_ATTEMPTS = 10
 LOGIN_LOCKOUT_MINUTES = 15
+# Per-account cap (independent of IP) so a distributed/rotating-IP attacker
+# can't grind a single account past the per-IP lockout. Set higher than the
+# per-IP cap to limit accidental lockout of a legitimate user.
+MAX_ACCOUNT_ATTEMPTS = 20
 
 def check_login_lockout(db: Session, ip: str) -> bool:
     """Return True if the IP is currently locked out."""
@@ -1017,6 +1044,19 @@ def check_login_lockout(db: Session, ip: str) -> bool:
         LoginAttempt.attempted_at > cutoff
     ).count()
     return recent_failures >= MAX_LOGIN_ATTEMPTS
+
+def check_account_lockout(db: Session, username: str) -> bool:
+    """Return True if this account (by username/email typed at login) has too
+    many recent failures, regardless of source IP."""
+    if not username:
+        return False
+    cutoff = datetime.utcnow() - timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+    recent_failures = db.query(LoginAttempt).filter(
+        func.lower(LoginAttempt.username) == username.strip().lower(),
+        LoginAttempt.success == False,
+        LoginAttempt.attempted_at > cutoff
+    ).count()
+    return recent_failures >= MAX_ACCOUNT_ATTEMPTS
 
 def record_login_attempt(db: Session, ip: str, username: str, success: bool):
     """Record a login attempt for rate limiting."""
@@ -1030,19 +1070,34 @@ def record_login_attempt(db: Session, ip: str, username: str, success: bool):
 
 
 # --- Rate limiting for signup, forgot-password, messaging ---
-_rate_limit_store: Dict[str, list] = {}
-
 def _check_rate_limit(key: str, max_requests: int, window_seconds: int) -> bool:
-    """Return True if rate limit exceeded."""
+    """Return True if the rate limit for `key` is exceeded.
+
+    DB-backed so the limit is shared across worker processes (the app runs
+    multiple uvicorn workers) and survives restarts — an in-process dict would
+    give each worker its own counter, multiplying the effective limit."""
     now = datetime.utcnow()
     cutoff = now - timedelta(seconds=window_seconds)
-    if key not in _rate_limit_store:
-        _rate_limit_store[key] = []
-    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > cutoff]
-    if len(_rate_limit_store[key]) >= max_requests:
-        return True
-    _rate_limit_store[key].append(now)
-    return False
+    db = SessionLocal()
+    try:
+        recent = db.query(RateLimitHit).filter(
+            RateLimitHit.key == key,
+            RateLimitHit.hit_at > cutoff,
+        ).count()
+        if recent >= max_requests:
+            return True
+        db.add(RateLimitHit(key=key, hit_at=now))
+        # Housekeeping: drop this key's expired rows and any very old rows.
+        db.query(RateLimitHit).filter(
+            (RateLimitHit.key == key) & (RateLimitHit.hit_at <= cutoff)
+        ).delete(synchronize_session=False)
+        db.query(RateLimitHit).filter(
+            RateLimitHit.hit_at < now - timedelta(hours=24)
+        ).delete(synchronize_session=False)
+        db.commit()
+        return False
+    finally:
+        db.close()
 
 def _page_window(current: int, total: int, size: int = 3) -> list:
     """Return up to `size` page numbers centered on `current`, sliding to keep
@@ -2799,10 +2854,13 @@ async def login_post(
     db: Session = Depends(get_db)
 ):
     client_ip = request.headers.get("x-real-ip", request.client.host if request.client else "unknown")
-    if check_login_lockout(db, client_ip):
+    if check_login_lockout(db, client_ip) or check_account_lockout(db, username):
         return templates.TemplateResponse("login.html", {"request": request, "error": f"Too many failed attempts. Please try again in {LOGIN_LOCKOUT_MINUTES} minutes."})
     user = db.query(User).filter((User.username == username) | (User.email == username)).first()
-    if not user or not verify_password(password, user.password_hash):
+    # Run a verify in both branches (dummy hash when the user is missing) so the
+    # response time doesn't reveal whether the account exists.
+    password_ok = verify_password(password, user.password_hash) if user else verify_password(password, _DUMMY_PW_HASH)
+    if not user or not password_ok:
         record_login_attempt(db, client_ip, username, False)
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password."})
     record_login_attempt(db, client_ip, username, True)
@@ -6603,7 +6661,11 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
             Message.read == False
         ).count()
         if last_msg:
-            last_msg.content = decrypt_message(last_msg.content)
+            # Decrypt for display only — detach first so this is never flushed
+            # back over the stored ciphertext (see conversation_get).
+            _ct = last_msg.content
+            db.expunge(last_msg)
+            last_msg.content = decrypt_message(_ct)
         conversations.append({"peer": peer, "last_msg": last_msg, "unread": unread})
 
     conversations.sort(key=lambda x: x["last_msg"].timestamp if x["last_msg"] else datetime.min, reverse=True)
@@ -6638,11 +6700,21 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
         ((Message.sender_id == peer.id) & (Message.receiver_id == user_id) & (Message.deleted_by_receiver == False))
     ).order_by(Message.timestamp.asc()).all()
 
+    # Mark unread messages as read; persist ONLY that change.
     for m in msgs:
-        m.content = decrypt_message(m.content)
         if m.receiver_id == user_id and not m.read:
             m.read = True
     db.commit()
+
+    # Decrypt bodies for display WITHOUT writing the plaintext back to the DB.
+    # Assigning to the mapped `content` column and committing would flush the
+    # decrypted text over the stored ciphertext, permanently destroying the
+    # message's encryption at rest. Detach each row first so the assignment is
+    # never persisted.
+    for m in msgs:
+        ciphertext = m.content          # load the row while still attached
+        db.expunge(m)
+        m.content = decrypt_message(ciphertext)
 
     unread_count = unread_sender_count(db, user_id)
     return templates.TemplateResponse("conversation.html", {
@@ -7604,6 +7676,13 @@ async def upgrade_success(request: Request, session_id: str = "", db: Session = 
         try:
             s = stripe.checkout.Session.retrieve(session_id)
         except Exception:
+            s = None
+        # SECURITY: retrieve() returns open/unpaid sessions too. Only finalize a
+        # signup (which grants the buyer-chosen tier) if the session was actually
+        # paid — otherwise a user could hit /upgrade/success with their own
+        # unpaid session id and be created as premium for free.
+        if s and not (s.get("status") == "complete"
+                      and s.get("payment_status") in ("paid", "no_payment_required")):
             s = None
         if s:
             pending_uuid = (s.get("metadata") or {}).get("pending_uuid") or s.get("client_reference_id") or ""
