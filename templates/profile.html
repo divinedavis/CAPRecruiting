@@ -8,11 +8,28 @@
 {% block og_type %}profile{% endblock %}
 {% block og_title %}{{ display_name }} — Collegiate Athletic Planning{% endblock %}
 {% block og_description %}{{ og_desc }}{% endblock %}
+{% block meta_description %}{{ og_desc }}{% endblock %}
 {% block og_image %}{{ og_img }}{% endblock %}
 {% block og_url %}https://caprecruiting.com/profile/{{ target.username }}{% endblock %}
 {% block tw_title %}{{ display_name }} — Collegiate Athletic Planning{% endblock %}
 {% block tw_description %}{{ og_desc }}{% endblock %}
 {% block tw_image %}{{ og_img }}{% endblock %}
+
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "{{ display_name }}",
+  "url": "https://caprecruiting.com/profile/{{ target.username }}"{% if profile and profile.photo %},
+  "image": "{{ og_img }}"{% endif %}{% if target.role == 'player' %},
+  "jobTitle": "Football Recruit"{% if profile and profile.position %},
+  "description": "{{ og_desc }}"{% endif %}{% endif %},
+  "affiliation": {"@type": "Organization", "name": "Collegiate Athletic Planning"}
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <div class="container page-top">

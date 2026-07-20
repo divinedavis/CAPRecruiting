@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Collegiate Athletic Planning{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}Collegiate Athletic Planning connects high school football recruits with college coaches. Build a recruiting profile, share film, and get discovered.{% endblock %}">
-    <link rel="canonical" href="{% block canonical %}https://caprecruiting.com{% endblock %}">
+    <link rel="canonical" href="{% block canonical %}https://caprecruiting.com{{ request.url.path }}{% endblock %}">
     <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
     <!-- Open Graph / iMessage / Social Preview -->
     <meta property="og:site_name" content="Collegiate Athletic Planning">
@@ -31,6 +31,7 @@
       gtag('js', new Date());
       gtag('config', 'G-TWX00ZCMYS');
     </script>
+    {% block head_extra %}{% endblock %}
 </head>
 <body>
 <nav class="navbar" id="main-nav">
