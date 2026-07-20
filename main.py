@@ -2070,6 +2070,75 @@ async def terms_page(request: Request):
 async def google_site_verification():
     return Response(content="google-site-verification: googlebd6b41dff5f2dd60.html", media_type="text/html")
 
+
+@app.get("/robots.txt")
+async def robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /dashboard\n"
+        "Disallow: /profile/edit\n"
+        "Disallow: /profile/me\n"
+        "Disallow: /messages\n"
+        "Disallow: /conversation\n"
+        "Disallow: /admin\n"
+        "Disallow: /marketing\n"
+        "Disallow: /api/\n"
+        "Disallow: /login\n"
+        "Disallow: /signup\n"
+        "Disallow: /forgot-password\n"
+        "Disallow: /reset-password\n"
+        "Disallow: /auth/\n"
+        "Disallow: /track/\n"
+        "Disallow: /preview/\n"
+        "Disallow: /sign/\n"
+        "\n"
+        "Sitemap: https://caprecruiting.com/sitemap.xml\n"
+    )
+    return Response(content=body, media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml(db: Session = Depends(get_db)):
+    base = "https://caprecruiting.com"
+    urls = [
+        (base + "/", "1.0", "weekly"),
+        (base + "/pricing", "0.8", "monthly"),
+        (base + "/privacy", "0.3", "yearly"),
+        (base + "/terms", "0.3", "yearly"),
+    ]
+    entries = []
+    for loc, prio, freq in urls:
+        entries.append(
+            "  <url><loc>%s</loc><changefreq>%s</changefreq>"
+            "<priority>%s</priority></url>" % (loc, freq, prio)
+        )
+    try:
+        players = (
+            db.query(User)
+            .filter(User.role == "player", User.username.isnot(None), User.username != "")
+            .all()
+        )
+        for u in players:
+            lastmod = ""
+            if getattr(u, "created_at", None):
+                lastmod = "<lastmod>%s</lastmod>" % u.created_at.strftime("%Y-%m-%d")
+            entries.append(
+                "  <url><loc>%s/profile/%s</loc>%s"
+                "<changefreq>weekly</changefreq><priority>0.6</priority></url>"
+                % (base, u.username, lastmod)
+            )
+    except Exception:
+        pass
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(entries)
+        + "\n</urlset>\n"
+    )
+    return Response(content=xml, media_type="application/xml")
+
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly", bypass_token: str = None):
     teams = db.query(Team).order_by(Team.name).all()
