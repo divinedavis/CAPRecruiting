@@ -62,11 +62,7 @@
     <!-- Step 1: Division -->
     <div id="step-division">
       <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#f0b429; margin-bottom:10px;">Step 1: Select Division</div>
-      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
-        <button onclick="selectDivision('D1')" class="q-btn" id="btn-D1">Division I</button>
-        <button onclick="selectDivision('D2')" class="q-btn" id="btn-D2">Division II</button>
-        <button onclick="selectDivision('D3')" class="q-btn" id="btn-D3">Division III</button>
-      </div>
+      <div id="division-list" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;"></div>
     </div>
 
     <!-- Step 2: Conference -->
@@ -175,6 +171,8 @@ function loadStateColleges(state) {
 
 <script>
 const DATA = {{ data | tojson }};
+const DIV_LABELS = {"D1":"Division I","D2":"Division II","D3":"Division III","NAIA":"NAIA","JUCO":"Junior College"};
+const DIV_ORDER = ["D1","D2","D3","NAIA","JUCO"];
 let currentDiv = null;
 let currentConf = null;
 
@@ -184,6 +182,16 @@ function escapeHtml(text) {
   d.appendChild(document.createTextNode(text));
   return d.innerHTML;
 }
+function renderDivisions() {
+  const el = document.getElementById('division-list');
+  const divs = DIV_ORDER.filter(d => DATA[d] && Object.keys(DATA[d]).length);
+  Object.keys(DATA).forEach(d => { if (!DIV_ORDER.includes(d)) divs.push(d); });
+  el.innerHTML = divs.map(d =>
+    `<button class="q-btn" id="btn-${d}" onclick="selectDivision('${d}')">${escapeHtml(DIV_LABELS[d] || d)}</button>`
+  ).join('');
+}
+renderDivisions();
+
 function selectDivision(div) {
   currentDiv = div;
   document.querySelectorAll('#step-division .q-btn').forEach(b => b.classList.remove('active'));

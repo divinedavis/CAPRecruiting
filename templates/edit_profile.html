@@ -605,6 +605,7 @@
                             <option value="Division I">Division I</option>
                             <option value="Division II">Division II</option>
                             <option value="Division III">Division III</option>
+                            <option value="NAIA">NAIA</option>
                         </select>
                         <select id="offer{{ n }}_conf" onchange="offerConfChange({{ n }})" style="flex:1.5; min-width:150px;">
                             <option value="">Conference</option>
@@ -629,6 +630,7 @@
                             <option value="Division I">Division I</option>
                             <option value="Division II">Division II</option>
                             <option value="Division III">Division III</option>
+                            <option value="NAIA">NAIA</option>
                         </select>
                         <select id="visit{{ n }}_conf" onchange="visitConfChange({{ n }})" style="flex:1.5; min-width:150px;">
                             <option value="">Conference</option>
@@ -1171,7 +1173,7 @@ const CFBD = {
     "CCIW": ["Carthage","Elmhurst","Illinois Wesleyan","Millikin","North Central","North Park","Washington University","Wheaton (IL)"],
     "Centennial": ["Carnegie Mellon","Dickinson","Franklin & Marshall","Gettysburg","Johns Hopkins","McDaniel","Muhlenberg","Ursinus","Washington (MD)"],
     "Commonwealth Coast": ["Curry","Endicott","Maine Maritime","Salve Regina","Western New England"],
-    "D3 Independents": ["Benedictine (IL)","Bethel (TN)","Brockport","Cortland","Dubuque","East Texas Baptist","Greenville","Hardin-Simmons","Linfield","Luther","Mary Hardin-Baylor","McMurry","Mississippi College","Nebraska Wesleyan","North Central (MN)","Norwich","Pacific Lutheran","Puget Sound","Texas Lutheran","Thomas More","Wartburg","Whitworth","Wisconsin Lutheran"],
+    "D3 Independents": ["Benedictine (IL)","Brockport","Cortland","Dubuque","East Texas Baptist","Greenville","Hardin-Simmons","Linfield","Luther","Mary Hardin-Baylor","McMurry","Mississippi College","Nebraska Wesleyan","North Central (MN)","Norwich","Pacific Lutheran","Puget Sound","Texas Lutheran","Thomas More","Wartburg","Whitworth","Wisconsin Lutheran"],
     "Empire 8": ["Alfred","Hartwick","Ithaca","Morrisville State","St. John Fisher","Utica"],
     "HCAC": ["Anderson","Bluffton","Franklin","Hanover","Manchester","Mount St. Joseph","Rose-Hulman"],
     "Landmark": ["Catholic","Drew","Juniata","Moravian","Susquehanna"],
@@ -1191,6 +1193,17 @@ const CFBD = {
     "Southern Athletic (D3)": ["Berry","Centre","Maryville","Millsaps","Rhodes","Sewanee","Southwestern","Trinity (TX)"],
     "USA South": ["Belhaven","Brevard","Greensboro","Huntingdon","LaGrange","Methodist","NC Wesleyan","Southern Virginia"],
     "WIAC": ["UW-Eau Claire","UW-La Crosse","UW-Oshkosh","UW-Platteville","UW-River Falls","UW-Stevens Point","UW-Stout","UW-Whitewater"]
+  },
+  "NAIA": {
+    "Appalachian Athletic (NAIA)": ["Bluefield","Kentucky Christian","Pikeville","Point","Reinhardt","Rio Grande","Union (KY)"],
+    "Frontier (NAIA)": ["Arizona Christian","Carroll (MT)","College of Idaho","Dakota State","Dickinson State","Eastern Oregon","Mayville State","Montana State-Northern","Montana Tech","Montana Western","Rocky Mountain","Simpson (CA)","Southern Oregon","Valley City State"],
+    "Great Plains (NAIA)": ["Briar Cliff","Concordia (NE)","Dakota Wesleyan","Doane","Dordt","Hastings","Midland","Morningside","Mount Marty","Northwestern (IA)","Waldorf"],
+    "Heart of America (NAIA)": ["Baker","Benedictine (KS)","Central Methodist","Clarke","Culver-Stockton","Graceland","Grand View","MidAmerica Nazarene","Missouri Baptist","Missouri Valley","Peru State","St. Ambrose","William Penn","William Woods"],
+    "Kansas Collegiate (NAIA)": ["Avila","Bethany (KS)","Bethel (KS)","Evangel","Friends","Kansas Wesleyan","McPherson","Ottawa (KS)","Saint Mary (KS)","Southwestern (KS)","Sterling","Tabor"],
+    "Mid-South (NAIA)": ["Bethel (TN)","Campbellsville","Cumberland","Cumberlands","Faulkner","Georgetown (KY)","Lindsey Wilson"],
+    "Mid-States Football Association (NAIA)": ["Defiance","Indiana Wesleyan","Judson","Lawrence Tech","Madonna","Marian (IN)","Olivet Nazarene","Saint Francis (IL)","Saint Francis (IN)","Saint Xavier","Siena Heights","Taylor"],
+    "Sooner Athletic (NAIA)": ["Arkansas Baptist","Langston","Louisiana Christian","Nelson","Oklahoma Panhandle State","Ottawa (AZ)","Texas College","Texas Wesleyan","Wayland Baptist"],
+    "Sun Conference (NAIA)": ["Ave Maria","Florida Memorial","Keiser","Saint Thomas (FL)","Southeastern (FL)","Thomas (GA)","Warner","Webber International"]
   }
 };
 

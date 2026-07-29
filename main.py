@@ -1837,7 +1837,7 @@ _CFBD = {
   "D3": [
     "Adrian","Albion","Albright","Alfred","Allegheny","Alma","Amherst","Augsburg",
     "Averett","Baldwin Wallace","Bates","Belhaven","Benedictine (IL)","Berry","Bethany","Bethel (MN)",
-    "Bethel (TN)","Bowdoin","Brevard","Bridgewater (VA)","Brockport","Buffalo State","Cal Lutheran","Calvin",
+    "Bowdoin","Brevard","Bridgewater (VA)","Brockport","Buffalo State","Cal Lutheran","Calvin",
     "Capital","Carleton","Carnegie Mellon","Carroll","Carthage","Case Western Reserve","Castleton","Catholic",
     "Centre","Chapman","Christopher Newport","Claremont-Mudd-Scripps","Colby","Concordia (MN)","Cortland","Curry",
     "DePauw","Delaware Valley","Denison","Dickinson","Drew","Dubuque","East Texas Baptist","Eastern Mennonite",
@@ -1857,6 +1857,17 @@ _CFBD = {
     "Utica","Wabash","Wartburg","Washington & Jefferson","Washington & Lee","Washington (MD)","Washington University","Waynesburg",
     "Wesleyan","Western New England","Westminster (PA)","Wheaton (IL)","Whitworth","Widener","Wilkes","William Paterson",
     "Williams","Wisconsin Lutheran","Wittenberg","Wooster"
+  ],
+  "NAIA": [
+    "Bluefield","Kentucky Christian","Pikeville","Point","Reinhardt","Rio Grande","Union (KY)",
+    "Arizona Christian","Carroll (MT)","College of Idaho","Dakota State","Dickinson State","Eastern Oregon","Mayville State","Montana State-Northern","Montana Tech","Montana Western","Rocky Mountain","Simpson (CA)","Southern Oregon","Valley City State",
+    "Briar Cliff","Concordia (NE)","Dakota Wesleyan","Doane","Dordt","Hastings","Midland","Morningside","Mount Marty","Northwestern (IA)","Waldorf",
+    "Baker","Benedictine (KS)","Central Methodist","Clarke","Culver-Stockton","Graceland","Grand View","MidAmerica Nazarene","Missouri Baptist","Missouri Valley","Peru State","St. Ambrose","William Penn","William Woods",
+    "Avila","Bethany (KS)","Bethel (KS)","Evangel","Friends","Kansas Wesleyan","McPherson","Ottawa (KS)","Saint Mary (KS)","Southwestern (KS)","Sterling","Tabor",
+    "Bethel (TN)","Campbellsville","Cumberland","Cumberlands","Faulkner","Georgetown (KY)","Lindsey Wilson",
+    "Defiance","Indiana Wesleyan","Judson","Lawrence Tech","Madonna","Marian (IN)","Olivet Nazarene","Saint Francis (IL)","Saint Francis (IN)","Saint Xavier","Siena Heights","Taylor",
+    "Arkansas Baptist","Langston","Louisiana Christian","Nelson","Oklahoma Panhandle State","Ottawa (AZ)","Texas College","Texas Wesleyan","Wayland Baptist",
+    "Ave Maria","Florida Memorial","Keiser","Saint Thomas (FL)","Southeastern (FL)","Thomas (GA)","Warner","Webber International"
   ]
 }
 for _div, _schools in _CFBD.items():
@@ -1865,7 +1876,7 @@ for _div, _schools in _CFBD.items():
 
 def _offer_div_counts(profile):
     """Return (d1, d2, d3) offer counts for a player profile."""
-    counts = {"D1": 0, "D2": 0, "D3": 0}
+    counts = {"D1": 0, "D2": 0, "D3": 0, "NAIA": 0}
     if not profile:
         return counts
     for _i in range(1, 26):
@@ -3412,8 +3423,8 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
         prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
         if not year or (prof and prof.year == year):
             counts = _offer_div_counts(prof)
-            player_data.append({"user": p, "profile": prof, "tier": p.subscription_tier or "free", "_d1": counts["D1"], "_d2": counts["D2"], "_d3": counts["D3"]})
-    player_data.sort(key=lambda x: (-x["_d1"], -x["_d2"], -x["_d3"]))
+            player_data.append({"user": p, "profile": prof, "tier": p.subscription_tier or "free", "_d1": counts["D1"], "_d2": counts["D2"], "_d3": counts["D3"], "_naia": counts["NAIA"]})
+    player_data.sort(key=lambda x: (-x["_d1"], -x["_d2"], -x["_d3"], -x["_naia"]))
 
     unread_count = unread_sender_count(db, user_id) if user_id else 0
     can_click_profiles = bool(user is not None)
@@ -7826,9 +7837,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
-    def get_user_from_meta(meta):
+    def get_user_from_meta(meta, obj=None):
         uid = meta.get("user_id")
-        return db.query(User).filter(User.id == int(uid)).first() if uid else None
+        if uid:
+            return db.query(User).filter(User.id == int(uid)).first()
+        # Subscriptions created by the signup flow carry pending_uuid, not
+        # user_id. That row is deleted at finalize, but the customer id is
+        # persisted on the User -- so match on that instead.
+        if obj:
+            cust = obj.get("customer", "")
+            if cust:
+                return db.query(User).filter(User.stripe_customer_id == cust).first()
+        return None
 
     def set_tier(user, tier, sub_id=""):
         if user:
@@ -7855,14 +7875,14 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             if pending:
                 _finalize_pending_signup(db, pending, obj.get("customer", ""), sub_id)
         else:
-            user = get_user_from_meta(meta)
+            user = get_user_from_meta(meta, obj)
             tier = meta.get("tier", "free")
             set_tier(user, tier, sub_id)
 
     elif etype in ("customer.subscription.updated",):
         obj = event["data"]["object"]
         meta = obj.get("metadata", {})
-        user = get_user_from_meta(meta)
+        user = get_user_from_meta(meta, obj)
         status = obj.get("status", "")
         if status == "active":
             tier = meta.get("tier", "free")
@@ -7873,7 +7893,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif etype in ("customer.subscription.deleted",):
         obj = event["data"]["object"]
         meta = obj.get("metadata", {})
-        user = get_user_from_meta(meta)
+        user = get_user_from_meta(meta, obj)
         if user:
             user.subscription_tier = "free"
             user.stripe_subscription_id = ""
@@ -7894,8 +7914,27 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         await send_payment_failed_member(obj, user, member_first)
         if user:
             user.subscription_tier = "free"
-            user.stripe_subscription_id = ""
             db.commit()
+
+    elif etype in ("invoice.paid", "invoice.payment_succeeded"):
+        # An athlete who lapsed and later paid the invoice must land back on the
+        # tier they are paying for, with no manual intervention.
+        obj = event["data"]["object"]
+        cust_id = obj.get("customer", "")
+        user = db.query(User).filter(User.stripe_customer_id == cust_id).first()
+        sub_id = obj.get("subscription", "") or ""
+        if user and sub_id:
+            tier = ""
+            try:
+                s = stripe.Subscription.retrieve(sub_id)
+                if s.get("status") in ("active", "trialing"):
+                    tier = (s.get("metadata") or {}).get("tier", "")
+            except Exception:
+                tier = ""
+            if tier:
+                user.subscription_tier = tier
+                user.stripe_subscription_id = sub_id
+                db.commit()
 
     return JSONResponse({"ok": True})
 
