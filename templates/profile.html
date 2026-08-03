@@ -29,6 +29,23 @@
   "affiliation": {"@type": "Organization", "name": "Collegiate Athletic Planning"}
 }
 </script>
+<style>
+/* School logo tiles — scholarship offers and campus visits */
+.school-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
+.school-tile { display:flex; flex-direction:column; align-items:center; gap:10px; padding:14px 10px 12px; background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); }
+.school-tile-mark { height:56px; display:flex; align-items:center; justify-content:center; }
+.school-tile-mark img { max-height:56px; max-width:100%; width:auto; object-fit:contain; display:block; }
+.school-tile-initial { font-size:30px; font-weight:800; color:var(--gray-400); letter-spacing:.02em; }
+.school-tile-name { font-size:13px; font-weight:600; color:var(--navy); text-align:center; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.school-tile-date { font-size:12px; color:var(--gray-500); text-align:center; }
+@media (max-width: 720px) {
+  .school-grid { grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:10px; }
+  .school-tile { padding:12px 8px 10px; }
+  .school-tile-mark { height:44px; }
+  .school-tile-mark img { max-height:44px; }
+  .school-tile-initial { font-size:24px; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -81,8 +98,10 @@
                     {% endif %}
                     {% if target.role == "player" and profile and (profile.committed_school or profile.committed_school_logo) %}
                     <div class="committed-banner" style="display:flex; align-items:center; gap:12px; margin-top:12px; background:#0a1628; color:#fff; padding:10px 16px; border-radius:10px; max-width:420px;">
-                        {% if profile.committed_school_logo %}
-                        <img src="{{ profile.committed_school_logo }}" alt="{{ profile.committed_school }} logo" style="width:40px; height:40px; object-fit:contain; border-radius:6px; background:#fff; padding:2px; flex-shrink:0;">
+                        {# Uploaded logo wins; otherwise fall back to our own logo library. #}
+                        {% set _committed_logo = profile.committed_school_logo or school_logo(profile.committed_school) %}
+                        {% if _committed_logo %}
+                        <img src="{{ _committed_logo }}" alt="{{ profile.committed_school }} logo" style="width:40px; height:40px; object-fit:contain; border-radius:6px; background:#fff; padding:2px; flex-shrink:0;">
                         {% endif %}
                         <div style="min-width:0;">
                             <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#9ca3af;">✓ Committed</div>
@@ -327,11 +346,19 @@
             {% if can_view_offers and target.role == "player" and _all_offers %}
             <div class="profile-section">
                 <h2>Scholarship Offers</h2>
-                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <div class="school-grid">
                     {% for offer in _all_offers %}
-                    <span style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--navy); background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:20px; padding:5px 14px;">
-                        🎓 {{ offer }}
-                    </span>
+                    {% set _logo = school_logo(offer) %}
+                    <div class="school-tile" title="{{ offer }}">
+                        <div class="school-tile-mark">
+                            {% if _logo %}
+                            <img src="{{ _logo }}" alt="{{ offer }}" loading="lazy">
+                            {% else %}
+                            <span class="school-tile-initial">{{ offer|trim|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="school-tile-name">{{ offer }}</span>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
@@ -463,11 +490,19 @@
             {% if visit_list %}
             <div class="profile-section">
                 <h2>Campus Visits</h2>
-                <div style="display:flex; flex-direction:column; gap:10px;">
+                <div class="school-grid">
                     {% for v in visit_list %}
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:var(--radius-sm);">
-                        <span style="font-size:14px; font-weight:600; color:var(--navy);">🏛 {{ v.school }}</span>
-                        {% if v.date %}<span style="font-size:13px; color:var(--gray-500);">{{ v.date }}</span>{% endif %}
+                    {% set _logo = school_logo(v.school) %}
+                    <div class="school-tile" title="{{ v.school }}">
+                        <div class="school-tile-mark">
+                            {% if _logo %}
+                            <img src="{{ _logo }}" alt="{{ v.school }}" loading="lazy">
+                            {% else %}
+                            <span class="school-tile-initial">{{ v.school|trim|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="school-tile-name">{{ v.school }}</span>
+                        {% if v.date %}<span class="school-tile-date">{{ v.date }}</span>{% endif %}
                     </div>
                     {% endfor %}
                 </div>

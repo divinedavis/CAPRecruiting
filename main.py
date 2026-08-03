@@ -1282,6 +1282,87 @@ def prices_for(billing: str) -> dict:
 templates.env.globals["june_sale_active"] = june_sale_active
 
 
+# ── School logo lookup ───────────────────────────────────────────────────────
+# Offers, visits and commitments are stored as free-text school names. Map a
+# name onto one of the PNGs in static/logos/ so profiles can show the mark
+# instead of a plain text pill. Returns "" when we have no logo on file — the
+# template falls back to a lettered tile.
+_LOGO_DIR = "/home/recruiting/bearcats/static/logos"
+
+# Shorthand and naming variants that normalization alone can't resolve.
+_LOGO_ALIASES = {
+    "iup": "indiana_university_of_pennsylvania",
+    "indiana_pa": "indiana_university_of_pennsylvania",
+    "pitt": "pittsburgh",
+    "vmi": "virginia_military_institute",
+    "w_and_j": "washington_and_jefferson",
+    "wandj": "washington_and_jefferson",
+    "st_anselm": "saint_anselm",
+    "umass_amherst": "umass",
+    "massachusetts": "umass",
+    "connecticut": "uconn",
+    "texas_a_and_m": "texas_aandm",
+    "tennessee_martin": "ut_martin",
+    "long_island": "liu",
+    "nd": "notre_dame",
+}
+
+
+def _logo_files() -> set:
+    """Filenames (sans .png) available in static/logos, cached after first read."""
+    cached = getattr(_logo_files, "_cache", None)
+    if cached is None:
+        try:
+            cached = {f[:-4].lower() for f in os.listdir(_LOGO_DIR) if f.lower().endswith(".png")}
+        except OSError:
+            cached = set()
+        _logo_files._cache = cached
+    return cached
+
+
+def _slugify_school(name: str) -> str:
+    # "&" collapses to "and" with no padding so "Texas A&M" -> texas_aandm,
+    # matching how the existing logo files are named.
+    s = (name or "").strip().lower().replace("&", "and")
+    return re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+
+
+def school_logo(name: str) -> str:
+    """URL of the logo for a school name, or "" if we don't have one."""
+    raw = (name or "").strip()
+    if not raw:
+        return ""
+    files = _logo_files()
+    if not files:
+        return ""
+
+    # Progressively looser candidates — first match wins, so exact names like
+    # "Boston College" resolve before the suffix-stripped forms are tried.
+    candidates = [raw]
+    no_paren = re.sub(r"\s*\([^)]*\)", "", raw).strip()          # California (PA)
+    candidates.append(no_paren)
+    for base in (raw, no_paren):
+        candidates.append(re.sub(r"\s+(university|college)$", "", base, flags=re.I))
+        candidates.append(re.sub(r"^(the\s+)?university\s+of\s+", "", base, flags=re.I))
+        candidates.append(re.sub(r"^(the\s+)?university\s+of\s+", "",
+                                 re.sub(r"\s+(university|college)$", "", base, flags=re.I),
+                                 flags=re.I))
+
+    seen = set()
+    for cand in candidates:
+        slug = _slugify_school(cand)
+        if not slug or slug in seen:
+            continue
+        seen.add(slug)
+        slug = _LOGO_ALIASES.get(slug, slug)
+        if slug in files:
+            return f"/static/logos/{slug}.png"
+    return ""
+
+
+templates.env.globals["school_logo"] = school_logo
+
+
 TIER_ORDER = {"free": 0, "essentials": 1, "advanced": 2, "premium": 3}
 
 def tier_gte(tier: str, required: str) -> bool:
