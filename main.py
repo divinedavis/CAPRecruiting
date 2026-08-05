@@ -300,6 +300,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     session_version = Column(Integer, default=0)
     public_id = Column(String, unique=True, index=True)
+    date_of_birth = Column(String, nullable=True)
 
 class PlayerProfile(Base):
     __tablename__ = "player_profiles"
@@ -481,6 +482,7 @@ class PendingSignup(Base):
     tier = Column(String, default="essentials")
     billing = Column(String, default="monthly")
     oauth_google = Column(Boolean, default=False)
+    date_of_birth = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
 
@@ -1014,6 +1016,32 @@ _DUMMY_PW_HASH = hash_password("timing-equalizer-never-matches")
 
 
 
+MIN_SIGNUP_AGE = 13
+
+def validate_player_age(dob_str: str) -> str:
+    """Return an error message if the date of birth is missing, malformed, or
+    under MIN_SIGNUP_AGE. Empty string means the date is acceptable.
+
+    Players are minors; collecting a verified age at registration keeps the
+    platform out of COPPA scope and gives AFL a record tied to the account."""
+    if not dob_str or not dob_str.strip():
+        return "Please enter your date of birth."
+    try:
+        dob = datetime.strptime(dob_str.strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return "Please enter a valid date of birth (YYYY-MM-DD)."
+    today = datetime.utcnow().date()
+    if dob > today:
+        return "Date of birth cannot be in the future."
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    if age > 120:
+        return "Please enter a valid date of birth."
+    if age < MIN_SIGNUP_AGE:
+        return (f"You must be at least {MIN_SIGNUP_AGE} years old to create an account. "
+                "Please have a parent or guardian contact us to get set up.")
+    return ""
+
+
 def validate_password_strength(password: str) -> str:
     """Return error message if password is weak, or empty string if OK."""
     if len(password) < 8:
@@ -1135,6 +1163,7 @@ def _finalize_pending_signup(db: Session, pending: "PendingSignup", stripe_custo
         email=pending.email,
         password_hash=pending.password_hash or "",
         role="player",
+        date_of_birth=pending.date_of_birth or None,
         subscription_tier=pending.tier or "essentials",
         stripe_customer_id=stripe_customer_id or "",
         stripe_subscription_id=stripe_subscription_id or "",
@@ -2284,6 +2313,7 @@ async def signup_post(
     school_county: str = Form(""),
     invite_token: Optional[str] = Form(None),
     bypass_token: Optional[str] = Form(None),
+    date_of_birth: str = Form(""),
     db: Session = Depends(get_db)
 ):
     client_ip = request.client.host if request.client else "unknown"
@@ -2312,6 +2342,10 @@ async def signup_post(
             return err("This invite link is invalid or has expired.")
     if role == "player" and not school_name.strip():
         return err("Players must select their high school.")
+    if role == "player":
+        age_err = validate_player_age(date_of_birth)
+        if age_err:
+            return err(age_err)
     if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         return err("Please enter a valid email address.")
     if len(username) > 30:
@@ -2368,6 +2402,7 @@ async def signup_post(
                 username=username, email=email,
                 password_hash=hash_password(password),
                 role="player", public_id=_generate_public_id(),
+                date_of_birth=date_of_birth.strip(),
                 subscription_tier="premium",
                 in_person_paid_until=datetime(2027, 3, 26),
             )
@@ -2495,6 +2530,7 @@ async def signup_finish_oauth_post(
     school_state: str = Form(""),
     school_county: str = Form(""),
     team_id: Optional[int] = Form(None),
+    date_of_birth: str = Form(""),
     db: Session = Depends(get_db),
 ):
     pending_uuid = request.session.get("pending_oauth_uuid", "")
@@ -2508,6 +2544,13 @@ async def signup_finish_oauth_post(
             "request": request, "pending": pending, "teams": teams,
             "error": "Please select your high school.",
         })
+    age_err = validate_player_age(date_of_birth)
+    if age_err:
+        teams = db.query(Team).order_by(Team.name).all()
+        return templates.TemplateResponse("signup_finish_oauth.html", {
+            "request": request, "pending": pending, "teams": teams,
+            "error": age_err,
+        })
     _price_map = prices_for(billing)
     _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
     if _tier not in _price_map or not _price_map[_tier]:
@@ -2518,6 +2561,7 @@ async def signup_finish_oauth_post(
     pending.school_city = school_city.strip()
     pending.school_state = school_state.strip()
     pending.school_county = school_county.strip()
+    pending.date_of_birth = date_of_birth.strip()
     pending.team_id = team_id
     pending.tier = _tier
     pending.billing = billing
