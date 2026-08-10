@@ -4116,6 +4116,7 @@ async def upload_video(
     try:
         shutil.copyfileobj(file_data, tmp_in)
         tmp_in.close()
+        _size_mb = os.path.getsize(tmp_in.name) / (1024 * 1024)
         vcodec = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: subprocess.run(
@@ -4124,6 +4125,8 @@ async def upload_video(
                 capture_output=True, text=True, timeout=60
             ).stdout.strip()
         )
+        _logger.warning("video upload: user=%s file=%r size=%.1fMB codec=%s",
+                        upload_user_id, video.filename, _size_mb, vcodec or "none")
         needs_transcode = (ext != "mp4") or (vcodec != "h264")
         if needs_transcode:
             tmp_out = tmp_in.name.rsplit(".", 1)[0] + "_h264.mp4"
@@ -4131,13 +4134,16 @@ async def upload_video(
             proc = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: subprocess.run(
-                    ["ffmpeg", "-i", tmp_in.name, "-c:v", "libx264", "-preset", "fast",
+                    ["ffmpeg", "-i", tmp_in.name, "-c:v", "libx264", "-preset", "veryfast",
                      "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
                      "-movflags", "+faststart", "-y", tmp_out],
-                    capture_output=True, timeout=900
+                    capture_output=True, timeout=3600
                 )
             )
             if proc.returncode != 0:
+                _logger.error("video upload: ffmpeg failed for user=%s rc=%s stderr=%s",
+                              upload_user_id, proc.returncode,
+                              proc.stderr.decode(errors="replace")[-800:])
                 return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
             key = f"videos/{upload_user_id}/{video_id_hex}.mp4"
             content_type = "video/mp4"
@@ -4145,6 +4151,8 @@ async def upload_video(
         else:
             file_data = open(tmp_in.name, "rb")
     except Exception:
+        _logger.exception("video upload: buffer/probe/transcode failed for user=%s file=%r",
+                          upload_user_id, video.filename)
         return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
 
     try:
@@ -4159,6 +4167,8 @@ async def upload_video(
             )
         )
     except Exception:
+        _logger.exception("video upload: Spaces upload failed for user=%s key=%s",
+                          upload_user_id, key)
         return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
     finally:
         import os as _os
