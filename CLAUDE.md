@@ -282,6 +282,49 @@ Players cannot message other players — only coach-to-player and player-to-coac
 2. Run the full endpoint test suite below — if ANY endpoint returns `500`, fix before proceeding
 3. Commit and push: `cd /home/recruiting/bearcats && git add -A && git commit -m "message" && git push origin main`
 
+## Error Alerting
+
+Anything that fails anywhere on the platform emails the operator (`ALERT_EMAIL` in
+`.env`) within seconds of it happening.
+
+- **`error_alerts.py`** — the watcher, running as `cap-error-alerts.service`
+  (unit tracked in the repo at `deploy/cap-error-alerts.service`).
+- **Watches:** journald for the `bearcats` and `nginx` units,
+  `/var/log/nginx/bearcats-error.log`, the cron job logs, plus an active health
+  probe of the public URL and `127.0.0.1:8080` every 60s.
+- **Alerts on:** unhandled exceptions (full traceback, request path, user id, IP),
+  any 5xx or 413 response, every `_logger.error`/`_logger.exception` record,
+  systemd crashes / restarts / OOM kills, nginx `[error]` and worse, failures in
+  the cron jobs, and site-down / site-recovered.
+- **Stays quiet about:** 404s, bot probes, 403s, and WARNING records (counted and
+  reported in the weekly summary instead).
+- **Noise control:** an identical error is collapsed for 15 minutes and then
+  re-sent with a repeat count; hard cap of 12 emails/hour with the overflow
+  delivered as a single digest. Stripe keys, tokens, passwords and session
+  cookies are masked before anything is mailed.
+- **Proof of life:** a summary email every Monday 9am ET (root crontab,
+  `error_alerts.py --heartbeat`) so silence can be trusted.
+
+**Every new failure path must stay visible.** Do not write `except Exception: pass` —
+use `_logger.exception("what failed and for whom")` so it turns into an email. The
+root logging handler configured at the top of `main.py` is what stamps the level
+onto the record; the watcher keys off that.
+
+### Testing the alert chain
+
+```bash
+# SMTP + formatting only
+cd /home/recruiting/bearcats && set -a && . ./.env && set +a && ./venv/bin/python3 error_alerts.py --test
+
+# a real exception through the real path (token is in .env)
+TOK=$(grep ^ERROR_TEST_TOKEN= .env | cut -d= -f2)
+curl -s -o /dev/null -w "%{http_code}\n" "http://127.0.0.1:8080/__selftest/error?token=$TOK"
+journalctl -u cap-error-alerts -n 20 --no-pager   # expect one "emailed: ..." line
+```
+
+Repeats inside 15 minutes are suppressed by design — `rm /var/lib/cap-error-alerts/state.json`
+and restart the service when re-testing the same error.
+
 ## Post-Change Testing (REQUIRED)
 
 After every change, restart the service and test ALL key endpoints to verify nothing is broken:

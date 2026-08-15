@@ -1,0 +1,33 @@
+[Unit]
+Description=CAP Recruiting error alerter (emails divinejdavis@gmail.com on any failure)
+After=network-online.target bearcats.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bearcats
+SupplementaryGroups=adm systemd-journal
+EnvironmentFile=/home/recruiting/bearcats/.env
+WorkingDirectory=/home/recruiting/bearcats
+ExecStart=/home/recruiting/bearcats/venv/bin/python3 /home/recruiting/bearcats/error_alerts.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cap-error-alerts
+
+# state lives in /var/lib/cap-error-alerts (created + owned by systemd)
+StateDirectory=cap-error-alerts
+
+# hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
