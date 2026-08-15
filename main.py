@@ -21,6 +21,18 @@ from typing import Optional, Dict, List
 import logging
 _logger = logging.getLogger("bearcats")
 
+# ── Error alerting hooks ── (see error_alerts.py / cap-error-alerts.service)
+# Without a handler on the root logger, logging falls back to a bare stderr
+# write with no level prefix, so an ERROR is indistinguishable from an INFO in
+# the journal. Uvicorn's own loggers use propagate=False, so this adds no
+# duplicate access logging.
+_alert_handler = logging.StreamHandler()
+_alert_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+logging.root.addHandler(_alert_handler)
+logging.root.setLevel(logging.WARNING)
+_logger.setLevel(logging.INFO)
+
+
 # docs_url/redoc_url/openapi_url disabled: the interactive OpenAPI schema would
 # otherwise publish the full endpoint map (admin, payment, webhook routes) to
 # anonymous users as free recon.
@@ -269,6 +281,52 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+# ── Error alerting middleware ──────────────────────────────────────────────────
+# Registered last, so it is the OUTERMOST middleware and sees failures raised by
+# every other layer. It only logs: cap-error-alerts.service tails the journal and
+# turns these records into email.
+def _alert_request_context(request):
+    uid = ip = "?"
+    try:
+        sess = request.scope.get("session") or {}
+        uid = sess.get("user_id", "anon")
+    except Exception:
+        pass
+    try:
+        ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "?")
+    except Exception:
+        pass
+    return uid, ip
+
+
+@app.middleware("http")
+async def _error_alert_middleware(request: Request, call_next):
+    try:
+        response = await call_next(request)
+    except Exception:
+        uid, ip = _alert_request_context(request)
+        _logger.exception("[APP-ERROR] unhandled exception on %s %s (user=%s ip=%s)",
+                          request.method, request.url.path, uid, ip)
+        raise
+    if response.status_code >= 500 or response.status_code == 413:
+        uid, ip = _alert_request_context(request)
+        _logger.error("[APP-ERROR] HTTP %s returned by %s %s (user=%s ip=%s)",
+                      response.status_code, request.method, request.url.path, uid, ip)
+    return response
+
+
+@app.get("/__selftest/error")
+async def _error_alert_selftest(request: Request, token: str = ""):
+    """Deliberately fail, to prove the alert path still works end to end.
+
+    404s unless ERROR_TEST_TOKEN is set in .env and matches ?token=.
+    """
+    expected = os.environ.get("ERROR_TEST_TOKEN", "")
+    if not expected or token != expected:
+        return HTMLResponse("Not Found", status_code=404)
+    raise RuntimeError("error-alert selftest: this exception is intentional")
 
 
 
@@ -4098,7 +4156,7 @@ async def upload_video(
         if not _detected.startswith("video/"):
             return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
     except Exception:
-        pass
+        _logger.exception("video upload: MIME sniff failed, type validation skipped")
 
     video_id_hex = uuid.uuid4().hex
     key = f"videos/{upload_user_id}/{video_id_hex}.{ext}"
@@ -4222,7 +4280,7 @@ async def delete_video(video_id: int, request: Request, db: Session = Depends(ge
         key = video.url.replace(f"{SPACES_BASE_URL}/", "")
         s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
     except Exception:
-        pass
+        _logger.exception("S3 delete failed for video id=%s", video_id)
     db.delete(video)
     db.commit()
     sep = "&" if "?" in redirect_to else "?"
@@ -4328,7 +4386,7 @@ async def delete_profile_image(image_id: int, request: Request, db: Session = De
         key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
         s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
     except Exception:
-        pass
+        _logger.exception("S3 delete failed for profile image id=%s", image_id)
     db.delete(img)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
@@ -4419,7 +4477,7 @@ async def delete_transcript(transcript_id: int, request: Request, db: Session = 
         key = t.file_url.replace(f"{SPACES_BASE_URL}/", "")
         s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
     except Exception:
-        pass
+        _logger.exception("S3 delete failed for transcript id=%s", transcript_id)
     db.delete(t)
     db.commit()
     return RedirectResponse(redirect_to, status_code=302)
@@ -6726,7 +6784,7 @@ async def admin_mass_dm_send(request: Request, content: str = Form(""), db: Sess
                 athlete_id, {"type": "unread", "count": unread_sender_count(db, athlete_id)}
             )
         except Exception:
-            pass
+            _logger.exception("mass DM: live push to athlete id=%s failed", athlete_id)
 
     log_admin_action(
         db, admin.id, "mass_dm",
@@ -6757,19 +6815,19 @@ async def admin_delete_user(target_id: int, request: Request, db: Session = Depe
             key = vid.url.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
         except Exception:
-            pass
+            _logger.exception("admin delete user %s: S3 video delete failed", target_id)
     for img in db.query(ProfileImage).filter(ProfileImage.user_id == target_id).all():
         try:
             key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
         except Exception:
-            pass
+            _logger.exception("admin delete user %s: S3 image delete failed", target_id)
     for tr in db.query(Transcript).filter(Transcript.user_id == target_id).all():
         try:
             key = tr.file_url.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
         except Exception:
-            pass
+            _logger.exception("admin delete user %s: S3 transcript delete failed", target_id)
     # Delete local profile photo if exists
     pp = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).first()
     cp = db.query(CoachProfile).filter(CoachProfile.user_id == target_id).first()
@@ -6780,7 +6838,7 @@ async def admin_delete_user(target_id: int, request: Request, db: Session = Depe
                 try:
                     os.remove(local_path)
                 except Exception:
-                    pass
+                    _logger.exception("admin delete user %s: local photo delete failed", target_id)
     db.query(PlayerProfile).filter(PlayerProfile.user_id == target_id).delete()
     db.query(CoachProfile).filter(CoachProfile.user_id == target_id).delete()
     db.query(Message).filter((Message.sender_id == target_id) | (Message.receiver_id == target_id)).delete()
@@ -7245,7 +7303,7 @@ def _backup_signed_doc_to_s3(filepath: str, filename: str):
             ExtraArgs={"ContentType": "application/pdf"}
         )
     except Exception:
-        pass
+        _logger.exception("signed document S3 backup failed for %s", filename)
 
 UPLOAD_DIR = "/home/recruiting/bearcats/static/uploads"
 SIGNED_DOCS_DIR = "/home/recruiting/bearcats/signed_docs"
@@ -7322,13 +7380,13 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
                 old_key = p.photo.replace(f"{SPACES_BASE_URL}/", "")
                 s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
             except Exception:
-                pass
+                _logger.exception("upload_photo: old player photo S3 delete failed")
         # Delete old local photo if exists
         elif p.photo and os.path.exists(os.path.join(UPLOAD_DIR, os.path.basename(p.photo))):
             try:
                 os.remove(os.path.join(UPLOAD_DIR, os.path.basename(p.photo)))
             except Exception:
-                pass
+                _logger.exception("upload_photo: old player photo local delete failed")
         p.photo = new_photo_url
     else:
         c = db.query(CoachProfile).filter(CoachProfile.user_id == target_user_id).first()
@@ -7340,12 +7398,12 @@ async def upload_photo(request: Request, photo: UploadFile = File(...), target_u
                 old_key = c.photo.replace(f"{SPACES_BASE_URL}/", "")
                 s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
             except Exception:
-                pass
+                _logger.exception("upload_photo: old coach photo S3 delete failed")
         elif c.photo and os.path.exists(os.path.join(UPLOAD_DIR, os.path.basename(c.photo))):
             try:
                 os.remove(os.path.join(UPLOAD_DIR, os.path.basename(c.photo)))
             except Exception:
-                pass
+                _logger.exception("upload_photo: old coach photo local delete failed")
         c.photo = new_photo_url
     db.commit()
 
@@ -7417,7 +7475,7 @@ async def upload_committed_logo(request: Request, logo: UploadFile = File(...), 
             old_key = p.committed_school_logo.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
         except Exception:
-            pass
+            _logger.exception("committed logo: old logo S3 delete failed")
     p.committed_school_logo = f"{SPACES_BASE_URL}/{s3_key}"
     db.commit()
 
@@ -7443,7 +7501,7 @@ async def remove_committed_logo(request: Request, target_user_id: str = Form(def
                 old_key = p.committed_school_logo.replace(f"{SPACES_BASE_URL}/", "")
                 s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
             except Exception:
-                pass
+                _logger.exception("committed logo removal: S3 delete failed")
         p.committed_school_logo = ""
         db.commit()
     if logged_in_user and logged_in_user.is_admin and target_user_id != user_id:
@@ -7591,7 +7649,7 @@ async def admin_migrate_local_photos(request: Request, db: Session = Depends(get
                     profile.photo = f"{SPACES_BASE_URL}/{s3_key}"
                     migrated += 1
                 except Exception:
-                    pass
+                    _logger.exception("photo migration: S3 upload failed for %s", local_path)
     for profile in db.query(CoachProfile).all():
         if profile.photo and profile.photo.startswith("/static/uploads/"):
             local_path = "/home/recruiting/bearcats" + profile.photo
@@ -7603,7 +7661,7 @@ async def admin_migrate_local_photos(request: Request, db: Session = Depends(get
                     profile.photo = f"{SPACES_BASE_URL}/{s3_key}"
                     migrated += 1
                 except Exception:
-                    pass
+                    _logger.exception("photo migration: S3 upload failed for %s", local_path)
     db.commit()
     _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
     log_admin_action(db, admin.id, "migrate_local_photos", detail=f"migrated={migrated}", ip=_ip)
@@ -7674,19 +7732,19 @@ async def delete_own_account(request: Request, db: Session = Depends(get_db)):
             key = vid.url.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
         except Exception:
-            pass
+            _logger.exception("account deletion: S3 video delete failed for user %s", user_id)
     for img in db.query(ProfileImage).filter(ProfileImage.user_id == user_id).all():
         try:
             key = img.file_url.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
         except Exception:
-            pass
+            _logger.exception("account deletion: S3 image delete failed for user %s", user_id)
     for tr in db.query(Transcript).filter(Transcript.user_id == user_id).all():
         try:
             key = tr.file_url.replace(f"{SPACES_BASE_URL}/", "")
             s3.delete_object(Bucket=SPACES_BUCKET, Key=key)
         except Exception:
-            pass
+            _logger.exception("account deletion: S3 transcript delete failed for user %s", user_id)
     # Delete local profile photo if exists
     pp = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
     cp = db.query(CoachProfile).filter(CoachProfile.user_id == user_id).first()
@@ -7697,14 +7755,14 @@ async def delete_own_account(request: Request, db: Session = Depends(get_db)):
                     old_key = prof.photo.replace(f"{SPACES_BASE_URL}/", "")
                     s3.delete_object(Bucket=SPACES_BUCKET, Key=old_key)
                 except Exception:
-                    pass
+                    _logger.exception("account deletion: S3 photo delete failed for user %s", user_id)
             else:
                 local_path = os.path.join("/home/recruiting/bearcats/static/uploads", os.path.basename(prof.photo))
                 if os.path.exists(local_path):
                     try:
                         os.remove(local_path)
                     except Exception:
-                        pass
+                        _logger.exception("account deletion: local photo delete failed for user %s", user_id)
     # Delete DB records
     db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).delete()
     db.query(CoachProfile).filter(CoachProfile.user_id == user_id).delete()
