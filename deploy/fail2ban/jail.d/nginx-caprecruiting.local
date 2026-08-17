@@ -1,0 +1,65 @@
+# Fail2Ban jails for the nginx vhosts on 167.71.170.219 (caprecruiting.com et al).
+#
+# Context: the box had only an [sshd] jail, so web scanners were rate-limited by
+# nginx but never actually blocked — they could probe indefinitely (and generate
+# alert email). These jails drop repeat offenders at the firewall.
+#
+# NOTE: /etc/fail2ban/jail.local sets "backend = systemd" in [DEFAULT], which does
+# not work for file-based nginx logs. Every jail below overrides it with "auto".
+#
+# Thresholds were validated against real traffic before enabling — see the header
+# comment on each jail for the observed false-positive count.
+
+# Bans clients that trip nginx's limit_req zones (cap_general / cap_sensitive /
+# cap_auth). This is the jail that would have caught the 2026-08-16 scan: one host
+# generated 824 limit_req events in 13 seconds. A real user cannot reach 10 events
+# in 60s against a 30r/s zone with burst=50.
+[nginx-limit-req]
+enabled  = true
+backend  = auto
+port     = http,https
+filter   = nginx-limit-req
+logpath  = /var/log/nginx/*error*.log
+findtime = 60
+maxretry = 10
+bantime  = 86400
+
+# Bans 404 floods — the generic scanner signature (.env, .git/config, .aws/
+# credentials, wp-config.php.bak and friends), which nginx-botsearch's fixed path
+# list does not cover.
+# Validated against 2026-08-16 logs: 32 IPs would have been banned, every one of
+# them a scanner. None had a single 200 on an application or API route.
+[nginx-404-flood]
+enabled  = true
+backend  = auto
+port     = http,https
+filter   = nginx-404-flood
+logpath  = /var/log/nginx/*access*.log
+findtime = 60
+maxretry = 30
+bantime  = 86400
+
+# Bans any request for a server-side script this stack cannot serve. caprecruiting
+# is Python/Flask with no PHP binary and no php-fpm service, so /fff.php,
+# /xiugai.php, /wp-admin/install.php and Shellshock-style /cgi-bin/../bin/sh are
+# unambiguously hostile. Two strikes, week-long ban.
+[nginx-noscript-cap]
+enabled  = true
+backend  = auto
+port     = http,https
+filter   = nginx-noscript-cap
+logpath  = /var/log/nginx/*access*.log
+findtime = 3600
+maxretry = 2
+bantime  = 604800
+
+# Stock filter: known bot/exploit paths (phpmyadmin, /cgi-bin, admin panels).
+[nginx-botsearch]
+enabled  = true
+backend  = auto
+port     = http,https
+filter   = nginx-botsearch
+logpath  = /var/log/nginx/*access*.log
+findtime = 600
+maxretry = 5
+bantime  = 86400
