@@ -63,3 +63,21 @@ logpath  = /var/log/nginx/*access*.log
 findtime = 600
 maxretry = 5
 bantime  = 86400
+
+# Bans credential/config probing (/.env, /.git/config, /.aws/credentials, ...).
+# The other jails are volume-based and a slow scanner slips under all of them: on
+# 2026-08-20 one host probed 8 distinct secret paths, peaked at 12 x 404 in 60s
+# against nginx-404-flood's maxretry=30, and was never banned.
+# Validated against 2026-08-20 logs (3084 requests): 14 IPs matched, 0 legitimate.
+# Every IP with >=2 hits was a scanner — none had a 200 on an app route beyond "/",
+# and 6 of them were already banned by nginx-404-flood on other evidence.
+# Two strikes, week-long ban, same rationale as nginx-noscript-cap.
+[nginx-secretprobe]
+enabled  = true
+backend  = auto
+port     = http,https
+filter   = nginx-secretprobe
+logpath  = /var/log/nginx/*access*.log
+findtime = 3600
+maxretry = 2
+bantime  = 604800
