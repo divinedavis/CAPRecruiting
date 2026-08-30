@@ -10,7 +10,14 @@ certifi==2026.2.25
 cffi==2.0.0
 charset-normalizer==3.4.6
 click==8.4.2
-cryptography==48.0.1
+cryptography==50.0.1
+# ecdsa is pulled in by python-jose. CVE-2024-23342 (Minerva, a timing attack
+# on P-256 signing) has no fix and upstream will not add one — but the path is
+# not reachable here: jose.backends selects CryptographyECKey whenever
+# `cryptography` is importable, which it always is below, so the pure-Python
+# ecdsa signer is installed and never called. Verified with
+# `from jose.backends import ECKey` -> cryptography_backend.CryptographyECKey.
+# Keep the pin so the version is deliberate rather than floating.
 ecdsa==0.19.2
 fastapi==0.135.2
 greenlet==3.3.2
