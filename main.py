@@ -541,6 +541,9 @@ class PendingSignup(Base):
     billing = Column(String, default="monthly")
     oauth_google = Column(Boolean, default=False)
     date_of_birth = Column(String, default="")
+    # Comped-profile invite token, when the signup started from one. The OAuth
+    # callbacks clear the session, so the token rides on this row instead.
+    comp_token = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
 
@@ -625,6 +628,31 @@ class InPersonPaymentToken(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     used_at    = Column(DateTime, nullable=True)
+
+
+class CompInvite(Base):
+    """Admin-issued link that hands a new player a paid tier at no charge.
+
+    An admin generates one, texts it to the player, the player signs up and
+    lands on the granted tier without ever seeing a payment screen. Single use,
+    expires, revocable.
+
+    Deliberately NOT an InPersonPaymentToken: that flow stamps
+    in_person_paid_until, so expire_in_person.py drops the player back to free
+    on that date. A comped profile has no end date and no Stripe subscription,
+    so nothing downgrades it.
+    """
+    __tablename__ = "comp_invites"
+    id            = Column(Integer, primary_key=True)
+    token         = Column(String(64), unique=True, nullable=False, index=True)
+    tier          = Column(String(20), nullable=False, default="essentials")
+    note          = Column(String(200), default="")
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow)
+    expires_at    = Column(DateTime, nullable=False)
+    used_at       = Column(DateTime, nullable=True)
+    used_by_id    = Column(Integer, ForeignKey("users.id"), nullable=True)
+    revoked_at    = Column(DateTime, nullable=True)
 
 
 
@@ -1004,6 +1032,9 @@ _add_column_if_missing("legal_contracts", "user_id", "INTEGER")
 _add_column_if_missing("legal_contracts", "gate_access", "BOOLEAN DEFAULT 0")
 _add_column_if_missing("player_profiles", "committed_school", "TEXT DEFAULT ''")
 _add_column_if_missing("player_profiles", "committed_school_logo", "TEXT DEFAULT ''")
+# Carries a comped-profile link through the OAuth round trip, where the session
+# is cleared before the pending row is handed to /signup/finish-oauth.
+_add_column_if_missing("pending_signups", "comp_token", "TEXT DEFAULT ''")
 
 # One-time backfill of stat_history from current player_profiles values.
 # Provides every player with a baseline data point so progression starts
@@ -1203,6 +1234,39 @@ def _cleanup_expired_pending_signups(db: Session):
         db.commit()
     except Exception:
         db.rollback()
+
+
+COMP_TIERS = ("essentials", "advanced", "premium")
+
+
+def comp_invite_for(db: Session, token: str):
+    """Return the CompInvite for a token if it is still redeemable, else None.
+
+    Redeemable means: exists, not yet used, not revoked, not past its expiry.
+    """
+    if not token:
+        return None
+    rec = db.query(CompInvite).filter(CompInvite.token == token).first()
+    if not rec or rec.used_at or rec.revoked_at:
+        return None
+    if rec.expires_at <= datetime.utcnow():
+        return None
+    return rec
+
+
+def claim_comp_invite(db: Session, rec: "CompInvite") -> bool:
+    """Atomically burn a comped invite. False if someone else got there first.
+
+    The UPDATE ... WHERE used_at IS NULL is what makes two people opening the
+    same texted link unable to both redeem it.
+    """
+    claimed = db.query(CompInvite).filter(
+        CompInvite.id == rec.id,
+        CompInvite.used_at == None,
+        CompInvite.revoked_at == None,
+    ).update({"used_at": datetime.utcnow()}, synchronize_session=False)
+    db.commit()
+    return bool(claimed)
 
 
 def _finalize_pending_signup(db: Session, pending: "PendingSignup", stripe_customer_id: str, stripe_subscription_id: str):
@@ -2320,7 +2384,7 @@ async def sitemap_xml(db: Session = Depends(get_db)):
 
 
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly", bypass_token: str = None):
+async def signup_get(request: Request, db: Session = Depends(get_db), invite: str = None, tier: str = "essentials", billing: str = "monthly", bypass_token: str = None, comp: str = None):
     teams = db.query(Team).order_by(Team.name).all()
     invite_valid = False
     invite_error = None
@@ -2339,13 +2403,22 @@ async def signup_get(request: Request, db: Session = Depends(get_db), invite: st
     if bypass_token:
         tier = "premium"
         billing = "monthly"
+    comp_rec = comp_invite_for(db, comp) if comp else None
+    comp_error = None
+    if comp and not comp_rec:
+        comp_error = "This free profile link is invalid, already used, or expired. Ask CAP Recruiting for a new one."
+    if comp_rec:
+        tier = comp_rec.tier
+        billing = "monthly"
     return templates.TemplateResponse("signup.html", {
-        "request": request, "error": invite_error, "teams": teams,
+        "request": request, "error": invite_error or comp_error, "teams": teams,
         "selected_team_id": None, "invite_token": invite if invite_valid else None,
         "invite_valid": invite_valid,
         "selected_tier": tier,
         "selected_billing": billing,
         "bypass_token": bypass_token,
+        "comp_token": comp_rec.token if comp_rec else None,
+        "comp_tier": comp_rec.tier if comp_rec else None,
         "prefill_school": prefill_school,
         "prefill_name": prefill_name,
     })
@@ -2371,6 +2444,7 @@ async def signup_post(
     school_county: str = Form(""),
     invite_token: Optional[str] = Form(None),
     bypass_token: Optional[str] = Form(None),
+    comp_token: Optional[str] = Form(None),
     date_of_birth: str = Form(""),
     db: Session = Depends(get_db)
 ):
@@ -2381,6 +2455,12 @@ async def signup_post(
     new_team_name = new_team_name.strip()
     teams = db.query(Team).order_by(Team.name).all()
 
+    # A comped link fixes the tier — never trust the tier the form posted back.
+    comp_rec = comp_invite_for(db, comp_token) if comp_token else None
+    if comp_rec:
+        tier = comp_rec.tier
+        billing = "monthly"
+
     def err(msg):
         return templates.TemplateResponse("signup.html", {
             "request": request, "error": msg,
@@ -2388,7 +2468,12 @@ async def signup_post(
             "selected_tier": tier, "selected_billing": billing,
             "invite_token": invite_token, "invite_valid": bool(invite_token),
             "bypass_token": bypass_token,
+            "comp_token": comp_rec.token if comp_rec else None,
+            "comp_tier": comp_rec.tier if comp_rec else None,
         })
+
+    if comp_token and not comp_rec:
+        return err("This free profile link is invalid, already used, or expired. Ask CAP Recruiting for a new one.")
 
     if role not in ("player", "coach"):
         return err("Invalid role selected.")
@@ -2493,6 +2578,46 @@ async def signup_post(
             request.session["session_version"] = user.session_version or 0
             return RedirectResponse(f"/sign/{_new_contract.token}", status_code=302)
 
+        # Comped link path: admin granted this player a paid tier for free.
+        # Create the user immediately — there is no payment to wait on.
+        if comp_rec:
+            if not claim_comp_invite(db, comp_rec):
+                return err("This free profile link has already been used.")
+            user = User(
+                username=username, email=email,
+                password_hash=hash_password(password),
+                role="player", public_id=_generate_public_id(),
+                date_of_birth=date_of_birth.strip(),
+                subscription_tier=comp_rec.tier,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            db.add(PlayerProfile(
+                user_id=user.id, team_id=team_id,
+                school=school_name.strip(), city=school_city.strip(),
+                state=school_state.strip(), county=school_county.strip(),
+            ))
+            comp_rec.used_by_id = user.id
+            db.commit()
+            try:
+                _notify_coaches_of_new_player(db, user, school_name.strip())
+            except Exception as _e:
+                _logger.warning("Notification fan-out failed: %s", type(_e).__name__)
+            try:
+                import asyncio as _asyncio
+                _asyncio.create_task(send_player_signup_notification(user.username, user.email, school_name.strip()))
+            except Exception:
+                _logger.exception("Signup notification email failed for comped player %s", user.username)
+            _new_contract = _create_and_send_contract(db, user)
+            request.session.clear()
+            request.session["user_id"] = user.id
+            request.session["is_admin"] = bool(user.is_admin)
+            request.session["role"] = user.role
+            request.session["subscription_tier"] = comp_rec.tier
+            request.session["session_version"] = user.session_version or 0
+            return RedirectResponse(f"/sign/{_new_contract.token}", status_code=302)
+
         # Stripe path: stash PendingSignup, redirect to Stripe checkout.
         # NO User row is created until the webhook (or success page) confirms payment.
         _price_map = prices_for(billing)
@@ -2571,10 +2696,12 @@ async def signup_finish_oauth_get(request: Request, db: Session = Depends(get_db
         request.session.pop("pending_oauth_uuid", None)
         return RedirectResponse("/signup?error=oauth_expired", status_code=302)
     teams = db.query(Team).order_by(Team.name).all()
+    comp_rec = comp_invite_for(db, pending.comp_token)
     return templates.TemplateResponse("signup_finish_oauth.html", {
         "request": request,
         "pending": pending,
         "teams": teams,
+        "comp_tier": comp_rec.tier if comp_rec else None,
     })
 
 
@@ -2596,19 +2723,49 @@ async def signup_finish_oauth_post(
     if not pending or pending.expires_at <= datetime.utcnow():
         request.session.pop("pending_oauth_uuid", None)
         return RedirectResponse("/signup?error=oauth_expired", status_code=302)
-    if not school_name.strip():
-        teams = db.query(Team).order_by(Team.name).all()
+    comp_rec = comp_invite_for(db, pending.comp_token)
+
+    def fo_err(msg):
         return templates.TemplateResponse("signup_finish_oauth.html", {
-            "request": request, "pending": pending, "teams": teams,
-            "error": "Please select your high school.",
+            "request": request, "pending": pending,
+            "teams": db.query(Team).order_by(Team.name).all(),
+            "comp_tier": comp_rec.tier if comp_rec else None,
+            "error": msg,
         })
+
+    if not school_name.strip():
+        return fo_err("Please select your high school.")
     age_err = validate_player_age(date_of_birth)
     if age_err:
-        teams = db.query(Team).order_by(Team.name).all()
-        return templates.TemplateResponse("signup_finish_oauth.html", {
-            "request": request, "pending": pending, "teams": teams,
-            "error": age_err,
-        })
+        return fo_err(age_err)
+
+    # Comped link path: grant the tier and finish the signup now, no Stripe.
+    if comp_rec:
+        if not claim_comp_invite(db, comp_rec):
+            return fo_err("This free profile link has already been used.")
+        pending.school_name = school_name.strip()
+        pending.school_city = school_city.strip()
+        pending.school_state = school_state.strip()
+        pending.school_county = school_county.strip()
+        pending.date_of_birth = date_of_birth.strip()
+        pending.team_id = team_id
+        pending.tier = comp_rec.tier
+        pending.billing = "monthly"
+        db.commit()
+        user = _finalize_pending_signup(db, pending, "", "")
+        if not user:
+            return fo_err("Could not finish your signup. Please try again.")
+        comp_rec.used_by_id = user.id
+        db.commit()
+        request.session.clear()
+        request.session["user_id"] = user.id
+        request.session["is_admin"] = bool(user.is_admin)
+        request.session["role"] = "player"
+        request.session["subscription_tier"] = user.subscription_tier or comp_rec.tier
+        request.session["session_version"] = user.session_version or 0
+        # The contract gate middleware routes them to /sign/{token} from here.
+        return RedirectResponse("/dashboard", status_code=302)
+
     _price_map = prices_for(billing)
     _tier = tier if tier in _price_map and _price_map[tier] else "essentials"
     if _tier not in _price_map or not _price_map[_tier]:
@@ -2640,11 +2797,8 @@ async def signup_finish_oauth_post(
         )
         return RedirectResponse(checkout.url, status_code=302)
     except Exception:
-        teams = db.query(Team).order_by(Team.name).all()
-        return templates.TemplateResponse("signup_finish_oauth.html", {
-            "request": request, "pending": pending, "teams": teams,
-            "error": "Could not start checkout. Please try again.",
-        })
+        _logger.exception("Stripe checkout creation failed for OAuth signup %s", pending.email)
+        return fo_err("Could not start checkout. Please try again.")
 
 
 @app.post("/coach-request")
@@ -3169,7 +3323,7 @@ import secrets as _secrets
 import httpx
 
 @app.get("/auth/google")
-async def google_auth_redirect(request: Request, invite: str = "", db: Session = Depends(get_db)):
+async def google_auth_redirect(request: Request, invite: str = "", comp: str = "", db: Session = Depends(get_db)):
     """Redirect user to Google's consent screen."""
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
@@ -3180,6 +3334,10 @@ async def google_auth_redirect(request: Request, invite: str = "", db: Session =
         inv = db.query(CoachInvite).filter(CoachInvite.token == invite, CoachInvite.used == False).first()
         if inv and inv.expires_at > datetime.utcnow():
             request.session["oauth_invite"] = invite
+    # Preserve a comped-profile link through the OAuth flow
+    request.session.pop("oauth_comp", None)
+    if comp and comp_invite_for(db, comp):
+        request.session["oauth_comp"] = comp
     params = _urlparse.urlencode({
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": f"{SITE_URL}/auth/google/callback",
@@ -3302,6 +3460,9 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
     # ── Player path: no User row — stash pending, send to finish page ──────
     _cleanup_expired_pending_signups(db)
 
+    # Read before session.clear() below wipes it.
+    _comp = request.session.get("oauth_comp", "")
+
     # Reuse an existing in-progress pending if the same email is already mid-signup
     pending = db.query(PendingSignup).filter(
         PendingSignup.email == google_email,
@@ -3316,11 +3477,15 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
             oauth_google=True,
             tier="essentials",
             billing="monthly",
+            comp_token=_comp,
             expires_at=datetime.utcnow() + timedelta(hours=24),
         )
         db.add(pending)
         db.commit()
         db.refresh(pending)
+    elif _comp:
+        pending.comp_token = _comp
+        db.commit()
 
     # Hand the user a short-lived token in their session so /signup/finish-oauth
     # knows which pending row they own without exposing the uuid in a URL.
@@ -3381,7 +3546,7 @@ async def _verify_apple_id_token(id_token: str) -> dict:
 
 
 @app.get("/auth/apple")
-async def apple_auth_redirect(request: Request, invite: str = "", db: Session = Depends(get_db)):
+async def apple_auth_redirect(request: Request, invite: str = "", comp: str = "", db: Session = Depends(get_db)):
     """Redirect user to Apple's Sign in with Apple consent screen."""
     if not APPLE_SERVICES_ID:
         raise HTTPException(status_code=500, detail="Sign in with Apple not configured")
@@ -3392,7 +3557,10 @@ async def apple_auth_redirect(request: Request, invite: str = "", db: Session = 
         inv = db.query(CoachInvite).filter(CoachInvite.token == invite, CoachInvite.used == False).first()
         if inv and inv.expires_at > datetime.utcnow():
             valid_invite = invite
-    state = _apple_state_serializer.dumps({"n": nonce, "invite": valid_invite})
+    # Same for a comped-profile link. The state blob is signed, so this is
+    # tamper-proof, and it is re-validated against the DB on the way back.
+    valid_comp = comp if (comp and comp_invite_for(db, comp)) else ""
+    state = _apple_state_serializer.dumps({"n": nonce, "invite": valid_invite, "comp": valid_comp})
     params = _urlparse.urlencode({
         "client_id": APPLE_SERVICES_ID,
         "redirect_uri": f"{SITE_URL}/auth/apple/callback",
@@ -3529,6 +3697,7 @@ async def apple_auth_callback(request: Request, db: Session = Depends(get_db)):
 
     # ── Player path: no User row yet — stash pending, send to finish page ──
     _cleanup_expired_pending_signups(db)
+    _comp = state_data.get("comp") or ""
     pending = db.query(PendingSignup).filter(
         PendingSignup.email == apple_email,
         PendingSignup.expires_at > datetime.utcnow(),
@@ -3542,11 +3711,15 @@ async def apple_auth_callback(request: Request, db: Session = Depends(get_db)):
             oauth_google=True,      # generic "OAuth signup, no password" flag (shared w/ Apple)
             tier="essentials",
             billing="monthly",
+            comp_token=_comp,
             expires_at=datetime.utcnow() + timedelta(hours=24),
         )
         db.add(pending)
         db.commit()
         db.refresh(pending)
+    elif _comp:
+        pending.comp_token = _comp
+        db.commit()
 
     request.session.clear()
     request.session["pending_oauth_uuid"] = pending.uuid
@@ -6674,6 +6847,14 @@ async def admin_invites_get(request: Request, db: Session = Depends(get_db)):
                 used_by_users[inv.used_by] = u.username
     site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
     bypass_link = request.query_params.get("bypass_link", "")
+    comp_link = request.query_params.get("comp_link", "")
+    comps = db.query(CompInvite).order_by(CompInvite.created_at.desc()).limit(100).all()
+    comp_used_by = {}
+    for c in comps:
+        if c.used_by_id and c.used_by_id not in comp_used_by:
+            u = db.query(User).filter(User.id == c.used_by_id).first()
+            if u:
+                comp_used_by[c.used_by_id] = u.username
     return templates.TemplateResponse("admin_invites.html", {
         "request": request,
         "invites": invites,
@@ -6681,6 +6862,10 @@ async def admin_invites_get(request: Request, db: Session = Depends(get_db)):
         "site_url": site_url,
         "now": datetime.utcnow(),
         "bypass_link": bypass_link,
+        "comp_link": comp_link,
+        "comps": comps,
+        "comp_used_by": comp_used_by,
+        "comp_tiers": COMP_TIERS,
     })
 
 @app.post("/admin/invites/create", response_class=HTMLResponse)
@@ -6893,6 +7078,64 @@ async def admin_generate_open_bypass(request: Request, db: Session = Depends(get
     _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
     log_admin_action(db, admin.id, "generate_open_bypass", None, f"token={token[:8]}...", _ip)
     return RedirectResponse(f"/admin/invites?bypass_link={link}", status_code=302)
+
+
+@app.post("/admin/comp-links/generate")
+async def admin_generate_comp_link(
+    request: Request,
+    tier: str = Form("essentials"),
+    days: int = Form(30),
+    note: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Generate a link that gives a brand-new player a paid tier for free."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    tier = tier if tier in COMP_TIERS else "essentials"
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 365))
+    import secrets as _sec
+    token = _sec.token_urlsafe(32)
+    db.add(CompInvite(
+        token=token,
+        tier=tier,
+        note=note.strip()[:200],
+        created_by_id=admin.id,
+        expires_at=datetime.utcnow() + timedelta(days=days),
+    ))
+    db.commit()
+    site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
+    link = f"{site_url}/signup?comp={token}"
+    _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+    log_admin_action(db, admin.id, "generate_comp_link", None, f"tier={tier} days={days} token={token[:8]}...", _ip)
+    return RedirectResponse(f"/admin/invites?comp_link={_urlparse.quote(link, safe='')}", status_code=302)
+
+
+@app.post("/admin/comp-links/{token}/revoke")
+async def admin_revoke_comp_link(token: str, request: Request, db: Session = Depends(get_db)):
+    """Kill an unused comped link — e.g. it was texted to the wrong number."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+    admin = db.query(User).filter(User.id == user_id).first()
+    if not admin or not admin.is_admin:
+        raise HTTPException(status_code=403)
+    rec = db.query(CompInvite).filter(CompInvite.token == token).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Link not found.")
+    if not rec.used_at and not rec.revoked_at:
+        rec.revoked_at = datetime.utcnow()
+        db.commit()
+        _ip = request.headers.get("x-real-ip", request.client.host if request.client else "")
+        log_admin_action(db, admin.id, "revoke_comp_link", None, f"token={token[:8]}...", _ip)
+    return RedirectResponse("/admin/invites", status_code=302)
 
 
 @app.get("/messages", response_class=HTMLResponse)

@@ -39,7 +39,7 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 
 ## Database Tables
 
-`users`, `player_profiles`, `coach_profiles`, `teams`, `videos`, `photos`, `profile_images`, `transcripts`, `evaluations`, `messages`, `legal_contracts`, `coach_invites`, `password_reset_tokens`, `in_person_payment_tokens`, `schools`
+`users`, `player_profiles`, `coach_profiles`, `teams`, `videos`, `photos`, `profile_images`, `transcripts`, `evaluations`, `messages`, `legal_contracts`, `coach_invites`, `password_reset_tokens`, `in_person_payment_tokens`, `comp_invites`, `schools`
 
 ### Key Models
 
@@ -90,8 +90,8 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 |-------|-------------|
 | `GET /` | Landing page (`home.html`) |
 | `GET /pricing` | Plan selection page (`pricing.html`) |
-| `GET /signup` | Signup form; accepts `tier`, `billing`, `invite`, `bypass_token` query params (`signup.html`) |
-| `POST /signup` | Creates user+profile, handles coach invites, bypass tokens, Stripe checkout redirect |
+| `GET /signup` | Signup form; accepts `tier`, `billing`, `invite`, `bypass_token`, `comp` query params (`signup.html`) |
+| `POST /signup` | Creates user+profile, handles coach invites, bypass tokens, comped links, Stripe checkout redirect |
 | `GET /login` | Login form (`login.html`) |
 | `POST /login` | Authenticates user, sets session (`user_id`, `is_admin`, `role`, `subscription_tier`) |
 | `GET /logout` | Clears session, redirects to `/` |
@@ -165,6 +165,8 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 | `POST /admin/users/{id}/delete` | Hard-delete user and all related data (see caveat below) |
 | `POST /admin/users/{id}/generate-bypass` | Generate bypass link for existing player (7-day expiry) |
 | `POST /admin/bypass-links/generate` | Generate open bypass link for new signups |
+| `POST /admin/comp-links/generate` | Generate a free (comped) profile link for a new player — tier, expiry, note |
+| `POST /admin/comp-links/{token}/revoke` | Revoke an unclaimed comped link |
 
 ### Legal (admin-only)
 
@@ -217,6 +219,29 @@ Two types, both use `InPersonPaymentToken`:
 2. **Open** (`/admin/bypass-links/generate`): Token with `user_id=None`. Redirects to `/signup?bypass_token={token}` for new signups. Signup flow sets premium automatically.
 
 Both expire in 7 days. The `expire_in_person.py` cron (daily 9am UTC) checks for expired `in_person_paid_until` dates, emails a renewal notice, and downgrades to free.
+
+### Free Profile Links (Comped)
+`POST /admin/comp-links/generate` on `/admin/invites` — admin picks a tier
+(essentials / advanced / premium), a link expiry (7/30/90 days) and an optional
+note, and gets `https://caprecruiting.com/signup?comp={token}` to text the
+player. The player signs up on that tier with no payment screen. Uses the
+`CompInvite` model, single use, revocable via `/admin/comp-links/{token}/revoke`.
+
+**Not the same as a bypass link.** A bypass link stamps `in_person_paid_until`,
+so `expire_in_person.py` drops the player to free on that date. A comped profile
+sets no end date and no Stripe subscription, so nothing downgrades it — the
+*link* expires, the granted tier does not.
+
+The tier is read from the invite row, never from the posted form, so a player
+can't edit `tier` in the HTML and comp themselves Premium. The token is burned
+with a conditional `UPDATE ... WHERE used_at IS NULL` before the user row is
+created, so a forwarded link can't be redeemed twice.
+
+Works through Google and Apple sign-in too: `/auth/google?comp=` stashes the
+token in the session, `/auth/apple?comp=` puts it in the signed state blob, and
+both callbacks copy it onto `pending_signups.comp_token` (the callbacks clear
+the session, so the token has to ride on the row). `/signup/finish-oauth` then
+redeems it and skips Stripe entirely.
 
 ### Star Ratings
 `POST /admin/users/{id}/set-stars` — sets `PlayerProfile.stars` (0-5, clamped). Displayed on player profiles.

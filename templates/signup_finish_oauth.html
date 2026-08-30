@@ -21,11 +21,21 @@
 
 <div class="fo-wrap">
   <h1>Finish Your Signup</h1>
+  {% if comp_tier %}
+  <p class="sub">Signed in as <strong>{{ pending.email }}</strong>. Tell us where you play and you're done — your {{ comp_tier | capitalize }} profile is covered by CAP Recruiting.</p>
+  {% else %}
   <p class="sub">Signed in as <strong>{{ pending.email }}</strong>. Pick a plan and tell us where you play — you'll be taken to Stripe to complete payment.</p>
+  {% endif %}
 
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
   <form method="post" action="/signup/finish-oauth">
+    {% if comp_tier %}
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;margin-bottom:18px;">
+      <span style="font-size:14px;font-weight:700;color:#166534;">{{ comp_tier | capitalize }} — Free, on us</span>
+      <div style="font-size:13px;color:#166534;margin-top:4px;">No card needed.</div>
+    </div>
+    {% else %}
     <label>Plan</label>
     <div class="tier-grid">
       <label class="tier-opt selected" data-tier="essentials">
@@ -47,6 +57,7 @@
       <label class="selected" data-billing="monthly"><input type="radio" name="billing" value="monthly" checked>Monthly</label>
       <label data-billing="yearly"><input type="radio" name="billing" value="yearly">Yearly</label>
     </div>
+    {% endif %}
 
     <label>State</label>
     <select name="school_state" id="school_state" required>
@@ -69,7 +80,7 @@
       <input type="date" name="date_of_birth" id="oauth_dob" required>
       <small>Players must be at least 13.</small>
     </div>
-    <button type="submit">Continue to Stripe</button>
+    <button type="submit">{% if comp_tier %}Create My Profile{% else %}Continue to Stripe{% endif %}</button>
   </form>
 </div>
 

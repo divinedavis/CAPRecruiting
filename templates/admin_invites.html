@@ -10,6 +10,96 @@
         <a href="/admin/teams" class="btn btn-outline">← Admin</a>
     </div>
 
+    <!-- Free (Comped) Profile Links -->
+    <div class="admin-form-card" style="max-width:520px; margin-bottom:32px;">
+        <h2>Generate Free Profile Link</h2>
+        <p style="font-size:14px; color:var(--gray-500); margin-bottom:16px;">
+            Send this to a player you want to comp. They click it, sign up, and land on the tier you pick
+            <strong>free of charge</strong> — no payment screen, no expiry on the tier itself.
+        </p>
+        <form method="post" action="/admin/comp-links/generate">
+            <div class="form-group">
+                <label>Tier</label>
+                <select name="tier">
+                    {% for t in comp_tiers %}
+                    <option value="{{ t }}"{% if t == 'essentials' %} selected{% endif %}>{{ t | capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Link expires in</label>
+                <select name="days">
+                    <option value="7">7 days</option>
+                    <option value="30" selected>30 days</option>
+                    <option value="90">90 days</option>
+                </select>
+                <span class="field-hint">How long the player has to claim it. Their tier never expires.</span>
+            </div>
+            <div class="form-group">
+                <label>Note <span class="field-hint">Optional — who it's for</span></label>
+                <input type="text" name="note" placeholder="e.g. Marcus Bell – Central York" maxlength="200">
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Free Profile Link</button>
+        </form>
+        {% if comp_link %}
+        <div style="margin-top:16px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:14px 16px;">
+            <p style="margin:0 0 6px; font-size:13px; font-weight:700; color:#166534;">Link generated — copy and send to the player:</p>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <input type="text" readonly id="comp-link-val" value="{{ comp_link }}"
+                    style="flex:1; border:1px solid #d1fae5; border-radius:6px; padding:7px 10px; font-size:12px; font-family:monospace; background:#fff; color:#0a1628; outline:none; min-width:0;">
+                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('comp-link-val').value);this.textContent='Copied!';"
+                    style="background:#0a1628;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Copy</button>
+            </div>
+            <p style="margin:8px 0 0; font-size:12px; color:#6b7280;">One-time use.</p>
+        </div>
+        {% endif %}
+
+        {% if comps %}
+        <div style="margin-top:22px;">
+            <h3 style="font-size:14px; font-weight:800; color:var(--navy); margin:0 0 10px;">Free profile links</h3>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                {% for c in comps %}
+                {% set c_expired = c.expires_at <= now %}
+                <div style="border:1px solid var(--gray-200); border-radius:8px; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                        {% if c.used_at %}
+                        <span style="background:#dcfce7; color:#15803d; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;">Claimed</span>
+                        {% elif c.revoked_at %}
+                        <span style="background:#e5e7eb; color:#4b5563; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;">Revoked</span>
+                        {% elif c_expired %}
+                        <span style="background:#fee2e2; color:#dc2626; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;">Expired</span>
+                        {% else %}
+                        <span style="background:#dbeafe; color:#1d4ed8; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;">Active</span>
+                        {% endif %}
+                        <span style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;">{{ c.tier | capitalize }}</span>
+                        {% if c.note %}<span style="font-size:13px; font-weight:600; color:var(--navy);">{{ c.note }}</span>{% endif %}
+                    </div>
+                    {% if not c.used_at and not c.revoked_at and not c_expired %}
+                    <div style="display:flex; align-items:center; gap:8px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:6px; padding:6px 10px; margin-bottom:6px;">
+                        <input type="text" readonly value="{{ site_url }}/signup?comp={{ c.token }}" id="comp-{{ c.id }}"
+                            style="flex:1; border:none; background:transparent; font-size:12px; color:var(--gray-700); font-family:monospace; outline:none; min-width:0;">
+                        <button type="button" onclick="copyInvite('c{{ c.id }}', '{{ site_url }}/signup?comp={{ c.token }}')" id="copy-btn-c{{ c.id }}"
+                            style="flex-shrink:0; background:var(--navy); color:var(--gold); border:none; border-radius:6px; padding:5px 11px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">Copy Link</button>
+                        <form method="post" action="/admin/comp-links/{{ c.token }}/revoke" onsubmit="return confirm('Revoke this free profile link?')" style="margin:0;">
+                            <button type="submit" style="background:#fee2e2; color:#b91c1c; border:none; border-radius:6px; padding:5px 11px; font-size:11px; font-weight:700; cursor:pointer;">Revoke</button>
+                        </form>
+                    </div>
+                    {% elif c.used_at %}
+                    <div style="font-size:12px; color:var(--gray-500); margin-bottom:4px;">
+                        Claimed by <strong style="color:var(--navy);">@{{ comp_used_by.get(c.used_by_id, 'unknown') }}</strong>
+                        on {{ c.used_at.strftime('%b %d, %Y') }}
+                    </div>
+                    {% endif %}
+                    <div style="font-size:11px; color:var(--gray-400);">
+                        Created {{ c.created_at.strftime('%b %d, %Y') }}{% if not c.used_at and not c.revoked_at %} · Link expires {{ c.expires_at.strftime('%b %d, %Y') }}{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Player In-Person Bypass Links -->
     <div class="admin-form-card" style="max-width:520px; margin-bottom:32px;">
         <h2>Generate Player Bypass Link</h2>
