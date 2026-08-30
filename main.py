@@ -9021,6 +9021,29 @@ async def scout_restore_card(card_id: int, request: Request, db: Session = Depen
     db.commit()
     return JSONResponse({"ok": True})
 
+
+def _csv_cell(value) -> str:
+    """Neutralise spreadsheet formula injection in an exported CSV cell.
+
+    Excel, LibreOffice and Google Sheets evaluate any cell whose text starts
+    with = + - @ (or a leading tab/CR, which they strip before looking at the
+    first character) as a formula when the file is opened. Recruit names,
+    positions, high schools and scout notes are all attacker-supplied — a
+    player can set their own name — and these exports are opened by coaches,
+    so an unescaped cell is code execution on their machine, or a DDE/HYPERLINK
+    call that quietly ships the sheet's contents to a third party (CWE-1236).
+
+    Prefixing with an apostrophe is the standard neutralisation: spreadsheets
+    treat the cell as literal text and hide the apostrophe, so the export still
+    reads correctly to a human.
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    if text[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + text
+    return text
+
 @app.get("/dashboard/scout/export.csv")
 async def scout_export_csv(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
@@ -9059,7 +9082,7 @@ async def scout_export_csv(request: Request, db: Session = Depends(get_db)):
             height = ""
             weight = ""
         lane = lanes.get(c.lane_id)
-        writer.writerow([
+        writer.writerow([_csv_cell(v) for v in (
             name or "Unnamed",
             position or "",
             high_school or "",
@@ -9072,7 +9095,7 @@ async def scout_export_csv(request: Request, db: Session = Depends(get_db)):
             c.scout_name or "",
             (c.notes or "").replace("\r\n", "\n"),
             c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
-        ])
+        )])
     filename = f"scout-board-{college.replace(' ', '_')}-{datetime.utcnow().strftime('%Y%m%d')}.csv"
     return Response(
         content=buf.getvalue(),
@@ -10691,7 +10714,7 @@ async def analytics_export_csv(request: Request, db: Session = Depends(get_db)):
                      "Median 40", "Median Bench", "Median Vertical"])
     for r in school_rows:
         writer.writerow([
-            r["school"], r["state"], r["n"],
+            _csv_cell(r["school"]), _csv_cell(r["state"]), r["n"],
             f"{r['med_gpa']:.2f}" if r["med_gpa"] is not None else "",
             _analytics_format_height(r["med_height_in"]) if r["med_height_in"] is not None else "",
             f"{r['med_weight']:.0f}" if r["med_weight"] is not None else "",
