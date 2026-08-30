@@ -4,7 +4,8 @@
 <div class="container page-top">
     <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <h1>Messages</h1>
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div class="msg-actions">
+            <button id="select-mode-btn" onclick="toggleSelectMode()" class="btn btn-outline btn-sm" style="display:none;">Select</button>
             <button id="select-all-btn" onclick="toggleSelectAll()" class="btn btn-outline btn-sm" style="display:none;">Select All</button>
             <button id="delete-selected-btn" onclick="deleteSelected()" class="btn btn-sm" style="display:none; background:#dc2626; color:#fff; border:none;">Delete Selected</button>
             <button onclick="document.getElementById('new-msg-modal').style.display='flex'" class="btn btn-primary" style="font-size:22px; line-height:1; padding:6px 16px; border-radius:50px;">+</button>
@@ -92,7 +93,31 @@
 
 <script>
 // ── Select / delete logic ────────────────────────────────────────
+// Selection used to be revealed on mouseenter. Touch browsers synthesise a
+// hover on the first tap and never fire the matching mouseleave, so tapping a
+// conversation on a phone popped the checkbox open (shifting the row out from
+// under the finger) instead of opening the conversation. Selection is now an
+// explicit mode; a plain tap always opens the thread.
 let selectMode = false;
+const HOVER_CAPABLE = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+function setSelectMode(on) {
+    selectMode = on;
+    document.querySelectorAll('.conv-checkbox').forEach(c => {
+        c.style.display = on ? '' : 'none';
+        if (!on) c.checked = false;
+    });
+    const modeBtn = document.getElementById('select-mode-btn');
+    const allBtn = document.getElementById('select-all-btn');
+    if (modeBtn) modeBtn.textContent = on ? 'Cancel' : 'Select';
+    if (allBtn) {
+        allBtn.style.display = on ? '' : 'none';
+        if (!on) allBtn.textContent = 'Select All';
+    }
+    onCheckboxChange();
+}
+
+function toggleSelectMode() { setSelectMode(!selectMode); }
 
 function toggleSelectAll() {
     const checkboxes = document.querySelectorAll('.conv-checkbox');
@@ -104,24 +129,38 @@ function toggleSelectAll() {
 
 function onCheckboxChange() {
     const any = [...document.querySelectorAll('.conv-checkbox')].some(c => c.checked);
-    document.getElementById('delete-selected-btn').style.display = any ? '' : 'none';
+    document.getElementById('delete-selected-btn').style.display = (selectMode && any) ? '' : 'none';
 }
 
-// Show checkboxes when hovering the list (desktop UX hint)
 document.addEventListener('DOMContentLoaded', () => {
     const rows = document.querySelectorAll('.conv-row');
     if (!rows.length) return;
 
-    // Show select-all button always if there are conversations
-    document.getElementById('select-all-btn').style.display = '';
+    document.getElementById('select-mode-btn').style.display = '';
 
     rows.forEach(row => {
         const cb = row.querySelector('.conv-checkbox');
         const link = row.querySelector('.conversation-item');
-        row.addEventListener('mouseenter', () => { if (cb) cb.style.display = ''; });
-        row.addEventListener('mouseleave', () => { if (cb && !cb.checked) cb.style.display = 'none'; });
-        // Prevent link navigation when clicking checkbox area
-        if (cb) cb.addEventListener('click', e => e.stopPropagation());
+
+        // In select mode a tap ticks the row instead of navigating.
+        if (link) link.addEventListener('click', e => {
+            if (!selectMode || !cb) return;
+            e.preventDefault();
+            cb.checked = !cb.checked;
+            onCheckboxChange();
+        });
+
+        if (cb) cb.addEventListener('click', e => {
+            e.stopPropagation();
+            if (!selectMode) setSelectMode(true);   // keeps the box just ticked
+            onCheckboxChange();
+        });
+
+        // Desktop shortcut only — never bound on touch, which is what broke it.
+        if (HOVER_CAPABLE) {
+            row.addEventListener('mouseenter', () => { if (cb && !selectMode) cb.style.display = ''; });
+            row.addEventListener('mouseleave', () => { if (cb && !selectMode && !cb.checked) cb.style.display = 'none'; });
+        }
     });
 });
 

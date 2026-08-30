@@ -12,7 +12,7 @@
                     <span class="chat-peer-role">{{ "Player" if peer.role == "player" else "Coach" }}</span>
                 </div>
             </div>
-            <div style="display:flex; gap:8px;">
+            <div class="chat-header-actions">
                 <a href="/profile/{{ peer.username }}" class="btn btn-outline btn-sm">View Profile</a>
                 <form method="post" action="/messages/{{ peer.username }}/delete-thread" style="margin:0;"
                       onsubmit="return confirm('Delete this entire conversation? It will be removed from your view.')">

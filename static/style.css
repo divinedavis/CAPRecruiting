@@ -564,7 +564,7 @@ textarea { resize: vertical; }
     flex-shrink: 0;
 }
 .back-link { color: var(--gold); font-weight: 600; font-size: 14px; white-space: nowrap; }
-.chat-peer-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+.chat-peer-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .chat-avatar {
     width: 38px; height: 38px;
     background: var(--navy);
@@ -574,9 +574,19 @@ textarea { resize: vertical; }
     font-size: 15px;
     font-weight: 800;
 }
-.chat-peer-name { font-size: 16px; font-weight: 700; color: var(--navy); display: block; }
+.chat-peer-name {
+    font-size: 16px; font-weight: 700; color: var(--navy); display: block;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .chat-peer-role { font-size: 12px; color: var(--gray-400); }
 .chat-header .btn { border-color: var(--gray-200); color: var(--gray-800); }
+.chat-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* Messages list header. The generic .btn-outline is white-on-transparent for
+   use on the navy hero; on this white page it rendered as invisible text. */
+.msg-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.msg-actions .btn-outline { background: var(--white); border-color: var(--gray-200); color: var(--navy); }
+.msg-actions .btn-outline:hover { border-color: var(--navy); }
 
 .chat-messages {
     flex: 1;
@@ -1090,8 +1100,9 @@ textarea { resize: vertical; }
         border-top: none;
         margin: 0;
     }
-    .chat-header { padding: 10px 14px; gap: 10px; }
+    .chat-header { padding: 10px 14px; gap: 10px; flex-wrap: wrap; row-gap: 10px; }
     .chat-header .btn { font-size: 12px; padding: 5px 10px; }
+    .chat-header-actions { width: 100%; justify-content: flex-end; }
     .chat-messages { padding: 14px; gap: 10px; }
     .message { max-width: 85%; }
     .chat-input-form { padding: 10px 14px; gap: 8px; }
