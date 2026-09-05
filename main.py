@@ -2932,6 +2932,16 @@ def _notify_coaches_of_new_player(db: Session, new_user: "User", school: str):
         ))
     db.commit()
 
+def _mask_email(addr: str) -> str:
+    """Log-safe form of an address: keeps enough to correlate a support
+    ticket (first char + domain) without writing the full PII to journald."""
+    try:
+        local, domain = addr.split("@", 1)
+    except (AttributeError, ValueError):
+        return "<invalid>"
+    return f"{local[:1]}***@{domain}"
+
+
 async def send_reset_email(to_email: str, reset_url: str):
     import aiosmtplib
     from email.mime.multipart import MIMEMultipart
@@ -2953,9 +2963,9 @@ async def send_reset_email(to_email: str, reset_url: str):
     msg.attach(MIMEText(html, "html"))
     try:
         await aiosmtplib.send(msg, hostname=SMTP_HOST, port=SMTP_PORT, username=(SMTP_USER or None), password=(SMTP_PASSWORD or None), start_tls=True)
-        _logger.info("Password reset email sent to %s", to_email)
+        _logger.info("Password reset email sent to %s", _mask_email(to_email))
     except Exception as e:
-        _logger.error("Password reset email FAILED for %s: %s: %s", to_email, type(e).__name__, str(e), exc_info=True)
+        _logger.error("Password reset email FAILED for %s: %s: %s", _mask_email(to_email), type(e).__name__, str(e), exc_info=True)
 
 async def send_player_signup_notification(player_username: str, player_email: str, school: str):
     try:
