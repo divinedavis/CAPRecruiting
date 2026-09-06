@@ -18,7 +18,9 @@ moment something breaks:
 
 Noise control: identical failures are collapsed by signature, repeats inside a
 15-minute window are counted rather than re-sent, and there is a hard cap on
-emails per hour with the overflow delivered as one digest. Secrets that show up
+emails per hour with the overflow delivered as one digest. A single trip of the
+nginx `cap_auth` rate limit (a crawler bursting /signup) is not worth an email;
+that zone alerts only when one client keeps tripping it. Secrets that show up
 in tracebacks (Stripe keys, session cookies, passwords) are masked before the
 mail goes out.
 
@@ -72,6 +74,8 @@ HEALTH_FAILURES_TO_ALERT = 3 # consecutive probe failures before "site down"
 TB_IDLE_FLUSH = 1.5          # a traceback is complete after this long with no new lines
 ASGI_DUP_WINDOW = 10         # uvicorn re-logs what our middleware already reported
 ACCESS_HOLD = 3              # wait this long before mailing a bare 5xx access line
+AUTH_LIMIT_TRIPS = 5         # cap_auth rate-limit hits from one client before alerting
+AUTH_LIMIT_WINDOW = 600      # ...within this many seconds (one crawler burst = 1 trip)
 
 # ── What counts as an error ───────────────────────────────────────────────────
 
@@ -123,6 +127,7 @@ IGNORE_PATTERNS = [
 ]
 
 NGINX_LEVEL_RE = re.compile(r"\[(error|crit|alert|emerg)\]")
+LIMIT_REQ_RE = re.compile(r'limiting requests, .*?by zone "(\w+)", client: ([\w.:]+)')
 
 # cron/script logs: only these shapes are errors
 FILE_ERROR_PATTERNS = [
@@ -652,6 +657,33 @@ def tail_file(path: str):
         time.sleep(2)
 
 
+_auth_limit_hits: dict = {}   # client ip -> [timestamps of cap_auth rate-limit trips]
+
+
+def auth_limit_worth_alerting(line: str, now: float = None) -> bool:
+    """A nginx rate-limit line is only alert-worthy for the `cap_auth` zone once
+    the same client has tripped it AUTH_LIMIT_TRIPS times inside
+    AUTH_LIMIT_WINDOW. A link crawler walking every /signup?tier=... variant
+    trips it once and is gone; a credential-stuffer keeps coming back. Other
+    zones and non-rate-limit lines are untouched (returns True)."""
+    m = LIMIT_REQ_RE.search(line)
+    if not m or m.group(1) != "cap_auth":
+        return True
+    now = time.time() if now is None else now
+    client = m.group(2)
+    hits = [t for t in _auth_limit_hits.get(client, []) if now - t < AUTH_LIMIT_WINDOW]
+    hits.append(now)
+    _auth_limit_hits[client] = hits
+    if len(_auth_limit_hits) > 5000:            # bound memory under a wide scan
+        for ip in [ip for ip, ts in _auth_limit_hits.items()
+                   if not ts or now - ts[-1] >= AUTH_LIMIT_WINDOW]:
+            _auth_limit_hits.pop(ip, None)
+    if len(hits) < AUTH_LIMIT_TRIPS:
+        return False
+    _auth_limit_hits[client] = []                # alert once per streak, then re-arm
+    return True
+
+
 def file_watcher(events: queue.Queue, source: str, path: str):
     is_nginx = source == "nginx"
     for line in tail_file(path):
@@ -661,7 +693,13 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             m = NGINX_LEVEL_RE.search(line)
             if not m:
                 continue
+            if not auth_limit_worth_alerting(line):
+                continue
             title = line.split("] ", 1)[-1][:150]
+            lm = LIMIT_REQ_RE.search(line)
+            if lm and lm.group(1) == "cap_auth":
+                title = (f"{lm.group(2)} tripped the auth rate limit "
+                         f"{AUTH_LIMIT_TRIPS}x in {AUTH_LIMIT_WINDOW // 60} min")
             emit(events, "nginx", f"nginx {m.group(1)}: {title}", line)
         else:
             if any(p in line for p in FILE_ERROR_PATTERNS):

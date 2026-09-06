@@ -322,7 +322,10 @@ Anything that fails anywhere on the platform emails the operator (`ALERT_EMAIL` 
   systemd crashes / restarts / OOM kills, nginx `[error]` and worse, failures in
   the cron jobs, and site-down / site-recovered.
 - **Stays quiet about:** 404s, bot probes, 403s, and WARNING records (counted and
-  reported in the weekly summary instead).
+  reported in the weekly summary instead). A single nginx `cap_auth` rate-limit
+  trip (a crawler bursting `/signup?tier=...`) is also silent; that zone mails
+  only when one client trips it 5x inside 10 minutes (`AUTH_LIMIT_TRIPS`).
+  `cap_general` / `cap_sensitive` trips still mail on the first hit.
 - **Noise control:** an identical error is collapsed for 15 minutes and then
   re-sent with a repeat count; hard cap of 12 emails/hour with the overflow
   delivered as a single digest. Stripe keys, tokens, passwords and session
