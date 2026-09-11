@@ -20,7 +20,9 @@ Noise control: identical failures are collapsed by signature, repeats inside a
 15-minute window are counted rather than re-sent, and there is a hard cap on
 emails per hour with the overflow delivered as one digest. A single trip of the
 nginx `cap_auth` rate limit (a crawler bursting /signup) is not worth an email;
-that zone alerts only when one client keeps tripping it. Secrets that show up
+that zone alerts only when one client keeps tripping it. A refused upstream
+while bearcats is restarting (unattended upgrades, the nightly auto-reboot) is
+dropped too — the health probe still catches a real outage. Secrets that show up
 in tracebacks (Stripe keys, session cookies, passwords) are masked before the
 mail goes out.
 
@@ -684,6 +686,30 @@ def auth_limit_worth_alerting(line: str, now: float = None) -> bool:
     return True
 
 
+UPSTREAM_REFUSED = "(111: Connection refused) while connecting to upstream"
+RESTART_GRACE = 90           # seconds after bearcats (re)starts that :8080 may refuse
+
+
+def app_restarting() -> bool:
+    """True while bearcats is stopping/starting or came up less than
+    RESTART_GRACE seconds ago. Unattended upgrades restart it and the nightly
+    auto-reboot takes it down; any request that lands in that ~30 s gap logs a
+    refused upstream. A real outage still pages via health_watcher and the
+    systemd crash patterns, so these lines are safe to drop in that window."""
+    try:
+        out = subprocess.run(
+            ["systemctl", "show", "-p", "ActiveState",
+             "-p", "ActiveEnterTimestampMonotonic", "bearcats"],
+            capture_output=True, text=True, timeout=5).stdout
+        props = dict(l.split("=", 1) for l in out.splitlines() if "=" in l)
+        if props.get("ActiveState") != "active":
+            return True
+        since_start = time.monotonic() - int(props["ActiveEnterTimestampMonotonic"]) / 1e6
+        return since_start < RESTART_GRACE
+    except Exception:
+        return False                         # unsure — alert as before
+
+
 def file_watcher(events: queue.Queue, source: str, path: str):
     is_nginx = source == "nginx"
     for line in tail_file(path):
@@ -694,6 +720,8 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             if not m:
                 continue
             if not auth_limit_worth_alerting(line):
+                continue
+            if UPSTREAM_REFUSED in line and app_restarting():
                 continue
             title = line.split("] ", 1)[-1][:150]
             lm = LIMIT_REQ_RE.search(line)
