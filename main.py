@@ -2299,22 +2299,22 @@ PARTNER_SCHOOLS = [
 async def home(request: Request, db: Session = Depends(get_db)):
     if request.session.get("user_id"):
         return RedirectResponse("/dashboard", status_code=302)
-    return templates.TemplateResponse("home.html", {
+    return templates.TemplateResponse(request, "home.html", {
         "request": request,
         "partner_schools": PARTNER_SCHOOLS,
     })
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
-    return templates.TemplateResponse("pricing.html", {"request": request})
+    return templates.TemplateResponse(request, "pricing.html", {"request": request})
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page(request: Request):
-    return templates.TemplateResponse("privacy.html", {"request": request})
+    return templates.TemplateResponse(request, "privacy.html", {"request": request})
 
 @app.get("/terms", response_class=HTMLResponse)
 async def terms_page(request: Request):
-    return templates.TemplateResponse("terms.html", {"request": request})
+    return templates.TemplateResponse(request, "terms.html", {"request": request})
 
 @app.get("/googlebd6b41dff5f2dd60.html")
 async def google_site_verification():
@@ -2416,7 +2416,7 @@ async def signup_get(request: Request, db: Session = Depends(get_db), invite: st
     if comp_rec:
         tier = comp_rec.tier
         billing = "monthly"
-    return templates.TemplateResponse("signup.html", {
+    return templates.TemplateResponse(request, "signup.html", {
         "request": request, "error": invite_error or comp_error, "teams": teams,
         "selected_team_id": None, "invite_token": invite if invite_valid else None,
         "invite_valid": invite_valid,
@@ -2456,7 +2456,7 @@ async def signup_post(
 ):
     client_ip = request.client.host if request.client else "unknown"
     if _check_rate_limit(f"signup:{client_ip}", 5, 3600):
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Too many signup attempts. Please try again later."})
+        return templates.TemplateResponse(request, "signup.html", {"request": request, "error": "Too many signup attempts. Please try again later."})
     username = username.strip()
     new_team_name = new_team_name.strip()
     teams = db.query(Team).order_by(Team.name).all()
@@ -2468,7 +2468,7 @@ async def signup_post(
         billing = "monthly"
 
     def err(msg):
-        return templates.TemplateResponse("signup.html", {
+        return templates.TemplateResponse(request, "signup.html", {
             "request": request, "error": msg,
             "teams": teams, "selected_team_id": team_id,
             "selected_tier": tier, "selected_billing": billing,
@@ -2703,7 +2703,7 @@ async def signup_finish_oauth_get(request: Request, db: Session = Depends(get_db
         return RedirectResponse("/signup?error=oauth_expired", status_code=302)
     teams = db.query(Team).order_by(Team.name).all()
     comp_rec = comp_invite_for(db, pending.comp_token)
-    return templates.TemplateResponse("signup_finish_oauth.html", {
+    return templates.TemplateResponse(request, "signup_finish_oauth.html", {
         "request": request,
         "pending": pending,
         "teams": teams,
@@ -2732,7 +2732,7 @@ async def signup_finish_oauth_post(
     comp_rec = comp_invite_for(db, pending.comp_token)
 
     def fo_err(msg):
-        return templates.TemplateResponse("signup_finish_oauth.html", {
+        return templates.TemplateResponse(request, "signup_finish_oauth.html", {
             "request": request, "pending": pending,
             "teams": db.query(Team).order_by(Team.name).all(),
             "comp_tier": comp_rec.tier if comp_rec else None,
@@ -3191,7 +3191,7 @@ async def preview_dashboard(token: str, request: Request, db: Session = Depends(
     school = te.school or "Your School"
     coach_name = te.recipient_name or ""
     last_name = coach_name.split(" ")[-1] if coach_name else ""
-    return templates.TemplateResponse("preview_dashboard.html", {
+    return templates.TemplateResponse(request, "preview_dashboard.html", {
         "request": request,
         "school": school,
         "coach_name": coach_name,
@@ -3204,7 +3204,7 @@ async def preview_dashboard(token: str, request: Request, db: Session = Depends(
 @app.get("/preview-demo", response_class=HTMLResponse)
 async def preview_demo(request: Request, school: str = "Your Team", name: str = "Coach"):
     last_name = name.split(" ")[-1] if name else ""
-    return templates.TemplateResponse("preview_dashboard_demo.html", {
+    return templates.TemplateResponse(request, "preview_dashboard_demo.html", {
         "request": request,
         "school": school,
         "coach_name": name,
@@ -3214,13 +3214,13 @@ async def preview_demo(request: Request, school: str = "Your Team", name: str = 
 
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_get(request: Request):
-    return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": False, "error": None})
+    return templates.TemplateResponse(request, "forgot_password.html", {"request": request, "sent": False, "error": None})
 
 @app.post("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_post(request: Request, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     if _check_rate_limit(f"forgot:{client_ip}", 3, 3600):
-        return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": True, "error": None})
+        return templates.TemplateResponse(request, "forgot_password.html", {"request": request, "sent": True, "error": None})
     form = await request.form()
     email = (form.get("email") or "").strip().lower()
     user = db.query(User).filter(User.email == email).first()
@@ -3239,7 +3239,7 @@ async def forgot_password_post(request: Request, db: Session = Depends(get_db)):
     else:
         # Burn roughly the same time as a real email send to prevent timing leaks
         await asyncio.sleep(0.5)
-    return templates.TemplateResponse("forgot_password.html", {"request": request, "sent": True, "error": None})
+    return templates.TemplateResponse(request, "forgot_password.html", {"request": request, "sent": True, "error": None})
 
 @app.get("/reset-password/{token}", response_class=HTMLResponse)
 async def reset_password_get(token: str, request: Request, db: Session = Depends(get_db)):
@@ -3249,8 +3249,8 @@ async def reset_password_get(token: str, request: Request, db: Session = Depends
         PasswordResetToken.expires_at > datetime.utcnow()
     ).first()
     if not rec:
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": True, "success": False, "error": None})
-    return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": None})
+        return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": True, "success": False, "error": None})
+    return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": None})
 
 @app.post("/reset-password/{token}", response_class=HTMLResponse)
 async def reset_password_post(token: str, request: Request, db: Session = Depends(get_db)):
@@ -3260,25 +3260,25 @@ async def reset_password_post(token: str, request: Request, db: Session = Depend
         PasswordResetToken.expires_at > datetime.utcnow()
     ).first()
     if not rec:
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": True, "success": False, "error": None})
+        return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": True, "success": False, "error": None})
     form = await request.form()
     password = form.get("password", "")
     confirm = form.get("confirm", "")
     pw_err = validate_password_strength(password)
     if pw_err:
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": pw_err})
+        return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": pw_err})
     if password != confirm:
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Passwords do not match."})
+        return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": False, "success": False, "error": "Passwords do not match."})
     user = db.query(User).filter(User.id == rec.user_id).first()
     user.password_hash = hash_password(password)
     user.session_version = (user.session_version or 0) + 1
     rec.used = 1
     db.commit()
-    return templates.TemplateResponse("reset_password.html", {"request": request, "token": token, "invalid": False, "success": True, "error": None})
+    return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": False, "success": True, "error": None})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", {"request": request, "error": None})
 
 @app.post("/login", response_class=HTMLResponse)
 async def login_post(
@@ -3289,14 +3289,14 @@ async def login_post(
 ):
     client_ip = request.headers.get("x-real-ip", request.client.host if request.client else "unknown")
     if check_login_lockout(db, client_ip) or check_account_lockout(db, username):
-        return templates.TemplateResponse("login.html", {"request": request, "error": f"Too many failed attempts. Please try again in {LOGIN_LOCKOUT_MINUTES} minutes."})
+        return templates.TemplateResponse(request, "login.html", {"request": request, "error": f"Too many failed attempts. Please try again in {LOGIN_LOCKOUT_MINUTES} minutes."})
     user = db.query(User).filter((User.username == username) | (User.email == username)).first()
     # Run a verify in both branches (dummy hash when the user is missing) so the
     # response time doesn't reveal whether the account exists.
     password_ok = verify_password(password, user.password_hash) if user else verify_password(password, _DUMMY_PW_HASH)
     if not user or not password_ok:
         record_login_attempt(db, client_ip, username, False)
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password."})
+        return templates.TemplateResponse(request, "login.html", {"request": request, "error": "Invalid username or password."})
     record_login_attempt(db, client_ip, username, True)
     # Session rotation: clear old session and set fresh data to prevent fixation
     request.session.clear()
@@ -3802,7 +3802,7 @@ async def dashboard(request: Request, school: Optional[str] = None, year: Option
     unread_count = unread_sender_count(db, user_id) if user_id else 0
     can_click_profiles = bool(user is not None)
     can_message_from_dashboard = bool(user and (user.role == "coach" or user.is_admin))
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "user": user,
         "player_data": player_data,
@@ -3856,7 +3856,7 @@ async def edit_profile_get(request: Request, db: Session = Depends(get_db)):
     transcript_error = request.query_params.get("transcript_error")
     success = request.query_params.get("success") == "1"
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == user_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if user.role == "player" else []
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": success, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user), "is_hudl_allowed": can_edit_hudl(user)})
+    return templates.TemplateResponse(request, "edit_profile.html", {"request": request, "user": user, "profile": profile, "success": success, "teams": teams, "videos": videos, "video_error": video_error, "transcripts": transcripts, "transcript_error": transcript_error, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user), "is_hudl_allowed": can_edit_hudl(user)})
 
 @app.post("/profile/edit", response_class=HTMLResponse)
 async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
@@ -4028,7 +4028,7 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
     videos = db.query(Video).filter(Video.user_id == user_id).order_by(Video.is_pinned.desc(), Video.created_at.desc()).all()
     transcripts = db.query(Transcript).filter(Transcript.user_id == user_id).order_by(Transcript.created_at.desc()).all() if user.role == "player" else []
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == user_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if user.role == "player" else []
-    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user), "is_hudl_allowed": can_edit_hudl(user)})
+    return templates.TemplateResponse(request, "edit_profile.html", {"request": request, "user": user, "profile": profile, "success": True, "teams": teams, "videos": videos, "video_error": None, "transcripts": transcripts, "transcript_error": None, "image_list": image_list, "is_advanced": can_edit_advanced_fields(user), "is_premium": can_edit_premium_fields(user), "is_hudl_allowed": can_edit_hudl(user)})
 
 @app.get("/profile/{username}", response_class=HTMLResponse)
 async def view_profile(username: str, request: Request, db: Session = Depends(get_db)):
@@ -4178,7 +4178,7 @@ async def view_profile(username: str, request: Request, db: Session = Depends(ge
             ))
             db.commit()
 
-    return templates.TemplateResponse("profile.html", {
+    return templates.TemplateResponse(request, "profile.html", {
         "request": request,
         "target": target,
         "profile": profile,
@@ -4295,7 +4295,7 @@ async def all_videos(username: str, request: Request, db: Session = Depends(get_
     unread_count = unread_sender_count(db, current_user_id) if current_user_id else 0
     is_owner = bool(current_user and current_user.id == target.id)
     video_error = request.query_params.get("video_error")
-    return templates.TemplateResponse("videos.html", {
+    return templates.TemplateResponse(request, "videos.html", {
         "request": request,
         "target": target,
         "target_profile": target_profile,
@@ -4905,7 +4905,7 @@ async def admin_profile_views(request: Request, db: Session = Depends(get_db)):
             "last_viewed_at": pv.last_viewed_at,
         })
 
-    return templates.TemplateResponse("admin_profile_views.html", {
+    return templates.TemplateResponse(request, "admin_profile_views.html", {
         "request": request,
         "current_user": user,
         "rows": rows,
@@ -4955,7 +4955,7 @@ async def admin_coach_interests(request: Request, db: Session = Depends(get_db))
             "created_at": ci.created_at,
         })
 
-    return templates.TemplateResponse("admin_coach_interests.html", {
+    return templates.TemplateResponse(request, "admin_coach_interests.html", {
         "request": request,
         "current_user": user,
         "rows": rows,
@@ -5040,7 +5040,7 @@ async def admin_teams_get(request: Request, db: Session = Depends(get_db)):
         players.append({"user": p, "profile": prof})
 
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("admin_teams.html", {
+    return templates.TemplateResponse(request, "admin_teams.html", {
         "request": request, "user": user,
         "teams": teams, "coaches": coaches, "unread_count": unread_count,
         "success": False, "error": None,
@@ -5094,7 +5094,7 @@ async def admin_edit_profile_get(target_id: int, request: Request, db: Session =
     transcripts = db.query(Transcript).filter(Transcript.user_id == target_id).order_by(Transcript.created_at.desc()).all() if target.role == "player" else []
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == target_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if target.role == "player" else []
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("edit_profile.html", {
+    return templates.TemplateResponse(request, "edit_profile.html", {
         "request": request, "user": target, "profile": profile,
         "success": request.query_params.get("success") == "1", "teams": teams, "videos": videos,
         "video_error": request.query_params.get("video_error"), "transcripts": transcripts, "transcript_error": None,
@@ -5195,7 +5195,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
     transcripts = db.query(Transcript).filter(Transcript.user_id == target_id).order_by(Transcript.created_at.desc()).all() if target.role == "player" else []
     image_list = db.query(ProfileImage).filter(ProfileImage.user_id == target_id).order_by(ProfileImage.is_pinned.desc(), ProfileImage.created_at.desc()).all() if target.role == "player" else []
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("edit_profile.html", {
+    return templates.TemplateResponse(request, "edit_profile.html", {
         "request": request, "user": target, "profile": profile,
         "success": True, "teams": teams, "videos": videos,
         "video_error": None, "transcripts": transcripts, "transcript_error": None,
@@ -5499,7 +5499,7 @@ async def admin_marketing_dashboard(request: Request, db: Session = Depends(get_
         ),
     ).scalar() or 0
 
-    return templates.TemplateResponse("marketing_dashboard.html", {
+    return templates.TemplateResponse(request, "marketing_dashboard.html", {
         "request": request,
         "user": user,
         "leads": leads,
@@ -5584,7 +5584,7 @@ async def admin_marketing_email_activity(request: Request, db: Session = Depends
     camp_ids = {r.campaign_id for r in rows if r.campaign_id}
     camps = {c.id: c for c in db.query(EmailCampaign).filter(EmailCampaign.id.in_(camp_ids)).all()} if camp_ids else {}
 
-    return templates.TemplateResponse("email_activity.html", {
+    return templates.TemplateResponse(request, "email_activity.html", {
         "request": request,
         "user": user,
         "rows": rows,
@@ -5643,7 +5643,7 @@ async def admin_marketing_live_visitors(request: Request, db: Session = Depends(
         rows = q.order_by(TrackedEmail.clicked_claim_at.desc()).all()
     else:
         rows = q.order_by(TrackedEmail.last_seen_at.desc()).all()
-    return templates.TemplateResponse("live_visitors.html", {
+    return templates.TemplateResponse(request, "live_visitors.html", {
         "request": request,
         "user": user,
         "rows": rows,
@@ -5685,7 +5685,7 @@ async def admin_marketing_teams_contacted(request: Request, db: Session = Depend
             "last_sent_at": a.get("last_sent_at"),
         })
     rows.sort(key=lambda r: r["last_sent_at"] or datetime.min, reverse=True)
-    return templates.TemplateResponse("teams_contacted.html", {
+    return templates.TemplateResponse(request, "teams_contacted.html", {
         "request": request,
         "user": user,
         "rows": rows,
@@ -5751,7 +5751,7 @@ async def admin_marketing_potential_staff(pid: int, request: Request, db: Sessio
                 else:
                     email_tracking[s.email] = "sent"
     unread_count = unread_sender_count(db, user.id)
-    return templates.TemplateResponse("potential_staff.html", {
+    return templates.TemplateResponse(request, "potential_staff.html", {
         "request": request,
         "user": user,
         "pot": pot,
@@ -6311,7 +6311,7 @@ async def admin_campaigns_list(request: Request, db: Session = Depends(get_db)):
         return err
     campaigns = db.query(EmailCampaign).order_by(EmailCampaign.created_at.desc()).all()
     unread_count = unread_sender_count(db, user.id)
-    return templates.TemplateResponse("campaigns.html", {
+    return templates.TemplateResponse(request, "campaigns.html", {
         "request": request, "user": user, "campaigns": campaigns, "unread_count": unread_count,
     })
 
@@ -6396,7 +6396,7 @@ async def admin_campaign_detail(cid: int, request: Request, db: Session = Depend
         )
 
     unread_count = unread_sender_count(db, user.id)
-    return templates.TemplateResponse("campaign_detail.html", {
+    return templates.TemplateResponse(request, "campaign_detail.html", {
         "request": request, "user": user, "campaign": campaign,
         "tracked": tracked, "total": total, "opened": opened,
         "clicked": clicked, "signed": signed, "unread_count": unread_count,
@@ -6666,7 +6666,7 @@ async def admin_marketing_lead_detail(lead_id: int, request: Request, db: Sessio
     ).order_by(MarketingActivity.created_at.desc()).limit(200).all()
     admin_by_id = {u.id: u.username for u in db.query(User).filter(User.is_admin == True).all()}
     admin_list = db.query(User).filter(User.is_admin == True).all()
-    return templates.TemplateResponse("marketing_lead.html", {
+    return templates.TemplateResponse(request, "marketing_lead.html", {
         "request": request,
         "user": user,
         "lead": lead,
@@ -6871,7 +6871,7 @@ async def admin_invites_get(request: Request, db: Session = Depends(get_db)):
             u = db.query(User).filter(User.id == c.used_by_id).first()
             if u:
                 comp_used_by[c.used_by_id] = u.username
-    return templates.TemplateResponse("admin_invites.html", {
+    return templates.TemplateResponse(request, "admin_invites.html", {
         "request": request,
         "invites": invites,
         "used_by_users": used_by_users,
@@ -6931,7 +6931,7 @@ async def admin_mass_dm_get(request: Request, db: Session = Depends(get_db)):
         User.role == "player", User.is_admin == False
     ).scalar() or 0
     sent = request.query_params.get("sent", "")
-    return templates.TemplateResponse("admin_mass_dm.html", {
+    return templates.TemplateResponse(request, "admin_mass_dm.html", {
         "request": request,
         "athlete_count": athlete_count,
         "sent": sent,
@@ -7209,7 +7209,7 @@ async def messages_inbox(request: Request, db: Session = Depends(get_db)):
     for p in all_players:
         prof = db.query(PlayerProfile).filter(PlayerProfile.user_id == p.id).first()
         player_profiles_map[p.id] = prof
-    return templates.TemplateResponse("messages.html", {
+    return templates.TemplateResponse(request, "messages.html", {
         "request": request,
         "user": user,
         "conversations": conversations,
@@ -7250,7 +7250,7 @@ async def conversation_get(username: str, request: Request, db: Session = Depend
         m.content = decrypt_message(ciphertext)
 
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("conversation.html", {
+    return templates.TemplateResponse(request, "conversation.html", {
         "request": request,
         "user": user,
         "peer": peer,
@@ -7318,7 +7318,7 @@ async def legal_page(request: Request, db: Session = Depends(get_db)):
                    .filter(LegalContract.hidden == False)
                    .order_by(LegalContract.created_at.desc()).all())
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("legal.html", {
+    return templates.TemplateResponse(request, "legal.html", {
         "request": request, "user": user,
         "contracts": contracts, "unread_count": unread_count,
     })
@@ -7387,9 +7387,9 @@ async def sign_page(token: str, request: Request, db: Session = Depends(get_db))
     if not contract:
         raise HTTPException(status_code=404, detail="Signing link not found or has expired.")
     if contract.status == "signed":
-        return templates.TemplateResponse("sign_done.html", {"request": request, "contract": contract})
+        return templates.TemplateResponse(request, "sign_done.html", {"request": request, "contract": contract})
     _today = datetime.utcnow().strftime("%Y-%m-%d")
-    return templates.TemplateResponse("sign.html", {"request": request, "contract": contract, "today": _today})
+    return templates.TemplateResponse(request, "sign.html", {"request": request, "contract": contract, "today": _today})
 
 
 @app.post("/sign/{token}", response_class=HTMLResponse)
@@ -7505,7 +7505,7 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     contract.signer_ip = request.client.host if request.client else None
     db.commit()
 
-    return templates.TemplateResponse("sign_done.html", {"request": request, "contract": contract})
+    return templates.TemplateResponse(request, "sign_done.html", {"request": request, "contract": contract})
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
@@ -8088,12 +8088,12 @@ async def join_bypass_get(token: str, request: Request, db: Session = Depends(ge
         error = "expired"
 
     if error:
-        return templates.TemplateResponse("join.html", {"request": request, "error": error, "token": token})
+        return templates.TemplateResponse(request, "join.html", {"request": request, "error": error, "token": token})
 
 
     # Open token (no user_id set) — for new signups, show landing page
     if rec.user_id is None:
-        return templates.TemplateResponse("join.html", {
+        return templates.TemplateResponse(request, "join.html", {
             "request": request, "error": None, "token": token,
             "open_token": True, "user": None, "already_activated": False,
         })
@@ -8104,9 +8104,9 @@ async def join_bypass_get(token: str, request: Request, db: Session = Depends(ge
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user or user.id != rec.user_id:
-        return templates.TemplateResponse("join.html", {"request": request, "error": "wrong_user", "token": token})
+        return templates.TemplateResponse(request, "join.html", {"request": request, "error": "wrong_user", "token": token})
 
-    return templates.TemplateResponse("join.html", {
+    return templates.TemplateResponse(request, "join.html", {
         "request": request, "error": None, "token": token,
         "user": user, "already_activated": user.in_person_paid_until is not None,
     })
@@ -8138,7 +8138,7 @@ async def upgrade_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/dashboard", status_code=302)
     unread_count = unread_sender_count(db, user_id)
     current_tier = user.subscription_tier or "free"
-    return templates.TemplateResponse("upgrade.html", {
+    return templates.TemplateResponse(request, "upgrade.html", {
         "request": request,
         "user": user,
         "unread_count": unread_count,
@@ -8254,7 +8254,7 @@ async def upgrade_success(request: Request, session_id: str = "", db: Session = 
 
     unread_count = unread_sender_count(db, user.id)
     request.session["subscription_tier"] = user.subscription_tier or "free"
-    return templates.TemplateResponse("upgrade_success.html", {
+    return templates.TemplateResponse(request, "upgrade_success.html", {
         "request": request,
         "user": user,
         "unread_count": unread_count,
@@ -8406,7 +8406,7 @@ async def questionnaires_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/dashboard", status_code=302)
     request.session["subscription_tier"] = user.subscription_tier or "free"
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("questionnaires.html", {
+    return templates.TemplateResponse(request, "questionnaires.html", {
         "request": request,
         "user": user,
         "unread_count": unread_count,
@@ -8423,7 +8423,7 @@ async def academics_page(request: Request, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.id == user_id).first()
         if user:
             unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("academics.html", {
+    return templates.TemplateResponse(request, "academics.html", {
         "request": request,
         "user": user,
         "unread_count": unread_count,
@@ -8495,7 +8495,7 @@ async def my_questionnaire_page(request: Request, db: Session = Depends(get_db))
         db.refresh(q)
     request.session["subscription_tier"] = user.subscription_tier or "free"
     unread_count = unread_sender_count(db, user_id)
-    return templates.TemplateResponse("my_questionnaire.html", {
+    return templates.TemplateResponse(request, "my_questionnaire.html", {
         "request": request,
         "user": user,
         "profile": profile,
@@ -8748,7 +8748,7 @@ async def scout_board_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/dashboard", status_code=302)
     college = _coach_college(user, db)
     if not college:
-        return templates.TemplateResponse("scout_board.html", {
+        return templates.TemplateResponse(request, "scout_board.html", {
             "request": request, "user": user, "college": "",
             "lanes": [], "cards_by_lane": {}, "scouts": [],
             "needs_college": True,
@@ -8797,7 +8797,7 @@ async def scout_board_page(request: Request, db: Session = Depends(get_db)):
                 "player_user_id": c.player_user_id,
             })
     scouts = db.query(ScoutBoardScout).filter(ScoutBoardScout.college == college).order_by(ScoutBoardScout.last_name).all()
-    return templates.TemplateResponse("scout_board.html", {
+    return templates.TemplateResponse(request, "scout_board.html", {
         "request": request, "user": user, "college": college,
         "lanes": lanes, "cards_by_lane": cards_by_lane, "scouts": scouts,
         "needs_college": False,
@@ -9168,7 +9168,7 @@ async def questionnaires_view_list(request: Request, db: Session = Depends(get_d
     for school in groups:
         groups[school].sort(key=lambda r: r["name"].lower())
     sorted_schools = sorted(groups.keys(), key=lambda s: (s == "Unknown School", s.lower()))
-    return templates.TemplateResponse("questionnaires_list.html", {
+    return templates.TemplateResponse(request, "questionnaires_list.html", {
         "request": request, "user": user,
         "on_board_players": on_board_players,
         "schools": [(s, groups[s]) for s in sorted_schools],
@@ -9190,7 +9190,7 @@ async def questionnaires_view_detail(username: str, request: Request, db: Sessio
     if not q:
         raise HTTPException(status_code=404, detail="No questionnaire on file")
     profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == target.id).first()
-    return templates.TemplateResponse("questionnaire_detail.html", {
+    return templates.TemplateResponse(request, "questionnaire_detail.html", {
         "request": request, "user": viewer, "target": target, "q": q, "profile": profile,
     })
 
@@ -10587,7 +10587,7 @@ async def analytics_page(request: Request, db: Session = Depends(get_db)):
     all_states = sorted({p["state"] for p in players if p["state"]})
     all_positions = sorted({p["position"] for p in players if p["position"]})
 
-    return templates.TemplateResponse("analytics.html", {
+    return templates.TemplateResponse(request, "analytics.html", {
         "request": request, "user": user,
         "grad_year": grad_year, "state": state, "position": position,
         "total_players": len(players),
@@ -10702,7 +10702,7 @@ async def player_analytics_page(request: Request, db: Session = Depends(get_db))
             "percentile": percentile,
         })
 
-    return templates.TemplateResponse("player_analytics.html", {
+    return templates.TemplateResponse(request, "player_analytics.html", {
         "request": request,
         "user": user,
         "profile": profile,
@@ -10763,7 +10763,7 @@ async def notifications_page(request: Request, db: Session = Depends(get_db)):
         Notification.is_read == False,
     ).update({"is_read": True})
     db.commit()
-    return templates.TemplateResponse("notifications.html", {
+    return templates.TemplateResponse(request, "notifications.html", {
         "request": request,
         "user": user,
         "notifications": notifs,
