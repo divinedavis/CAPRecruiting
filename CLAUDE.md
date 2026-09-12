@@ -78,6 +78,24 @@ free (0) → essentials (1) → advanced (2) → premium (3)
 
 - **IP:** 167.71.170.219 (DigitalOcean)
 - **Nginx:** `/etc/nginx/sites-available/caprecruiting` — rate limiting, WebSocket proxy, 4GB upload limit
+  - Live copy is `sites-enabled/caprecruiting`; both it and `conf.d/rate_limits.conf`
+    are mirrored in `deploy/nginx/` in this repo. Edit the repo copy and the live
+    file together, then `nginx -t && systemctl reload nginx`.
+- **`/static/` is served by nginx off disk, not by the app.** Files need to be
+  world-readable (644) and their directories world-traversable (755);
+  `/home/recruiting/bearcats` is 751 so www-data can traverse to `static/` without
+  being able to list the app dir or read `.env` (600) or `recruiting.db` (640).
+  Two carve-outs: `static/uploads/` (mode 750, user-uploaded profile photos) still
+  proxies to uvicorn's StaticFiles mount, and `*.bak*`/`*.orig`/`*.old` under
+  `/static/` are denied.
+  - Cache headers come from nginx: 30d on images, 1h on css/js (not every code
+    reference is cache-busted). Adding an `add_header` inside a `/static/` block
+    would silently drop the inherited server-level security headers — use
+    `expires` instead.
+- **Static bursts have their own rate-limit zone (`cap_static`).** The homepage
+  marquee is ~150 requests in one page load; on `cap_general` it 429'd and
+  fail2ban banned the visitor for 24h (fixed 2026-09-12). Any new page that fans
+  out to many assets belongs in `cap_static`, never `cap_general`.
 - **systemd:** `/etc/systemd/system/bearcats.service` — auto-restart, runs as `bearcats` user on port 8080
 - **Cron (root):** git_autopush every 30min, expire_in_person daily at 9am UTC
 - **Git:** `git@github-bearcats:divinedavis/CAPRecruiting.git` (SSH alias in `/root/.ssh/config`)

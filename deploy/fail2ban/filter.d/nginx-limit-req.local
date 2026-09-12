@@ -1,0 +1,15 @@
+# Local override for the stock nginx-limit-req filter.
+#
+# 2026-09-12: the homepage marquee renders one <img> per partner school (131 of
+# them), so a single visit is a ~140-request burst. Those requests used to land
+# in the cap_general zone, 90 of them 429'd, and this jail banned the visitor at
+# the firewall for 24h. Static assets now have their own cap_static zone
+# (nginx conf.d/rate_limits.conf) sized to absorb a full page load.
+#
+# cap_static is excluded here as belt-and-braces: if a page ever grows past that
+# budget the visitor should get 429s on images, never a 24h IP ban. Abuse of
+# static assets is a bandwidth problem, and the nginx limit already caps it.
+# Real attack signal (auth brute force, scanners, dynamic-route floods) still
+# bans normally via cap_auth / cap_general / cap_sensitive.
+[Definition]
+ignoreregex = limiting requests, excess: [\d\.]+ by zone "cap_static"
