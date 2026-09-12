@@ -80,6 +80,8 @@ AUTH_LIMIT_TRIPS = 5         # cap_auth rate-limit hits from one client before a
 AUTH_LIMIT_WINDOW = 600      # ...within this many seconds (one crawler burst = 1 trip)
 DENY_TRIPS = 10              # deny-rule 403s from one client before alerting
 DENY_WINDOW = 600            # ...within this many seconds (a drive-by .bak probe = 1 trip)
+BODY_TRIPS = 5               # nginx oversized-body rejections from one client before alerting
+BODY_WINDOW = 600            # ...within this many seconds (a scanner's 10MB probe = 1-2 trips)
 
 # ── What counts as an error ───────────────────────────────────────────────────
 
@@ -133,6 +135,7 @@ IGNORE_PATTERNS = [
 NGINX_LEVEL_RE = re.compile(r"\[(error|crit|alert|emerg)\]")
 LIMIT_REQ_RE = re.compile(r'limiting requests, .*?by zone "(\w+)", client: ([\w.:]+)')
 DENY_RE = re.compile(r'access forbidden by rule, client: ([\w.:]+)')
+BODY_RE = re.compile(r'client intended to send too large body: \d+ bytes, client: ([\w.:]+)')
 
 # The routes that actually take a file. Everything else that 413s hit the
 # blanket body cap instead, and calling that "upload rejected" sent us looking
@@ -677,6 +680,7 @@ def tail_file(path: str):
 
 _auth_limit_hits: dict = {}   # client ip -> [timestamps of cap_auth rate-limit trips]
 _deny_hits: dict = {}         # client ip -> [timestamps of deny-rule 403s]
+_body_hits: dict = {}         # client ip -> [timestamps of nginx oversized-body 413s]
 
 
 def _tripped(bucket: dict, client: str, trips: int, window: int, now: float) -> bool:
@@ -724,6 +728,21 @@ def deny_worth_alerting(line: str, now: float = None) -> bool:
                     time.time() if now is None else now)
 
 
+def body_worth_alerting(line: str, now: float = None) -> bool:
+    """`client intended to send too large body` is nginx's 5m server-wide cap
+    rejecting a POST before it reaches the app. Upload routes carry their own 4g
+    limit and the app pages on its own 413s, so a real user almost never trips
+    this line; scanners do, probing POST / with a 10MB body (9/12:
+    193.138.195.45, alongside stratum-miner and stager64 probes). Alert only once
+    one client trips it BODY_TRIPS times inside BODY_WINDOW. Other lines are
+    untouched (returns True)."""
+    m = BODY_RE.search(line)
+    if not m:
+        return True
+    return _tripped(_body_hits, m.group(1), BODY_TRIPS, BODY_WINDOW,
+                    time.time() if now is None else now)
+
+
 UPSTREAM_REFUSED = "(111: Connection refused) while connecting to upstream"
 RESTART_GRACE = 90           # seconds after bearcats (re)starts that :8080 may refuse
 
@@ -761,6 +780,8 @@ def file_watcher(events: queue.Queue, source: str, path: str):
                 continue
             if not deny_worth_alerting(line):
                 continue
+            if not body_worth_alerting(line):
+                continue
             if UPSTREAM_REFUSED in line and app_restarting():
                 continue
             title = line.split("] ", 1)[-1][:150]
@@ -772,6 +793,10 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             if dm:
                 title = (f"{dm.group(1)} hit blocked paths "
                          f"{DENY_TRIPS}x in {DENY_WINDOW // 60} min")
+            bm = BODY_RE.search(line)
+            if bm:
+                title = (f"{bm.group(1)} sent oversized bodies "
+                         f"{BODY_TRIPS}x in {BODY_WINDOW // 60} min")
             emit(events, "nginx", f"nginx {m.group(1)}: {title}", line)
         else:
             if any(p in line for p in FILE_ERROR_PATTERNS):
