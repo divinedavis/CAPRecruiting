@@ -134,6 +134,17 @@ NGINX_LEVEL_RE = re.compile(r"\[(error|crit|alert|emerg)\]")
 LIMIT_REQ_RE = re.compile(r'limiting requests, .*?by zone "(\w+)", client: ([\w.:]+)')
 DENY_RE = re.compile(r'access forbidden by rule, client: ([\w.:]+)')
 
+# The routes that actually take a file. Everything else that 413s hit the
+# blanket body cap instead, and calling that "upload rejected" sent us looking
+# for a broken upload form when the request was a POST to /login. Keep in step
+# with _BodySizeLimitMiddleware._UPLOAD_PATHS / _UPLOAD_RE in main.py.
+# Prefix match for the path set and an exact match for the card image, the same
+# way main.py splits them between _UPLOAD_PATHS (startswith) and _UPLOAD_RE.
+UPLOAD_PATH_RE = re.compile(
+    r"^/(?:profile/(?:upload-photo|upload-committed-logo|videos/upload"
+    r"|images/upload|transcripts/upload)|sign/)"
+    r"|^/dashboard/scout/card/[^/]+/image$")
+
 # cron/script logs: only these shapes are errors
 FILE_ERROR_PATTERNS = [
     "Traceback (most recent call last)",
@@ -405,7 +416,9 @@ def classify_app_line(line: str):
         if code >= 500:
             return (f"HTTP {code} on {method} {path}", "error")
         if code == 413:
-            return (f"Upload rejected — too large: {method} {path}", "error")
+            if UPLOAD_PATH_RE.match(path.split("?", 1)[0]):
+                return (f"Upload rejected — too large: {method} {path}", "error")
+            return (f"Request body too large: {method} {path}", "error")
         return None
 
     level = LEVEL_RE.match(line)
