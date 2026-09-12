@@ -78,6 +78,8 @@ ASGI_DUP_WINDOW = 10         # uvicorn re-logs what our middleware already repor
 ACCESS_HOLD = 3              # wait this long before mailing a bare 5xx access line
 AUTH_LIMIT_TRIPS = 5         # cap_auth rate-limit hits from one client before alerting
 AUTH_LIMIT_WINDOW = 600      # ...within this many seconds (one crawler burst = 1 trip)
+DENY_TRIPS = 10              # deny-rule 403s from one client before alerting
+DENY_WINDOW = 600            # ...within this many seconds (a drive-by .bak probe = 1 trip)
 
 # ── What counts as an error ───────────────────────────────────────────────────
 
@@ -130,6 +132,7 @@ IGNORE_PATTERNS = [
 
 NGINX_LEVEL_RE = re.compile(r"\[(error|crit|alert|emerg)\]")
 LIMIT_REQ_RE = re.compile(r'limiting requests, .*?by zone "(\w+)", client: ([\w.:]+)')
+DENY_RE = re.compile(r'access forbidden by rule, client: ([\w.:]+)')
 
 # cron/script logs: only these shapes are errors
 FILE_ERROR_PATTERNS = [
@@ -660,6 +663,25 @@ def tail_file(path: str):
 
 
 _auth_limit_hits: dict = {}   # client ip -> [timestamps of cap_auth rate-limit trips]
+_deny_hits: dict = {}         # client ip -> [timestamps of deny-rule 403s]
+
+
+def _tripped(bucket: dict, client: str, trips: int, window: int, now: float) -> bool:
+    """True once `client` has hit `bucket` `trips` times inside `window`; the
+    streak then resets, so a persistent offender pages once per streak instead
+    of once per request. Bounded at 5000 clients so a wide scan can't grow it
+    without end."""
+    hits = [t for t in bucket.get(client, []) if now - t < window]
+    hits.append(now)
+    bucket[client] = hits
+    if len(bucket) > 5000:                      # bound memory under a wide scan
+        for ip in [ip for ip, ts in bucket.items()
+                   if not ts or now - ts[-1] >= window]:
+            bucket.pop(ip, None)
+    if len(hits) < trips:
+        return False
+    bucket[client] = []                         # alert once per streak, then re-arm
+    return True
 
 
 def auth_limit_worth_alerting(line: str, now: float = None) -> bool:
@@ -671,19 +693,22 @@ def auth_limit_worth_alerting(line: str, now: float = None) -> bool:
     m = LIMIT_REQ_RE.search(line)
     if not m or m.group(1) != "cap_auth":
         return True
-    now = time.time() if now is None else now
-    client = m.group(2)
-    hits = [t for t in _auth_limit_hits.get(client, []) if now - t < AUTH_LIMIT_WINDOW]
-    hits.append(now)
-    _auth_limit_hits[client] = hits
-    if len(_auth_limit_hits) > 5000:            # bound memory under a wide scan
-        for ip in [ip for ip, ts in _auth_limit_hits.items()
-                   if not ts or now - ts[-1] >= AUTH_LIMIT_WINDOW]:
-            _auth_limit_hits.pop(ip, None)
-    if len(hits) < AUTH_LIMIT_TRIPS:
-        return False
-    _auth_limit_hits[client] = []                # alert once per streak, then re-arm
-    return True
+    return _tripped(_auth_limit_hits, m.group(2), AUTH_LIMIT_TRIPS,
+                    AUTH_LIMIT_WINDOW, time.time() if now is None else now)
+
+
+def deny_worth_alerting(line: str, now: float = None) -> bool:
+    """`access forbidden by rule` is the /static/ deny rule (.bak/.old/.swp/...)
+    working as designed, and scanners probe those paths all day - one email per
+    probe is pure noise, and fail2ban's noscript/secretprobe jails already ban
+    the client. Alert only once one client trips it DENY_TRIPS times inside
+    DENY_WINDOW, which is enumeration rather than a drive-by. Non-deny lines are
+    untouched (returns True)."""
+    m = DENY_RE.search(line)
+    if not m:
+        return True
+    return _tripped(_deny_hits, m.group(1), DENY_TRIPS, DENY_WINDOW,
+                    time.time() if now is None else now)
 
 
 UPSTREAM_REFUSED = "(111: Connection refused) while connecting to upstream"
@@ -721,6 +746,8 @@ def file_watcher(events: queue.Queue, source: str, path: str):
                 continue
             if not auth_limit_worth_alerting(line):
                 continue
+            if not deny_worth_alerting(line):
+                continue
             if UPSTREAM_REFUSED in line and app_restarting():
                 continue
             title = line.split("] ", 1)[-1][:150]
@@ -728,6 +755,10 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             if lm and lm.group(1) == "cap_auth":
                 title = (f"{lm.group(2)} tripped the auth rate limit "
                          f"{AUTH_LIMIT_TRIPS}x in {AUTH_LIMIT_WINDOW // 60} min")
+            dm = DENY_RE.search(line)
+            if dm:
+                title = (f"{dm.group(1)} hit blocked paths "
+                         f"{DENY_TRIPS}x in {DENY_WINDOW // 60} min")
             emit(events, "nginx", f"nginx {m.group(1)}: {title}", line)
         else:
             if any(p in line for p in FILE_ERROR_PATTERNS):
