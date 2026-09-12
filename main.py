@@ -7398,7 +7398,13 @@ async def sign_submit(token: str, request: Request, db: Session = Depends(get_db
     contract = db.query(LegalContract).filter(LegalContract.token == token).first()
     if not contract or contract.status == "signed":
         raise HTTPException(status_code=404)
-    form = await request.form()
+    # signature_data is a base64 PNG data URL from the signature pad, and
+    # starlette 1.x caps a non-file form part at 1MB (0.52.1 ignored the limit
+    # entirely, GHSA-7vf4-x5m2-r6gr). A signature drawn on a high-DPI canvas can
+    # cross that, and this route is exempt from the app's 1MB body cap, so raise
+    # the part limit to the 5m nginx already allows here rather than reject a
+    # signed contract with "Part exceeded maximum size".
+    form = await request.form(max_part_size=5 * 1024 * 1024)
     full_name    = form.get("full_name", "").strip()[:200]
     date_top     = form.get("date_top", "").strip()[:50]
     print_name   = form.get("print_name", "").strip()[:200]
