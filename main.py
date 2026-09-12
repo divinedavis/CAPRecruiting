@@ -257,12 +257,18 @@ class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
     """Reject non-upload POST requests with bodies larger than 1MB."""
     _UPLOAD_PATHS = {"/profile/upload-photo", "/profile/videos/upload",
                      "/profile/images/upload", "/profile/transcripts/upload",
+                     "/profile/upload-committed-logo",
                      "/sign/"}
+    # /dashboard/scout/card/{card_id}/image takes a file too, but the card id
+    # sits in the middle of the path, so it needs a pattern rather than a prefix.
+    _UPLOAD_RE = re.compile(r"^/dashboard/scout/card/[^/]+/image$")
     _MAX_BODY = 1 * 1024 * 1024  # 1MB
 
     async def dispatch(self, request, call_next):
         if request.method == "POST":
-            is_upload = any(request.url.path.startswith(p) for p in self._UPLOAD_PATHS)
+            path = request.url.path
+            is_upload = (any(path.startswith(p) for p in self._UPLOAD_PATHS)
+                         or bool(self._UPLOAD_RE.match(path)))
             if not is_upload:
                 cl = request.headers.get("content-length")
                 if cl and int(cl) > self._MAX_BODY:
