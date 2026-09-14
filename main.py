@@ -1102,7 +1102,11 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+    encoded = password.encode()
+    # bcrypt 5 raises on inputs over 72 bytes; reject them as invalid credentials.
+    if len(encoded) > 72:
+        return False
+    return bcrypt.checkpw(encoded, hashed.encode())
 
 # Constant bcrypt hash used to run a real verify even when the account doesn't
 # exist, so login timing doesn't reveal whether a username/email is registered.
@@ -3277,8 +3281,12 @@ async def reset_password_post(token: str, request: Request, db: Session = Depend
     return templates.TemplateResponse(request, "reset_password.html", {"request": request, "token": token, "invalid": False, "success": True, "error": None})
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_get(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"request": request, "error": None})
+async def login_get(request: Request, error: str = ""):
+    oauth_errors = {"google_denied", "google_state", "google_token", "google_userinfo",
+                    "google_exception", "google_failed", "apple_denied", "apple_state",
+                    "apple_token", "apple_exception", "apple_failed"}
+    return templates.TemplateResponse(request, "login.html", {
+        "request": request, "error": error if error in oauth_errors else None})
 
 @app.post("/login", response_class=HTMLResponse)
 async def login_post(
@@ -3372,7 +3380,11 @@ async def google_auth_callback(request: Request, code: str = "", state: str = ""
         return RedirectResponse("/login?error=google_denied", status_code=302)
     saved_state = request.session.pop("oauth_state", "")
     if not state or state != saved_state:
-        _logger.error(f"Google OAuth state mismatch: got={state!r} saved={saved_state!r} session_keys={list(request.session.keys())}")
+        if state or code or saved_state:
+            _logger.warning("Google OAuth state mismatch (state_present=%s session_state_present=%s)",
+                            bool(state), bool(saved_state))
+        else:
+            _logger.info("Google OAuth callback without an authorization attempt")
         return RedirectResponse("/login?error=google_state", status_code=302)
     # Exchange code for tokens
     try:
@@ -7728,6 +7740,7 @@ async def upload_committed_logo(request: Request, logo: UploadFile = File(...), 
             ExtraArgs={"ContentType": "image/png", "ACL": "public-read"}
         )
     except Exception:
+        _logger.exception("committed logo upload failed (user=%s)", user_id)
         return RedirectResponse("/profile/edit?logo_error=upload", status_code=302)
 
     p = db.query(PlayerProfile).filter(PlayerProfile.user_id == target_user_id).first()

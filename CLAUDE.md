@@ -340,16 +340,25 @@ Anything that fails anywhere on the platform emails the operator (`ALERT_EMAIL` 
   systemd crashes / restarts / OOM kills, nginx `[error]` and worse, failures in
   the cron jobs, and site-down / site-recovered.
 - **Stays quiet about:** 404s, bot probes, 403s, and WARNING records (counted and
-  reported in the weekly summary instead). A single nginx `cap_auth` rate-limit
-  trip (a crawler bursting `/signup?tier=...`) is also silent; that zone mails
-  only when one client trips it 5x inside 10 minutes (`AUTH_LIMIT_TRIPS`).
-  `cap_general` / `cap_sensitive` trips still mail on the first hit.
+  reported in the weekly summary instead). nginx `cap_*` rate-limit blocks are
+  counted separately from application errors; a client hitting the same zone
+  5x in 10 minutes triggers a warning alert, subject to email deduplication.
 - **Noise control:** an identical error is collapsed for 15 minutes and then
   re-sent with a repeat count; hard cap of 12 emails/hour with the overflow
   delivered as a single digest. Stripe keys, tokens, passwords and session
   cookies are masked before anything is mailed.
 - **Proof of life:** a summary email every Monday 9am ET (root crontab,
   `error_alerts.py --heartbeat`) so silence can be trusted.
+- **Weekly accounting:** timestamped events retained for seven days, independent
+  of lifetime dedupe counts and SMTP delivery. The report states its actual
+  coverage window, labels partial coverage after upgrade or the 50,000-event
+  retention cap, and lists rate-limit blocks separately. A response recorded by
+  both app middleware and the access log is counted once. Retrying a heartbeat
+  does not reset history. Legacy state and the old baseline can remain in place.
+- **Offline regressions:** `python -m unittest test_alerts_regression
+  test_auth_upload_regression` in the app virtualenv. These use temporary state
+  and databases, simulated Google responses, and in-memory storage; no mail is
+  sent. Google account selection/consent also needs a real browser check.
 
 **Every new failure path must stay visible.** Do not write `except Exception: pass` —
 use `_logger.exception("what failed and for whom")` so it turns into an email. The

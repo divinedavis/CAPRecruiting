@@ -15,6 +15,17 @@
         <div class="alert alert-success">✅ Profile saved successfully!</div>
         {% endif %}
 
+        {% set logo_errors = {
+            'type': 'Choose a JPG, PNG, GIF or WebP image for your school logo.',
+            'size': 'The school logo is too large. Choose an image under 5MB.',
+            'invalid': 'We could not read that school logo. Try a different image.',
+            'upload': 'The school logo could not be uploaded. Please try again.'
+        } %}
+        {% set logo_error = logo_errors.get(request.query_params.get('logo_error', '')) %}
+        {% if logo_error %}
+        <div class="alert alert-error" role="alert">{{ logo_error }}</div>
+        {% endif %}
+
         <!-- Photo Upload Section -->
         <div class="form-section">
             <h2>Profile Photo</h2>

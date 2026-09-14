@@ -46,7 +46,7 @@ import threading
 import time
 import urllib.request
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 
 APP_DIR = "/home/recruiting/bearcats"
@@ -82,6 +82,8 @@ DENY_TRIPS = 10              # deny-rule 403s from one client before alerting
 DENY_WINDOW = 600            # ...within this many seconds (a drive-by .bak probe = 1 trip)
 BODY_TRIPS = 5               # nginx oversized-body rejections from one client before alerting
 BODY_WINDOW = 600            # ...within this many seconds (a scanner's 10MB probe = 1-2 trips)
+HISTORY_WINDOW = 7 * 86400
+MAX_HISTORY = 50000         # report a shorter coverage window if a flood fills this
 
 # ── What counts as an error ───────────────────────────────────────────────────
 
@@ -210,6 +212,8 @@ class State:
         self.email_times = []   # timestamps of sent emails (rolling hour)
         self.digest = []        # suppressed-by-rate-limit events
         self.counters = Counter()
+        self.history = []
+        self.history_started_at = time.time()
         self.load()
 
     def load(self):
@@ -219,11 +223,17 @@ class State:
             self.seen = data.get("seen", {})
             self.email_times = data.get("email_times", [])
             self.counters = Counter(data.get("counters", {}))
+            self.history = data.get("history", [])
+            self.history_started_at = data.get("history_started_at", time.time())
         except Exception:
             pass
 
     def save(self):
         try:
+            self.history = [e for e in self.history if e["ts"] >= time.time() - HISTORY_WINDOW]
+            if len(self.history) > MAX_HISTORY:
+                self.history = self.history[-MAX_HISTORY:]
+                self.history_started_at = self.history[0]["ts"]
             os.makedirs(STATE_DIR, exist_ok=True)
             tmp = STATE_PATH + ".tmp"
             with open(tmp, "w") as fh:
@@ -231,11 +241,24 @@ class State:
                     "seen": self.seen,
                     "email_times": self.email_times,
                     "counters": dict(self.counters),
+                    "history": self.history,
+                    "history_started_at": self.history_started_at,
                     "saved_at": time.time(),
                 }, fh)
             os.replace(tmp, STATE_PATH)
         except Exception as exc:
             log(f"state save failed: {exc}")
+
+    def record(self, event):
+        """Called under lock; retain event counts separately from email dedupe."""
+        self.counters[event.get("severity", "error")] += 1
+        self.history.append({
+            "ts": event.get("ts", time.time()),
+            "severity": event.get("severity", "error"),
+            "category": event.get("category", "application"),
+            "title": redact(event["title"]),
+            "signature": event["signature"],
+        })
 
 
 def log(msg: str):
@@ -334,7 +357,10 @@ class Dispatcher(threading.Thread):
         now = time.time()
         sig = event["signature"]
         with self.state.lock:
-            self.state.counters[event.get("severity", "error")] += 1
+            self.state.record(event)
+            if not event.get("notify", True):
+                self.state.save()
+                return
             rec = self.state.seen.get(sig)
             if rec and now - rec["last"] < SUPPRESS_WINDOW:
                 rec["count"] += 1
@@ -395,7 +421,8 @@ class Dispatcher(threading.Thread):
 
 # ── Sources ───────────────────────────────────────────────────────────────────
 
-def emit(events: queue.Queue, source: str, title: str, text: str, severity="error"):
+def emit(events: queue.Queue, source: str, title: str, text: str, severity="error",
+         notify=True, category="application", event_signature=None):
     title = redact(title)
     events.put({
         "ts": time.time(),
@@ -403,7 +430,9 @@ def emit(events: queue.Queue, source: str, title: str, text: str, severity="erro
         "title": title[:150],
         "text": text,
         "severity": severity,
-        "signature": signature(source, title + "\n" + text),
+        "notify": notify,
+        "category": category,
+        "signature": event_signature or signature(source, title + "\n" + text),
     })
 
 
@@ -458,6 +487,32 @@ INCIDENT_PATH_RE = re.compile(r"on (\w+) (\S+) \(user=")
 # access line — remember what we just reported so it is only mailed once
 _recent_incidents = {}
 _recent_lock = threading.Lock()
+_recent_responses = {}
+APP_RESPONSE_RE = re.compile(
+    r"\[APP-ERROR\] HTTP (\d{3}) returned by (\w+) (\S+) \(user=\S+ ip=([^ )]+)\)")
+
+
+def mark_response_incident(message):
+    hit = APP_RESPONSE_RE.search(message)
+    if not hit:
+        return
+    code, method, path, ip = hit.groups()
+    now = time.time()
+    with _recent_lock:
+        _recent_responses[(method, path, code, ip)] = now
+        for key in [k for k, ts in _recent_responses.items() if now - ts >= ASGI_DUP_WINDOW]:
+            del _recent_responses[key]
+
+
+def recent_response(message):
+    hit = ACCESS_RE.match(message)
+    if not hit:
+        return False
+    address, method, path, code = hit.groups()
+    ip = address.rsplit(":", 1)[0].strip("[]")
+    key = (method, path.split("?", 1)[0], code, ip)
+    with _recent_lock:
+        return time.time() - _recent_responses.get(key, 0) < ASGI_DUP_WINDOW
 
 
 def mark_incident(path: str):
@@ -488,7 +543,7 @@ def drain_deferred(events: queue.Queue):
         if due:
             _deferred[:] = [d for d in _deferred if d[0] > now]
     for _due, unit, title, message, severity, path in due:
-        if recent_incident(path):
+        if recent_incident(path) or recent_response(message):
             continue                      # already mailed with a traceback attached
         emit(events, unit, title, message, severity)
 
@@ -633,10 +688,13 @@ def journal_watcher(events: queue.Queue, state: State):
                 verdict = classify_app_line(message)
                 if verdict:
                     title, severity = verdict
+                    mark_response_incident(message)
                     emit(events, unit, title, message, severity)
                 elif LEVEL_RE.match(message) and " WARNING " in message:
                     with state.lock:
-                        state.counters["warning"] += 1
+                        state.record({"title": LOG_PREFIX_RE.sub("", message)[:150],
+                                      "signature": signature(unit, message), "severity": "warning"})
+                        state.save()
             proc.wait()
         except Exception as exc:
             log(f"journal watcher restarting after: {exc}")
@@ -681,6 +739,7 @@ def tail_file(path: str):
 _auth_limit_hits: dict = {}   # client ip -> [timestamps of cap_auth rate-limit trips]
 _deny_hits: dict = {}         # client ip -> [timestamps of deny-rule 403s]
 _body_hits: dict = {}         # client ip -> [timestamps of nginx oversized-body 413s]
+_rate_hits: dict = {}         # (zone, client) -> rate-limit streak
 
 
 def _tripped(bucket: dict, client: str, trips: int, window: int, now: float) -> bool:
@@ -776,7 +835,14 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             m = NGINX_LEVEL_RE.search(line)
             if not m:
                 continue
-            if not auth_limit_worth_alerting(line):
+            lm = LIMIT_REQ_RE.search(line)
+            if lm and lm.group(1).startswith("cap_"):
+                zone, client = lm.groups()
+                sustained = _tripped(_rate_hits, (zone, client), AUTH_LIMIT_TRIPS,
+                                     AUTH_LIMIT_WINDOW, time.time())
+                emit(events, "nginx", f"Requests rate-limited ({zone})", line,
+                     "warning", notify=sustained, category="rate_limit",
+                     event_signature=f"nginx|rate_limit|{zone}")
                 continue
             if not deny_worth_alerting(line):
                 continue
@@ -785,10 +851,6 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             if UPSTREAM_REFUSED in line and app_restarting():
                 continue
             title = line.split("] ", 1)[-1][:150]
-            lm = LIMIT_REQ_RE.search(line)
-            if lm and lm.group(1) == "cap_auth":
-                title = (f"{lm.group(2)} tripped the auth rate limit "
-                         f"{AUTH_LIMIT_TRIPS}x in {AUTH_LIMIT_WINDOW // 60} min")
             dm = DENY_RE.search(line)
             if dm:
                 title = (f"{dm.group(1)} hit blocked paths "
@@ -863,49 +925,54 @@ def send_test():
     return 0 if ok else 1
 
 
-BASELINE_PATH = os.path.join(STATE_DIR, "heartbeat_baseline.json")
+def heartbeat_report(state, now=None):
+    """Render a rolling week of events, independent of dedupe and mail delivery.
+
+    Legacy lifetime totals cannot reconstruct a week. Report the actual shorter
+    coverage after upgrade (or history overflow), instead of inventing counts.
+    """
+    now = time.time() if now is None else now
+    cutoff = now - HISTORY_WINDOW
+    start = max(cutoff, state.history_started_at)
+    events = [e for e in state.history if start <= e["ts"] <= now]
+    rates = sum(e.get("category") == "rate_limit" for e in events)
+    errors = sum(e["severity"] == "error" for e in events)
+    warnings = sum(e["severity"] == "warning" and e.get("category") != "rate_limit"
+                   for e in events)
+    groups = Counter(e["signature"] for e in events if e.get("category") != "rate_limit")
+    titles = {e["signature"]: e["title"] for e in events}
+    top = [(titles[k], count) for k, count in groups.most_common(10)]
+    rate_groups = Counter(e["title"] for e in events if e.get("category") == "rate_limit")
+    stamp = lambda ts: datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    coverage = f"Reporting window: {stamp(start)} to {stamp(now)}."
+    if start > cutoff:
+        coverage += " Partial week: only events retained since detailed tracking began are included."
+    explanation = "Counts are recorded events, including repeats; they are not outages or emails sent."
+    lines = [f"{count:>4}x  {title}" for title, count in top]
+    rate_lines = [f"{count:>4}x  {title}" for title, count in rate_groups.most_common()]
+    body = (f"CAP Recruiting watcher heartbeat\n\n{coverage}\n\n"
+            f"Error events: {errors}\nOther warnings: {warnings}\nRate-limit blocks: {rates}\n\n"
+            f"{explanation}\n\nMost frequent errors and warnings:\n"
+            + ("\n".join(lines) if lines else "None recorded in this window.")
+            + "\n\nRate-limit activity:\n"
+            + ("\n".join(rate_lines) if rate_lines else "None recorded in this window."))
+    html_body = ("<div style=\"font-family:-apple-system,sans-serif\">"
+                 "<h2>CAP Recruiting — watcher heartbeat</h2>"
+                 f"<p>{html.escape(coverage)}</p><p><b>{errors}</b> error events, "
+                 f"<b>{warnings}</b> other warnings, <b>{rates}</b> rate-limit blocks.</p>"
+                 f"<p>{explanation}</p><h3>Most frequent errors and warnings</h3>"
+                 + ("<ul>" + "".join(f"<li><b>{count}x</b> {html.escape(title)}</li>"
+                                      for title, count in top) + "</ul>" if top
+                    else "<p>None recorded in this window.</p>")
+                 + "<h3>Rate-limit activity</h3><ul>"
+                 + "".join(f"<li><b>{count}x</b> {html.escape(title)}</li>"
+                           for title, count in rate_groups.most_common()) + "</ul></div>")
+    return f"[CAP] Weekly health: {errors} error events, {rates} rate-limit blocks", body, html_body
 
 
 def send_heartbeat():
-    """Weekly proof-of-life. Reports the delta since the last heartbeat, and
-    never mutates the daemon's state file (that would reset dedupe history)."""
-    state = State()
-    baseline = {}
-    try:
-        with open(BASELINE_PATH) as fh:
-            baseline = json.load(fh)
-    except Exception:
-        pass
-
-    since = "the last 7 days"
-    errors = state.counters.get("error", 0) - baseline.get("error", 0)
-    warnings = state.counters.get("warning", 0) - baseline.get("warning", 0)
-    errors, warnings = max(errors, 0), max(warnings, 0)
-    cutoff = time.time() - 7 * 86400
-    top = sorted(((k, v) for k, v in state.seen.items() if v["last"] > cutoff),
-                 key=lambda kv: -kv[1]["count"])[:10]
-    lines = [f"{v['count']:>4}x  {k.split('|', 1)[-1][:110]}" for k, v in top]
-    body = (f"CAP Recruiting error watcher is running.\n\n"
-            f"Errors alerted:  {errors}\n"
-            f"Warnings seen:   {warnings}\n\n"
-            + ("Most frequent signatures:\n" + "\n".join(lines) if lines else "No errors recorded.\n"))
-    html_body = ("<div style=\"font-family:-apple-system,sans-serif\">"
-                 "<h2>CAP Recruiting — watcher heartbeat</h2>"
-                 f"<p>Still watching. In {since}: <b>{errors}</b> errors alerted, "
-                 f"<b>{warnings}</b> warnings logged.</p>"
-                 + ("<ul>" + "".join(f"<li><b>{v['count']}x</b> {html.escape(k.split('|', 1)[-1][:110])}</li>"
-                                     for k, v in top) + "</ul>" if top
-                    else "<p>No errors recorded — quiet week.</p>")
-                 + "</div>")
-    ok = send_email(f"[CAP] Weekly health: {errors} errors, {warnings} warnings", body, html_body)
-    if ok:
-        try:
-            os.makedirs(STATE_DIR, exist_ok=True)
-            with open(BASELINE_PATH, "w") as fh:
-                json.dump(dict(state.counters), fh)
-        except Exception as exc:
-            log(f"baseline write failed: {exc}")
-    return 0 if ok else 1
+    # Read-only: sending/retrying the report never resets the daemon's history.
+    return 0 if send_email(*heartbeat_report(State())) else 1
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -918,6 +985,7 @@ def main():
 
     socket.setdefaulttimeout(30)
     state = State()
+    state.save()                            # persist the start of report coverage
     events = queue.Queue(maxsize=5000)
 
     Dispatcher(state, events).start()
