@@ -2,7 +2,7 @@ aiofiles==25.1.0
 aiosmtplib==5.1.2
 annotated-doc==0.0.4
 annotated-types==0.7.0
-anyio==4.13.0
+anyio==4.14.2
 bcrypt==5.0.0
 boto3==1.42.76
 botocore==1.42.76
