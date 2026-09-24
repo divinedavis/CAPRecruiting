@@ -123,5 +123,28 @@ class WatcherTests(unittest.TestCase):
         self.assertEqual(self.events.get_nowait()["severity"], "error")
 
 
+    CLOSED = ('2026/09/24 03:33:02 [error] 336914#336914: *90567 upstream '
+              'prematurely closed connection while reading response header '
+              'from upstream, client: 167.71.170.219, server: caprecruiting.com')
+
+    def test_closed_upstream_during_worker_recycle_is_dropped(self):
+        with patch.object(alerts, "tail_file", return_value=iter([self.CLOSED])), \
+             patch.object(alerts, "worker_recycled", return_value=True):
+            alerts.file_watcher(self.events, "nginx", "unused")
+        self.assertTrue(self.events.empty())
+
+    def test_closed_upstream_without_recycle_still_alerts(self):
+        with patch.object(alerts, "tail_file", return_value=iter([self.CLOSED])), \
+             patch.object(alerts, "worker_recycled", return_value=False):
+            alerts.file_watcher(self.events, "nginx", "unused")
+        self.assertEqual(self.events.get_nowait()["severity"], "error")
+
+    def test_recycle_detected_from_supervisor_log(self):
+        log = "INFO:     Waiting for child process [296244]\nINFO:     Child process [296244] died\n"
+        run = type("R", (), {"stdout": log})()
+        with patch.object(alerts.subprocess, "run", return_value=run):
+            self.assertTrue(alerts.worker_recycled(settle=0))
+
+
 if __name__ == "__main__":
     unittest.main()

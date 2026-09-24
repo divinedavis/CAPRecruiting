@@ -22,7 +22,8 @@ emails per hour with the overflow delivered as one digest. A single trip of the
 nginx `cap_auth` rate limit (a crawler bursting /signup) is not worth an email;
 that zone alerts only when one client keeps tripping it. A refused upstream
 while bearcats is restarting (unattended upgrades, the nightly auto-reboot) is
-dropped too — the health probe still catches a real outage. Secrets that show up
+dropped too, as is a closed upstream when uvicorn just recycled a hung
+worker — the health probe still catches a real outage. Secrets that show up
 in tracebacks (Stripe keys, session cookies, passwords) are masked before the
 mail goes out.
 
@@ -826,6 +827,29 @@ def app_restarting() -> bool:
         return False                         # unsure — alert as before
 
 
+UPSTREAM_CLOSED = "upstream prematurely closed connection"
+RECYCLE_RE = re.compile(r"Child process \[\d+\] died")
+
+
+def worker_recycled(settle: float = 3.0) -> bool:
+    """True when uvicorn's supervisor killed and replaced a worker in the last
+    RESTART_GRACE seconds. The supervisor pings each worker every 0.5 s and
+    SIGKILLs one that misses a 5 s pong; whatever request that worker held
+    gets "upstream prematurely closed" in nginx while the other worker keeps
+    serving (9/24 03:33: one 502 on the probe, fresh worker up 6 s later). The
+    nginx line can land a beat before the supervisor logs the death, hence the
+    settle wait. A worker that keeps dying still pages via health_watcher."""
+    time.sleep(settle)
+    try:
+        out = subprocess.run(
+            ["journalctl", "-u", "bearcats", "--since", f"-{RESTART_GRACE}s",
+             "--no-pager", "-o", "cat"],
+            capture_output=True, text=True, timeout=10).stdout
+        return bool(RECYCLE_RE.search(out))
+    except Exception:
+        return False                         # unsure — alert as before
+
+
 def file_watcher(events: queue.Queue, source: str, path: str):
     is_nginx = source == "nginx"
     for line in tail_file(path):
@@ -849,6 +873,8 @@ def file_watcher(events: queue.Queue, source: str, path: str):
             if not body_worth_alerting(line):
                 continue
             if UPSTREAM_REFUSED in line and app_restarting():
+                continue
+            if UPSTREAM_CLOSED in line and worker_recycled():
                 continue
             title = line.split("] ", 1)[-1][:150]
             dm = DENY_RE.search(line)
