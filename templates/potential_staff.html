@@ -51,7 +51,7 @@
     <a href="{% if not pot.athletic_url.startswith('http') %}https://{% endif %}{{ pot.athletic_url }}" target="_blank" rel="noopener">Athletics Site ↗</a>
     {% endif %}
     {% if pot.questionnaire_url %}
-    <a href="{{ pot.questionnaire_url }}" target="_blank" rel="noopener">Questionnaire ↗</a>
+    <a href="{{ pot.questionnaire_url | safe_href }}" target="_blank" rel="noopener">Questionnaire ↗</a>
     {% endif %}
     {% set with_email = staff | selectattr('email') | list | length %}
     {% set without_email = staff|length - with_email %}

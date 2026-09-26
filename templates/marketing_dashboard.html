@@ -270,7 +270,7 @@ function submitPotentialStatus(sel) {
           <div class="school">
             {% if p.athletic_url %}<a href="{% if not p.athletic_url.startswith('http') %}https://{% endif %}{{ p.athletic_url }}" target="_blank" rel="noopener" style="color:#0a1628; text-decoration:none;">{{ p.school }}</a>{% else %}{{ p.school }}{% endif %}
           </div>
-          {% if p.questionnaire_url %}<div class="sub"><a href="{{ p.questionnaire_url }}" target="_blank" rel="noopener" style="color:#6b7280;">Questionnaire ↗</a></div>{% endif %}
+          {% if p.questionnaire_url %}<div class="sub"><a href="{{ p.questionnaire_url | safe_href }}" target="_blank" rel="noopener" style="color:#6b7280;">Questionnaire ↗</a></div>{% endif %}
         </div>
         <div><span class="div-pill">{{ p.division }}</span></div>
         <div>{{ p.conference or '—' }}</div>

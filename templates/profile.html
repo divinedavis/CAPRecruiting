@@ -370,19 +370,19 @@
                 <h2>Links</h2>
                 <div class="links-list">
                     {% if profile.link1_url %}
-                    <a href="{{ profile.link1_url }}" target="_blank" rel="noopener" class="ext-link">
+                    <a href="{{ profile.link1_url | safe_href }}" target="_blank" rel="noopener" class="ext-link">
                         {{ profile.link1_label if profile.link1_label else profile.link1_url }}
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
                     {% if profile.link2_url %}
-                    <a href="{{ profile.link2_url }}" target="_blank" rel="noopener" class="ext-link">
+                    <a href="{{ profile.link2_url | safe_href }}" target="_blank" rel="noopener" class="ext-link">
                         {{ profile.link2_label if profile.link2_label else profile.link2_url }}
                         <span class="ext-arrow">↗</span>
                     </a>
                     {% endif %}
                     {% if target.role == "player" and profile.link3_url %}
-                    <a href="{{ profile.link3_url }}" target="_blank" rel="noopener" class="ext-link">
+                    <a href="{{ profile.link3_url | safe_href }}" target="_blank" rel="noopener" class="ext-link">
                         {{ profile.link3_label if profile.link3_label else profile.link3_url }}
                         <span class="ext-arrow">↗</span>
                     </a>
@@ -398,7 +398,7 @@
                 <h2>News & Media</h2>
                 <div class="links-list">
                     {% for link in _all_news %}
-                    <a href="{{ link }}" target="_blank" rel="noopener" class="ext-link">
+                    <a href="{{ link | safe_href }}" target="_blank" rel="noopener" class="ext-link">
                         {{ link | replace('https://', '') | replace('http://', '') | truncate(60) }}
                         <span class="ext-arrow">↗</span>
                     </a>

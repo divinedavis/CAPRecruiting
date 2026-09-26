@@ -113,7 +113,7 @@ SESSION_MAX_AGE = 86400  # 24 hours
 
 # ── Message encryption at rest ─────────────────────────────────────────────────
 from cryptography.fernet import Fernet
-import hashlib, base64
+import hashlib, base64, hmac
 _msg_key = base64.urlsafe_b64encode(hashlib.sha256(_session_secret.encode()).digest())
 _fernet = Fernet(_msg_key)
 
@@ -552,6 +552,18 @@ class PendingSignup(Base):
     comp_token = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
+
+
+class SignupCheckoutClaim(Base):
+    """Maps a paid signup's pending_uuid to the User it created, so the
+    /upgrade/success page can log that browser in exactly once. Written at
+    finalize (webhook or success page); consumed_at marks the one-time login."""
+    __tablename__ = "signup_checkout_claims"
+    id = Column(Integer, primary_key=True)
+    pending_uuid = Column(String, unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    consumed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class PasswordResetToken(Base):
@@ -1088,6 +1100,33 @@ app.mount("/static", StaticFiles(directory="/home/recruiting/bearcats/static"), 
 app.mount("/.well-known", StaticFiles(directory="/home/recruiting/bearcats/static/.well-known"), name="well-known")
 templates = Jinja2Templates(directory="/home/recruiting/bearcats/templates")
 
+_BARE_DOMAIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?:[/?#]|$)")
+
+def _safe_http_url(value) -> str:
+    """Return value if it is an http(s) URL with a host, "https://"+value for a
+    bare domain like "maxpreps.com/x", else "". Blocks javascript:, data:, etc.
+    Control chars/whitespace are stripped first because browsers ignore them
+    inside a scheme ("java\tscript:")."""
+    from urllib.parse import urlsplit
+    v = str(value or "").strip()
+    check = re.sub(r"[\x00-\x20\x7f]", "", v)
+    if not check:
+        return ""
+    try:
+        parsed = urlsplit(check)
+    except ValueError:
+        return ""
+    if parsed.scheme.lower() in ("http", "https") and parsed.netloc:
+        return v
+    if not parsed.scheme and _BARE_DOMAIN_RE.match(check):
+        return "https://" + v
+    return ""
+
+def _safe_href_filter(value) -> str:
+    return _safe_http_url(value) or "#"
+
+templates.env.filters["safe_href"] = _safe_href_filter
+
 def get_db():
     db = SessionLocal()
     try:
@@ -1304,6 +1343,14 @@ def _finalize_pending_signup(db: Session, pending: "PendingSignup", stripe_custo
     db.add(user)
     db.commit()
     db.refresh(user)
+    # Record which user this checkout created (only for a freshly created
+    # user -- never for the "existing" branch above) so the success page can
+    # log in the browser that started the checkout, once.
+    try:
+        db.add(SignupCheckoutClaim(pending_uuid=pending.uuid, user_id=user.id))
+        db.commit()
+    except Exception:
+        db.rollback()
     db.add(PlayerProfile(
         user_id=user.id,
         team_id=pending.team_id,
@@ -1591,6 +1638,17 @@ def _safe_redirect(url: str, fallback: str = "/profile/edit") -> str:
     return fallback
 
 VIDEO_ALLOWED_EXTENSIONS = {"mp4", "mov", "webm", "avi", "mkv"}
+# Sniffed MIME (libmagic) -> ffmpeg demuxer forced with -f, so a crafted upload
+# (e.g. an HLS playlist) can never be probed as some other format.
+VIDEO_SNIFFED_DEMUXERS = {
+    "video/mp4": "mov",
+    "video/quicktime": "mov",
+    "video/3gpp": "mov",
+    "video/x-m4v": "mov",
+    "video/webm": "matroska",
+    "video/x-matroska": "matroska",
+    "video/x-msvideo": "avi",
+}
 VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024  # 4 GB
 
 TRANSCRIPT_ALLOWED_EXTENSIONS = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "gif", "webp", "heic"}
@@ -2667,6 +2725,8 @@ async def signup_post(
                 metadata={"pending_uuid": pending.uuid, "tier": _tier},
                 subscription_data={"metadata": {"pending_uuid": pending.uuid, "tier": _tier}},
             )
+            # Binds the post-payment auto-login to this browser (signed session cookie).
+            request.session["checkout_pending_uuid"] = pending.uuid
             return RedirectResponse(checkout.url, status_code=302)
         except Exception:
             db.delete(pending)
@@ -2805,6 +2865,8 @@ async def signup_finish_oauth_post(
             metadata={"pending_uuid": pending.uuid, "tier": _tier},
             subscription_data={"metadata": {"pending_uuid": pending.uuid, "tier": _tier}},
         )
+        # Binds the post-payment auto-login to this browser (signed session cookie).
+        request.session["checkout_pending_uuid"] = pending.uuid
         return RedirectResponse(checkout.url, status_code=302)
     except Exception:
         _logger.exception("Stripe checkout creation failed for OAuth signup %s", pending.email)
@@ -3924,14 +3986,14 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         p.home_address_state = form.get("home_address_state", "")[:10]
         p.home_address_zip = form.get("home_address_zip", "")[:20]
         for _ni in range(1, 26):
-            setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
+            setattr(p, f"news_link{_ni}", _safe_http_url(form.get(f"news_link{_ni}", ""))[:500])
         p.bio = form.get("bio", "")[:2000]
         p.link1_label = form.get("link1_label", "")[:100]
-        p.link1_url = form.get("link1_url", "")[:500]
+        p.link1_url = _safe_http_url(form.get("link1_url", ""))[:500]
         p.link2_label = form.get("link2_label", "")[:100]
-        p.link2_url = form.get("link2_url", "")[:500]
+        p.link2_url = _safe_http_url(form.get("link2_url", ""))[:500]
         p.link3_label = form.get("link3_label", "")[:100]
-        p.link3_url = form.get("link3_url", "")[:500]
+        p.link3_url = _safe_http_url(form.get("link3_url", ""))[:500]
         for _oi in range(1, 26):
             setattr(p, f"offer{_oi}", form.get(f"offer{_oi}", "")[:100])
         for i in range(1, 6):
@@ -4025,9 +4087,9 @@ async def edit_profile_post(request: Request, db: Session = Depends(get_db)):
         c.conference = form.get("conference", "")[:100]
         c.bio = form.get("bio", "")[:2000]
         c.link1_label = form.get("link1_label", "")[:100]
-        c.link1_url = form.get("link1_url", "")[:500]
+        c.link1_url = _safe_http_url(form.get("link1_url", ""))[:500]
         c.link2_label = form.get("link2_label", "")[:100]
-        c.link2_url = form.get("link2_url", "")[:500]
+        c.link2_url = _safe_http_url(form.get("link2_url", ""))[:500]
         c.phone = form.get("phone", "")[:100]
         c.contact_email = form.get("contact_email", "")[:100]
     db.commit()
@@ -4351,17 +4413,22 @@ async def upload_video(
     if cl and int(cl) > VIDEO_MAX_BYTES:
         return RedirectResponse(redirect_to + "?video_error=size", status_code=302)
     await video.seek(0)
+    # The client's filename/Content-Type are untrusted; the sniffed type picks
+    # the ffmpeg demuxer and the stored Content-Type.
     try:
         import magic as _magic
         _detected = _magic.from_buffer(_video_header, mime=True)
-        if not _detected.startswith("video/"):
-            return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
     except Exception:
-        _logger.exception("video upload: MIME sniff failed, type validation skipped")
+        _logger.exception("video upload: MIME sniff failed")
+        return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
+    _demuxer = VIDEO_SNIFFED_DEMUXERS.get(_detected)
+    if not _demuxer:
+        _logger.warning("video upload: rejected sniffed type %r (user=%s)", _detected, upload_user_id)
+        return RedirectResponse(redirect_to + "?video_error=type", status_code=302)
 
     video_id_hex = uuid.uuid4().hex
-    key = f"videos/{upload_user_id}/{video_id_hex}.{ext}"
-    content_type = video.content_type or f"video/{ext}"
+    key = f"videos/{upload_user_id}/{video_id_hex}.mp4"
+    content_type = "video/mp4"
     file_data = video.file
 
     # Browser compatibility: always buffer to disk and probe the real video codec.
@@ -4379,21 +4446,25 @@ async def upload_video(
         vcodec = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: subprocess.run(
-                ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                ["ffprobe", "-v", "error", "-protocol_whitelist", "file", "-f", _demuxer,
+                 "-select_streams", "v:0",
                  "-show_entries", "stream=codec_name", "-of", "csv=p=0", tmp_in.name],
                 capture_output=True, text=True, timeout=60
             ).stdout.strip()
         )
         _logger.warning("video upload: user=%s file=%r size=%.1fMB codec=%s",
                         upload_user_id, video.filename, _size_mb, vcodec or "none")
-        needs_transcode = (ext != "mp4") or (vcodec != "h264")
+        # Pass through only a sniffed-MP4 H.264 file; everything else is
+        # re-encoded, so the stored object is always an H.264 MP4.
+        needs_transcode = (ext != "mp4") or (_detected != "video/mp4") or (vcodec != "h264")
         if needs_transcode:
             tmp_out = tmp_in.name.rsplit(".", 1)[0] + "_h264.mp4"
             _transcode_cleanup.append(tmp_out)
             proc = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: subprocess.run(
-                    ["ffmpeg", "-i", tmp_in.name, "-c:v", "libx264", "-preset", "veryfast",
+                    ["ffmpeg", "-protocol_whitelist", "file", "-f", _demuxer,
+                     "-i", tmp_in.name, "-c:v", "libx264", "-preset", "veryfast",
                      "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
                      "-movflags", "+faststart", "-y", tmp_out],
                     capture_output=True, timeout=3600
@@ -4404,8 +4475,6 @@ async def upload_video(
                               upload_user_id, proc.returncode,
                               proc.stderr.decode(errors="replace")[-800:])
                 return RedirectResponse(redirect_to + "?video_error=upload", status_code=302)
-            key = f"videos/{upload_user_id}/{video_id_hex}.mp4"
-            content_type = "video/mp4"
             file_data = open(tmp_out, "rb")
         else:
             file_data = open(tmp_in.name, "rb")
@@ -5171,7 +5240,7 @@ async def admin_edit_profile_post(target_id: int, request: Request, db: Session 
         p.home_address_state = form.get("home_address_state", "")[:10]
         p.home_address_zip = form.get("home_address_zip", "")[:20]
         for _ni in range(1, 26):
-            setattr(p, f"news_link{_ni}", form.get(f"news_link{_ni}", "")[:500])
+            setattr(p, f"news_link{_ni}", _safe_http_url(form.get(f"news_link{_ni}", ""))[:500])
         p.bio = form.get("bio", "")[:2000]
         p.hudl_url = form.get("hudl_url", "")[:100]
         p.x_url = form.get("x_url", "")[:100]
@@ -8216,43 +8285,61 @@ async def create_checkout(request: Request, db: Session = Depends(get_db)):
     )
     return RedirectResponse(session.url, status_code=302)
 
+def _claim_checkout_login(request: Request, db: Session, session_id: str) -> None:
+    """Log in the buyer of a paid signup checkout -- once, and only in the
+    browser that started it. The Stripe session id alone is NOT a credential:
+    it sits in a URL (history, analytics, referrers), so it must match the
+    pending_uuid stashed in this browser's signed session cookie at checkout
+    creation, and the claim row is consumed atomically on first use."""
+    if request.session.get("user_id"):
+        return  # already logged in (the normal /upgrade flow) -- never swap accounts
+    expected = request.session.get("checkout_pending_uuid") or ""
+    if not expected or not session_id or len(session_id) > 255:
+        return
+    try:
+        s = stripe.checkout.Session.retrieve(session_id)
+    except Exception:
+        return
+    # retrieve() returns open/unpaid sessions too -- only a paid one counts.
+    if not (s and s.get("status") == "complete"
+            and s.get("payment_status") in ("paid", "no_payment_required")):
+        return
+    pending_uuid = (s.get("metadata") or {}).get("pending_uuid") or s.get("client_reference_id") or ""
+    if not pending_uuid or not hmac.compare_digest(str(pending_uuid), str(expected)):
+        return
+    pending = db.query(PendingSignup).filter(PendingSignup.uuid == pending_uuid).first()
+    if pending:
+        _finalize_pending_signup(db, pending, s.get("customer") or "", s.get("subscription") or "")
+    claimed = db.query(SignupCheckoutClaim).filter(
+        SignupCheckoutClaim.pending_uuid == pending_uuid,
+        SignupCheckoutClaim.consumed_at == None,
+    ).update({"consumed_at": datetime.utcnow()}, synchronize_session=False)
+    db.commit()
+    if not claimed:
+        request.session.pop("checkout_pending_uuid", None)
+        return
+    claim = db.query(SignupCheckoutClaim).filter(SignupCheckoutClaim.pending_uuid == pending_uuid).first()
+    user = db.query(User).filter(User.id == claim.user_id).first() if claim else None
+    if not user:
+        return
+    request.session.clear()
+    request.session["user_id"] = user.id
+    request.session["is_admin"] = bool(user.is_admin)
+    request.session["role"] = user.role
+    request.session["subscription_tier"] = user.subscription_tier or "free"
+    request.session["session_version"] = user.session_version or 0
+
+
 @app.get("/upgrade/success", response_class=HTMLResponse)
 async def upgrade_success(request: Request, session_id: str = "", db: Session = Depends(get_db)):
+    # Stripe lands here with ?session_id=cs_... . Handle it, then redirect to
+    # the bare URL so the id never renders into a page (GA, history, Referer).
+    if request.url.query:
+        _claim_checkout_login(request, db, session_id)
+        return RedirectResponse("/upgrade/success", status_code=303)
+
     user_id = request.session.get("user_id")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
-
-    # Post-signup path: no session yet — finalize from the Stripe session.
-    # Works whether the webhook already created the user (pending row gone) or
-    # hasn't fired yet (pending row still there and we create the user inline).
-    if not user and session_id:
-        try:
-            s = stripe.checkout.Session.retrieve(session_id)
-        except Exception:
-            s = None
-        # SECURITY: retrieve() returns open/unpaid sessions too. Only finalize a
-        # signup (which grants the buyer-chosen tier) if the session was actually
-        # paid — otherwise a user could hit /upgrade/success with their own
-        # unpaid session id and be created as premium for free.
-        if s and not (s.get("status") == "complete"
-                      and s.get("payment_status") in ("paid", "no_payment_required")):
-            s = None
-        if s:
-            pending_uuid = (s.get("metadata") or {}).get("pending_uuid") or s.get("client_reference_id") or ""
-            customer_id = s.get("customer") or ""
-            sub_id = s.get("subscription") or ""
-            if pending_uuid:
-                pending = db.query(PendingSignup).filter(PendingSignup.uuid == pending_uuid).first()
-                if pending:
-                    user = _finalize_pending_signup(db, pending, customer_id, sub_id)
-            if not user and customer_id:
-                user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
-            if user:
-                request.session.clear()
-                request.session["user_id"] = user.id
-                request.session["is_admin"] = bool(user.is_admin)
-                request.session["role"] = user.role
-                request.session["subscription_tier"] = user.subscription_tier or "free"
-                request.session["session_version"] = user.session_version or 0
 
     if not user:
         return RedirectResponse("/login", status_code=302)
@@ -9290,18 +9377,39 @@ async def scout_upload_card_image(card_id: int, request: Request, image: UploadF
     card = db.query(ScoutBoardCard).filter(ScoutBoardCard.id == card_id, ScoutBoardCard.college == college).first()
     if not card:
         return JSONResponse({"error": "Not found"}, status_code=404)
-    ext = image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else "jpg"
-    if ext not in ("jpg", "jpeg", "png", "gif", "webp"):
-        return JSONResponse({"error": "Invalid file type"}, status_code=400)
+    # Never trust the client's filename/Content-Type: decode with PIL, re-encode
+    # (drops metadata and any polyglot payload), and store with our own type.
+    contents = await image.read(10 * 1024 * 1024 + 1)
+    if len(contents) > 10 * 1024 * 1024:
+        return JSONResponse({"error": "Image too large (max 10MB)"}, status_code=400)
+    try:
+        import io as _io
+        from PIL import Image as _PIL, ImageOps as _ImageOps
+        img = _PIL.open(_io.BytesIO(contents))
+        if img.format not in ("JPEG", "PNG", "GIF", "WEBP"):
+            return JSONResponse({"error": "Invalid file type"}, status_code=400)
+        img = _ImageOps.exif_transpose(img)
+        img.thumbnail((1600, 1600), _PIL.LANCZOS)
+        buf = _io.BytesIO()
+        if img.mode in ("RGBA", "LA", "P"):
+            img.convert("RGBA").save(buf, format="PNG", optimize=True)
+            ext, ctype = "png", "image/png"
+        else:
+            img.convert("RGB").save(buf, format="JPEG", quality=88)
+            ext, ctype = "jpg", "image/jpeg"
+        buf.seek(0)
+    except Exception:
+        return JSONResponse({"error": "Invalid image"}, status_code=400)
     key = f"scout_board/{card.college.replace(' ', '_')}/{uuid.uuid4().hex}.{ext}"
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             None,
-            lambda: s3.upload_fileobj(image.file, SPACES_BUCKET, key, ExtraArgs={"ContentType": image.content_type or f"image/{ext}", "ACL": "public-read"})
+            lambda: s3.upload_fileobj(buf, SPACES_BUCKET, key, ExtraArgs={"ContentType": ctype, "ACL": "public-read"})
         )
-    except Exception as e:
-        return JSONResponse({"error": f"Upload failed: {e}"}, status_code=500)
+    except Exception:
+        _logger.exception("scout card image upload failed (card=%s)", card_id)
+        return JSONResponse({"error": "Upload failed"}, status_code=500)
     card.tile_image_url = f"{SPACES_BASE_URL}/{key}"
     db.commit()
     return JSONResponse({"ok": True, "url": card.tile_image_url})
