@@ -171,10 +171,19 @@ class AppTests(unittest.TestCase):
             files={"image": ("card.png", self.image, "image/png")})
         self.assertEqual(response.status_code, 200)
         url = response.json()["url"]
-        self.assertEqual(self.objects[url.removeprefix(self.app.SPACES_BASE_URL + "/")], self.image)
+        # Stored bytes are a PIL re-encode, never the client's raw upload.
+        stored = self.objects[url.removeprefix(self.app.SPACES_BASE_URL + "/")]
+        self.assertNotEqual(stored, self.image)
+        Image.open(io.BytesIO(stored)).verify()
         with self.app.SessionLocal() as db:
             self.assertEqual(db.get(self.app.ScoutBoardCard, self.card_id).tile_image_url, url)
         self.assertIn(url, self.client.get("/dashboard/scout").text)
+
+    def test_scout_image_rejects_non_image_bytes(self):
+        self.login("reg_coach")
+        response = self.client.post(f"/dashboard/scout/card/{self.card_id}/image",
+            files={"image": ("card.png", b"<html><script>alert(1)</script></html>", "image/png")})
+        self.assertEqual(response.status_code, 400)
 
     def test_upload_guards_and_non_upload_body_limit(self):
         response = self.client.post(f"/dashboard/scout/card/{self.card_id}/image",
