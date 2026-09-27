@@ -1127,6 +1127,12 @@ def _safe_href_filter(value) -> str:
 
 templates.env.filters["safe_href"] = _safe_href_filter
 
+def _avatar_seed_filter(value) -> str:
+    """Opaque DiceBear seed: a hash, so the avatar service never sees the email itself."""
+    return hashlib.sha256((value or "").strip().lower().encode()).hexdigest()[:16]
+
+templates.env.filters["avatar_seed"] = _avatar_seed_filter
+
 def get_db():
     db = SessionLocal()
     try:
@@ -5937,6 +5943,9 @@ def _send_staff_email(db, admin_user, campaign, staff_member, potential):
 
     if not staff_member.email:
         return False
+    # Opt-out: a coach who asked not to be contacted (or whose school did) is never mailed.
+    if (staff_member.status or "") == "not_interested" or (potential.status or "") == "not_interested":
+        return False
     # Skip if already sent this campaign to this email
     existing = db.query(TrackedEmail).filter(
         TrackedEmail.campaign_id == campaign.id,
@@ -6608,6 +6617,8 @@ async def admin_campaign_send(cid: int, request: Request, db: Session = Depends(
         db.query(PotentialStaff, MarketingPotential)
         .join(MarketingPotential, PotentialStaff.potential_id == MarketingPotential.id)
         .filter(PotentialStaff.email != "")
+        .filter(func.coalesce(PotentialStaff.status, "") != "not_interested")
+        .filter(func.coalesce(MarketingPotential.status, "") != "not_interested")
         .all()
     )
     seen_emails = set()

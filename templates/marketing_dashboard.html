@@ -383,7 +383,7 @@ function submitPotentialStatus(sel) {
         <tr>
           <td>
             <div class="mk-lead-name">
-              <img class="mk-avatar" src="https://api.dicebear.com/9.x/notionists/svg?seed={{ lead.email|urlencode }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="" loading="lazy">
+              <img class="mk-avatar" src="https://api.dicebear.com/9.x/notionists/svg?seed={{ lead.email|avatar_seed }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="" loading="lazy">
               <div>
                 <a href="/admin/marketing/leads/{{ lead.id }}">{{ lead.name or lead.email }}</a>
                 {% if lead.name %}<div class="mk-lead-email">{{ lead.email }}</div>{% endif %}

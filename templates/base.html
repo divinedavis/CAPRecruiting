@@ -24,12 +24,60 @@
     <link rel="privacy-policy" href="https://caprecruiting.com/privacy">
     <link rel="terms-of-service" href="https://caprecruiting.com/terms">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Google Analytics (inline only - no external GTM script to prevent supply chain risk) -->
+    <!-- Google Consent Mode v2: EEA/UK/CH default-denied. MUST come before the gtag.js loader and any gtag('config'). -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-TWX00ZCMYS');
+      gtag('consent', 'default', {
+        ad_storage: 'denied', analytics_storage: 'denied',
+        ad_user_data: 'denied', ad_personalization: 'denied',
+        region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'],
+        wait_for_update: 500
+      });
+      (function () {
+        var KEY = 'consent.v1', saved = null;
+        try { saved = localStorage.getItem(KEY); } catch (e) {}
+        function grant(v) {
+          gtag('consent', 'update', {
+            ad_storage: v, analytics_storage: v, ad_user_data: v, ad_personalization: v
+          });
+        }
+        if (saved === 'granted' || saved === 'denied') { grant(saved); return; }
+        // Only visitors whose clock is set to a European zone see the banner; Consent Mode's
+        // region list above is the real gate, this just decides who gets asked.
+        var tz = '';
+        try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+        if (!/^(Europe\/|Atlantic\/(Reykjavik|Canary|Madeira|Azores|Faroe))/.test(tz)) return;
+        function show() {
+          var b = document.createElement('div');
+          b.setAttribute('role', 'dialog');
+          b.setAttribute('aria-label', 'Cookie choice');
+          b.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:2147483647;max-width:560px;margin:0 auto;padding:14px 16px;border-radius:12px;background:#111;color:#fff;font:14px/1.4 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.3);display:flex;flex-wrap:wrap;gap:10px;align-items:center';
+          b.innerHTML = '<span style="flex:1 1 260px">We use Google Analytics cookies to see how the site is used. <a href="/privacy" style="color:#9cf">Privacy</a></span>' +
+            '<button type="button" data-v="denied" style="padding:8px 14px;border-radius:8px;border:1px solid #666;background:transparent;color:#fff;cursor:pointer">Decline</button>' +
+            '<button type="button" data-v="granted" style="padding:8px 14px;border-radius:8px;border:0;background:#fff;color:#111;cursor:pointer">Accept</button>';
+          b.addEventListener('click', function (ev) {
+            var v = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-v');
+            if (!v) return;
+            try { localStorage.setItem(KEY, v); } catch (e) {}
+            grant(v);
+            b.remove();
+          });
+          document.body.appendChild(b);
+        }
+        if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+      })();
+    </script>
+    <!-- Google Analytics (inline only - no external GTM script to prevent supply chain risk).
+         Not configured at all when the browser sends Do Not Track or Global Privacy Control;
+         the privacy policy promises this. -->
+    <script>
+      (function () {
+        var dnt = navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.msDoNotTrack === '1';
+        if (dnt || navigator.globalPrivacyControl === true) return;
+        gtag('js', new Date());
+        gtag('config', 'G-TWX00ZCMYS');
+      })();
     </script>
     {% block head_extra %}{% endblock %}
 </head>

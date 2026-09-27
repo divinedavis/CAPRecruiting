@@ -19,85 +19,118 @@
 
 <div class="policy">
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: April 20, 2026</p>
+  <p class="updated">Last updated: September 27, 2026</p>
 
-  <p>Collegiate Athletic Planning ("<strong>CAP Recruiting</strong>," "<strong>we</strong>," "<strong>us</strong>," or "<strong>our</strong>") operates <a href="https://caprecruiting.com">caprecruiting.com</a> (the "Service"). This page explains what information we collect, why we collect it, and how we handle it.</p>
+  <p>Collegiate Athletic Planning ("<strong>CAP Recruiting</strong>," "<strong>we</strong>," "<strong>us</strong>," or "<strong>our</strong>") operates <a href="https://caprecruiting.com">caprecruiting.com</a> (the "Service"). This page explains what information we collect, why we collect it, who can see it, and the choices you have.</p>
 
   <h2>1. Information We Collect</h2>
 
   <h3>1.1 Information you provide</h3>
   <ul>
-    <li><strong>Account information:</strong> name, username, email address, password (hashed), role (player or coach), state, and (for coaches) school / title / division / conference.</li>
-    <li><strong>Player profile content:</strong> position, class year, stats (height, weight, GPA, 40-yard dash, vertical, bench, squat, clean, etc.), bio, social links, scholarship offers, campus visits, uploaded photos, highlight videos, and academic transcripts.</li>
-    <li><strong>Messages:</strong> content of messages you send through the in-app messenger.</li>
-    <li><strong>Payment information:</strong> handled entirely by Stripe. We store Stripe customer and subscription identifiers, but never card numbers or CVV.</li>
+    <li><strong>Account information:</strong> name, username, email address, password (stored only as a bcrypt hash), role (player or coach), state, and (for coaches) school, title, division and conference.</li>
+    <li><strong>Player profile content:</strong> position, class year, measurables and stats (height, weight, GPA, 40-yard dash, vertical, bench, squat, clean, broad jump, pro agility, wingspan and similar), intended major, the factors that matter most to you in a college, bio, social and Hudl links, news links, scholarship offers, campus visits, uploaded photos, uploaded highlight videos, and academic transcripts.</li>
+    <li><strong>Contact details:</strong> the athlete's phone number, contact email and home address (street, city, state, ZIP).</li>
+    <li><strong>Parent / guardian details:</strong> first and last names, email addresses and phone numbers for a mother, father or guardian, if you enter them.</li>
+    <li><strong>NCAA Eligibility Center number</strong>, if you enter it.</li>
+    <li><strong>Recruiting questionnaire:</strong> if you fill out the CAP questionnaire, the answers you give there (much of it copied from your profile, including address and parent details) so coaches do not have to ask for them again.</li>
+    <li><strong>Messages and evaluations:</strong> the content of messages sent through the in-app messenger and written evaluations coaches leave on player profiles. Both are encrypted at rest in our database.</li>
+    <li><strong>Signed agreements:</strong> when you sign the CAP player agreement electronically, we collect the athlete's full and printed name, a drawn or typed signature, the date, the IP address the signature was submitted from, and, for athletes under 18, the parent or guardian's name, relationship to the athlete, and drawn or typed signature. The signed agreement is stored as a PDF on our server and is available only to CAP administrators.</li>
+    <li><strong>Payment information:</strong> handled entirely by Stripe. We store Stripe customer and subscription identifiers, never card numbers or CVV.</li>
   </ul>
 
   <h3>1.2 Information we collect automatically</h3>
   <ul>
-    <li><strong>Log data:</strong> IP address, browser type, pages visited, timestamps.</li>
-    <li><strong>Cookies and session data:</strong> used to keep you logged in and remember preferences.</li>
-    <li><strong>Analytics:</strong> anonymized usage via Google Analytics (measurement ID G-TWX00ZCMYS).</li>
+    <li><strong>Log and security data:</strong> IP address, browser type, pages requested and timestamps, kept in server logs and in login-attempt and rate-limit records used to stop abuse.</li>
+    <li><strong>Session cookie:</strong> a signed cookie that keeps you logged in. It is required for the Service to work.</li>
+    <li><strong>Coach profile views:</strong> when a signed-in coach opens a player's profile, we record which coach viewed which player, how many times, and when. Administrators can see this log. The player receives an anonymous notice ("A coach viewed your profile") that does not name the coach, and Premium players see a monthly count of coach views.</li>
+    <li><strong>Profile stat history:</strong> when you change a tracked stat, we keep the earlier value and date so your progress can be charted.</li>
+    <li><strong>Analytics:</strong> our pages include a Google Analytics (measurement ID G-TWX00ZCMYS) configuration, but Google's analytics script is not currently loaded, so no analytics data is sent to Google. If it is enabled in the future it will run under Google Consent Mode: visitors in the EEA, UK and Switzerland are asked first, and it is not configured at all when your browser sends a Do Not Track or Global Privacy Control signal.</li>
   </ul>
 
   <h3>1.3 Information from third parties</h3>
-  <p>If you sign in with Google, we receive your Google account email, name, and profile picture (scopes: <code>openid email profile</code>). We do not receive any other Google data.</p>
+  <ul>
+    <li><strong>Sign in with Google:</strong> we receive your Google account email, name and profile picture (scopes: <code>openid email profile</code>) and nothing else.</li>
+    <li><strong>Sign in with Apple:</strong> we receive your Apple ID email (which may be an Apple private-relay address) and, the first time only, your name.</li>
+    <li><strong>College coaching staff directories:</strong> to invite college coaches to the Service, we collect the names, titles, work email addresses and staff photos that colleges publish on their public athletics websites. See section 4.</li>
+  </ul>
 
   <h2>2. How We Use Your Information</h2>
   <ul>
-    <li>Provide and maintain the Service (profiles, directory, messaging, offers).</li>
+    <li>Provide and maintain the Service (profiles, player directory, messaging, offers, questionnaires, scout board).</li>
     <li>Process subscription payments via Stripe.</li>
-    <li>Send account-related emails (welcome, password reset, messages, payment receipts).</li>
-    <li>Enforce tier-based visibility (e.g., hiding premium content from coaches viewing non-premium players).</li>
-    <li>Monitor and prevent abuse, spam, and fraud.</li>
-    <li>Improve the Service based on aggregate analytics.</li>
+    <li>Send account and service emails (welcome, password reset, new-message alerts, payment and renewal notices).</li>
+    <li>Enforce tier-based visibility (for example, hiding Premium content on non-Premium profiles).</li>
+    <li>Keep a signed record of the player agreement.</li>
+    <li>Invite college coaches to join (section 4).</li>
+    <li>Monitor and prevent abuse, spam and fraud, and alert our operator when something breaks.</li>
   </ul>
 
-  <h2>3. How We Share Your Information</h2>
+  <h2>3. Who Can See Your Information</h2>
 
-  <h3>3.1 With other users</h3>
-  <p>Player profile data is shown to coaches and admins according to the player's subscription tier. Visitors and logged-out users can see only summary cards on the public player directory; full profiles require login. Coaches can be messaged by Premium-tier players; free- and lower-tier players cannot initiate coach conversations.</p>
+  <h3>3.1 Other users and the public</h3>
+  <ul>
+    <li><strong>Anyone, including logged-out visitors,</strong> can see the player directory (player names and summary cards) and a player's profile page with the basic stats grid (position, class year, measurables, GPA). Photos, offers, visits, videos and contact details on that page are shown only as the player's tier allows.</li>
+    <li><strong>Signed-in coaches and administrators</strong> can see the full player profile, including photos, offers, visits, videos, transcripts, contact details (phone, contact email and home address), parent/guardian details, the NCAA Eligibility Center number, and the recruiting questionnaire.</li>
+    <li><strong>Other signed-in users</strong> can see a player's contact details only when that player has a Premium plan.</li>
+    <li>Parent/guardian details, the NCAA Eligibility Center number, transcripts and questionnaires are never shown to logged-out visitors or to other players.</li>
+  </ul>
 
-  <h3>3.2 With service providers</h3>
-  <p>We share limited information with the following vendors to operate the Service:</p>
+  <h3>3.2 Service providers</h3>
   <ul>
     <li><strong>Stripe</strong> — payment processing and subscription management.</li>
-    <li><strong>DigitalOcean (Spaces)</strong> — storage for videos, images, and transcripts (S3-compatible CDN).</li>
-    <li><strong>Google</strong> — OAuth sign-in and Google Analytics.</li>
-    <li><strong>Gmail / Google SMTP</strong> — transactional email delivery.</li>
-    <li><strong>DiceBear</strong> — generated illustrated avatars for admin dashboards (no user data is sent; only a deterministic seed derived from email).</li>
-    <li><strong>Let's Encrypt</strong> — SSL certificate issuance.</li>
+    <li><strong>DigitalOcean</strong> — hosting for our server and database, and DigitalOcean Spaces storage for uploaded videos, images and transcripts.</li>
+    <li><strong>Google</strong> — Sign in with Google, and Gmail (Google Workspace SMTP) for sending email.</li>
+    <li><strong>Apple</strong> — Sign in with Apple.</li>
+    <li><strong>DiceBear</strong> — generates cartoon avatars on admin-only marketing pages. It receives a one-way hash of a contact's email address, not the address itself.</li>
+    <li><strong>Let's Encrypt</strong> — SSL certificate issuance (receives no personal information).</li>
   </ul>
 
-  <h3>3.3 For legal reasons</h3>
-  <p>We may disclose information if required by law, court order, or valid legal process, or to protect the rights, property, or safety of CAP Recruiting, our users, or the public.</p>
+  <h3>3.3 Links to other sites</h3>
+  <p>Highlight videos are uploaded to and played from our own storage; we do not embed YouTube or Hudl players. Hudl, social media and news links on a profile are ordinary links: when you click one you leave CAP Recruiting and that site's privacy policy applies.</p>
 
-  <h3>3.4 We do not sell your personal information.</h3>
+  <h3>3.4 For legal reasons</h3>
+  <p>We may disclose information if required by law, court order or valid legal process, or to protect the rights, property or safety of CAP Recruiting, our users or the public.</p>
 
-  <h2>4. Data Retention</h2>
-  <p>We keep account information for as long as your account is active. Profile content, messages, and uploaded media are retained until you delete them or request account deletion. Stripe transaction records are retained as required by applicable financial regulations.</p>
+  <h3>3.5 We do not sell or share your personal information</h3>
+  <p>We do not sell personal information, and we do not share it for cross-context behavioral advertising, as those terms are defined in the California Consumer Privacy Act (CCPA/CPRA). We do not show ads.</p>
 
-  <h2>5. Your Rights and Choices</h2>
+  <h2>4. Emails to College Coaches</h2>
+  <p>We email football coaching staff at colleges, including coaches who have never signed up, to invite them to use the Service. Their names, titles and work emails come from the college's public athletics staff directory. These emails contain a tracking pixel and a tracked sign-up link, so we can tell whether and when a message was opened or its link clicked, and whether it bounced.</p>
+  <p><strong>How coaches opt out:</strong> reply to any outreach email with "unsubscribe," use your email app's unsubscribe button, or email <a href="mailto:divinejdavis@gmail.com">divinejdavis@gmail.com</a>. We mark you "not interested," and our system skips anyone marked that way when it sends. You can also ask us to delete your record entirely.</p>
+
+  <h2>5. Athletes Under 18</h2>
+  <p>Most CAP Recruiting athletes are high school students, many of them under 18 (generally ages 14 to 18). The Service is not directed to children under 13, and we do not knowingly collect personal information from anyone under 13; if we learn that we have, we delete it.</p>
   <ul>
-    <li><strong>Access and update:</strong> view and edit most of your profile from the Edit Profile page.</li>
-    <li><strong>Delete your account:</strong> email <a href="mailto:divinejdavis@gmail.com">divinejdavis@gmail.com</a> from your registered address and we will delete your account, profile, and associated media within 30 days.</li>
-    <li><strong>Cancel subscription:</strong> manage or cancel anytime via the Stripe Customer Portal from your account settings.</li>
-    <li><strong>Opt out of analytics:</strong> use your browser's Do Not Track setting or a Google Analytics opt-out extension.</li>
+    <li>We do not ask for date of birth; we rely on class year. Athletes under 18 should create and manage their account with a parent or guardian.</li>
+    <li>The CAP player agreement requires a parent or guardian's signature unless the athlete confirms they are 18 or older.</li>
+    <li>A player's name and basic stats are visible to the public (section 3.1). Contact details, home address, parent/guardian details, the NCAA number and transcripts are limited to signed-in coaches and administrators (and, for contact details on Premium profiles, other signed-in users).</li>
+    <li>A parent or guardian can ask us to review, correct or delete a minor's information at any time by emailing <a href="mailto:divinejdavis@gmail.com">divinejdavis@gmail.com</a>.</li>
   </ul>
 
-  <h2>6. Security</h2>
-  <p>Passwords are hashed with bcrypt. Transport is encrypted via TLS (Let's Encrypt). Sessions are signed with a server-side secret. Admin routes, rate limits, and CSP headers are in place to reduce the risk of abuse. No system is perfectly secure — we encourage you to use a unique password and report any suspected account compromise immediately.</p>
+  <h2>6. Data Retention</h2>
+  <p>We keep account information while your account is active. Profile content, messages and uploaded media stay until you delete them or delete your account. Signed agreements are kept as a record of the agreement. Outreach tracking records for college coaches are kept until the coach asks us to delete them. Stripe keeps transaction records as financial regulations require.</p>
 
-  <h2>7. Children</h2>
-  <p>CAP Recruiting is intended for high school and college athletes (generally ages 14+). We do not knowingly collect information from children under 13. Users under 18 should review this policy with a parent or guardian before creating an account. If you believe a child under 13 has created an account, please email us and we will remove it.</p>
+  <h2>7. Your Rights and Choices</h2>
+  <ul>
+    <li><strong>Access and correct:</strong> view and edit your profile from the Edit Profile page, or email us for a copy of the information we hold about you.</li>
+    <li><strong>Delete:</strong> delete your account yourself from the Edit Profile page (type DELETE to confirm), or email <a href="mailto:divinejdavis@gmail.com">divinejdavis@gmail.com</a> from your registered address and we will delete your account, profile and associated media within 30 days.</li>
+    <li><strong>Cancel your subscription:</strong> anytime via the Stripe Customer Portal from your account.</li>
+    <li><strong>Analytics:</strong> send a Do Not Track or Global Privacy Control signal from your browser; when either is on, our pages do not configure Google Analytics.</li>
+    <li><strong>California residents (CCPA/CPRA):</strong> you have the right to know what personal information we collect and how we use it, to access it, to have it corrected or deleted, and to opt out of its sale or sharing (we do neither). We will not discriminate against you for using these rights. You or an authorized agent can make a request by emailing us; we will verify it by confirming control of the account's email address.</li>
+    <li><strong>EEA, UK and Swiss residents (GDPR / UK GDPR):</strong> you have the right to access, correct, delete, restrict or object to our processing of your personal information, to data portability, and to withdraw consent at any time. Our legal bases are performance of our contract with you (running your account), consent (analytics cookies and optional profile details), and our legitimate interests (security, fraud prevention and inviting coaches to the Service). You may also complain to your local data protection authority.</li>
+  </ul>
+  <p>We respond to requests within 30 days (45 days for CCPA requests, extendable as the law allows).</p>
 
-  <h2>8. International Users</h2>
-  <p>CAP Recruiting is operated from the United States. If you access the Service from outside the United States, your information will be transferred to, stored, and processed in the U.S. By using the Service, you consent to that transfer.</p>
+  <h2>8. Security</h2>
+  <p>Passwords are hashed with bcrypt. Traffic is encrypted with TLS. Messages and coach evaluations are encrypted at rest. Sessions are signed with a server-side secret, and admin routes, rate limits and Content-Security-Policy headers are in place to reduce abuse. No system is perfectly secure; please use a unique password and tell us right away if you suspect your account has been compromised.</p>
 
-  <h2>9. Changes to This Policy</h2>
-  <p>We may update this Privacy Policy from time to time. Changes take effect when the updated version is posted here. If changes are material, we will notify account holders by email or in-app notice.</p>
+  <h2>9. International Users</h2>
+  <p>CAP Recruiting is operated from the United States, and your information is stored and processed in the U.S.</p>
 
-  <h2>10. Contact</h2>
-  <p>Questions, requests, or complaints about this policy can be sent to <a href="mailto:divinejdavis@gmail.com">divinejdavis@gmail.com</a>.</p>
+  <h2>10. Changes to This Policy</h2>
+  <p>We may update this policy from time to time. Changes take effect when posted here, and the date at the top will change. If a change is material, we will notify account holders by email or in-app notice.</p>
+
+  <h2>11. Contact</h2>
+  <p>Questions, requests or complaints about this policy: <a href="mailto:divinejdavis@gmail.com">divinejdavis@gmail.com</a>.</p>
 </div>
 {% endblock %}

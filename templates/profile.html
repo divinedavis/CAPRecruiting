@@ -258,7 +258,7 @@
                         <span class="stat-value">{{ profile.year }}</span>
                     </div>
                     {% endif %}
-                    {% if profile.ncaa_eligibility_num %}
+                    {% if profile.ncaa_eligibility_num and (is_owner or can_view_parents) %}
                     <div class="stat-card">
                         <span class="stat-label">NCAA Eligibility #</span>
                         <span class="stat-value">{{ profile.ncaa_eligibility_num }}</span>
