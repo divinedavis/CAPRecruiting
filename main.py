@@ -3059,6 +3059,10 @@ async def send_player_signup_notification(player_username: str, player_email: st
             db.close()
         if not admin_emails:
             admin_emails = [SMTP_USER]
+        # Admins who opted out of signup notifications
+        _opted_out = {e.strip().lower() for e in os.environ.get(
+            "SIGNUP_NOTIFY_OPT_OUT", "divinejdavis@gmail.com").split(",") if e.strip()}
+        admin_emails = [e for e in admin_emails if e.lower() not in _opted_out]
         site_url = os.environ.get("SITE_URL", "https://caprecruiting.com")
         for admin_email in admin_emails:
             msg = MIMEMultipart("alternative")
