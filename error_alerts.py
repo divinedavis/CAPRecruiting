@@ -127,6 +127,10 @@ IGNORE_PATTERNS = [
     "Unsupported upgrade request",
     "client closed connection",
     "SSL_do_handshake() failed",
+    # 0A000461 = the CLIENT sent a TLS alert and hung up (2026-10-01: alert
+    # 121 from scanner 138.246.253.45, before any request, logged at [crit]).
+    # Same class as the handshake failures above; nothing on our side.
+    "SSL_read() failed (SSL: error:0A000461",
     "no such file or directory) while reading upstream",  # client aborted download
     "Deactivated successfully",
     "Consumed ",
