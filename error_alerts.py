@@ -694,6 +694,8 @@ def journal_watcher(events: queue.Queue, state: State):
                 if verdict:
                     title, severity = verdict
                     mark_response_incident(message)
+                    if not app_body_worth_alerting(message):
+                        continue
                     emit(events, unit, title, message, severity)
                 elif LEVEL_RE.match(message) and " WARNING " in message:
                     with state.lock:
@@ -744,6 +746,7 @@ def tail_file(path: str):
 _auth_limit_hits: dict = {}   # client ip -> [timestamps of cap_auth rate-limit trips]
 _deny_hits: dict = {}         # client ip -> [timestamps of deny-rule 403s]
 _body_hits: dict = {}         # client ip -> [timestamps of nginx oversized-body 413s]
+_app_body_hits: dict = {}     # client ip -> [timestamps of anon app 413s on non-upload routes]
 _rate_hits: dict = {}         # (zone, client) -> rate-limit streak
 
 
@@ -804,6 +807,26 @@ def body_worth_alerting(line: str, now: float = None) -> bool:
     if not m:
         return True
     return _tripped(_body_hits, m.group(1), BODY_TRIPS, BODY_WINDOW,
+                    time.time() if now is None else now)
+
+
+def app_body_worth_alerting(message: str, now: float = None) -> bool:
+    """The app's own 1MB cap (`_BodySizeLimitMiddleware`) 413s a non-upload
+    POST before any handler runs. From an anonymous client that is a scanner:
+    10/6 103.124.106.232 sent oversized bodies to POST /?rest_route=/batch/v1
+    and POST /index.php (WordPress probes) and paged twice in 3 s. Same gate
+    as the nginx body cap: alert once one client trips it BODY_TRIPS times in
+    BODY_WINDOW. Upload routes and signed-in users still page every time - a
+    413 there is a real person whose file or form didn't go through."""
+    hit = APP_RESPONSE_RE.search(message)
+    if not hit:
+        return True
+    code, _method, path, ip = hit.groups()
+    if code != "413" or "user=anon " not in message:
+        return True
+    if UPLOAD_PATH_RE.match(path.split("?", 1)[0]):
+        return True
+    return _tripped(_app_body_hits, ip, BODY_TRIPS, BODY_WINDOW,
                     time.time() if now is None else now)
 
 

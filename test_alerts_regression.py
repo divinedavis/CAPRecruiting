@@ -25,6 +25,7 @@ class WatcherTests(unittest.TestCase):
         alerts._recent_responses.clear()
         alerts._deferred.clear()
         alerts._rate_hits.clear()
+        alerts._app_body_hits.clear()
         self.events = queue.Queue()
         self.state = alerts.State()
 
@@ -145,6 +146,27 @@ class WatcherTests(unittest.TestCase):
         with patch.object(alerts.subprocess, "run", return_value=run):
             self.assertTrue(alerts.worker_recycled(settle=0))
 
+
+    APP_413 = ("2026-10-06 14:06:06,537 ERROR bearcats: [APP-ERROR] HTTP 413 "
+               "returned by POST {path} (user={user} ip=103.124.106.232)")
+
+    def test_anon_app_413_scanner_pages_once_per_streak(self):
+        line = self.APP_413.format(path="/index.php", user="anon")
+        verdicts = [alerts.app_body_worth_alerting(line, now=1000 + i)
+                    for i in range(alerts.BODY_TRIPS)]
+        self.assertEqual(verdicts, [False] * (alerts.BODY_TRIPS - 1) + [True])
+
+    def test_app_413_on_upload_route_always_pages(self):
+        line = self.APP_413.format(path="/profile/videos/upload", user="anon")
+        self.assertTrue(alerts.app_body_worth_alerting(line, now=1000))
+
+    def test_signed_in_app_413_always_pages(self):
+        line = self.APP_413.format(path="/login", user="42")
+        self.assertTrue(alerts.app_body_worth_alerting(line, now=1000))
+
+    def test_other_app_errors_untouched(self):
+        line = self.APP_413.format(path="/", user="anon").replace("HTTP 413", "HTTP 500")
+        self.assertTrue(alerts.app_body_worth_alerting(line, now=1000))
 
 if __name__ == "__main__":
     unittest.main()
