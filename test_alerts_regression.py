@@ -24,7 +24,6 @@ class WatcherTests(unittest.TestCase):
         alerts._recent_incidents.clear()
         alerts._recent_responses.clear()
         alerts._deferred.clear()
-        alerts._rate_hits.clear()
         alerts._app_body_hits.clear()
         self.events = queue.Queue()
         self.state = alerts.State()
@@ -81,7 +80,7 @@ class WatcherTests(unittest.TestCase):
         self.assertEqual(self.state.history_started_at, self.state.history[0]["ts"])
         self.assertIn("Partial week", alerts.heartbeat_report(self.state)[1])
 
-    def test_rate_limits_are_reported_separately_and_only_sustained_hits_notify(self):
+    def test_rate_limits_are_counted_in_heartbeat_but_never_email(self):
         line = ('2026/09/14 12:00:00 [error] 123#123: *4 limiting requests, '
                 'excess: 3.000 by zone "cap_general", client: 192.0.2.1, server: caprecruiting.com')
         with patch.object(alerts, "tail_file", return_value=iter([line] * 5)):
@@ -89,9 +88,9 @@ class WatcherTests(unittest.TestCase):
         dispatcher = alerts.Dispatcher(self.state, self.events)
         for i in range(5):
             event = self.events.get_nowait()
-            self.assertEqual(event["notify"], i == 4)
+            self.assertFalse(event["notify"])
             dispatcher.handle(event)
-        self.assertEqual(self.mail.call_count, 1)
+        self.assertEqual(self.mail.call_count, 0)
         subject, body, _ = alerts.heartbeat_report(self.state)
         self.assertIn("0 error events, 5 rate-limit blocks", subject)
         self.assertIn("Other warnings: 0", body)

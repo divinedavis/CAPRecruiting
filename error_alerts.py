@@ -18,9 +18,10 @@ moment something breaks:
 
 Noise control: identical failures are collapsed by signature, repeats inside a
 15-minute window are counted rather than re-sent, and there is a hard cap on
-emails per hour with the overflow delivered as one digest. A single trip of the
-nginx `cap_auth` rate limit (a crawler bursting /signup) is not worth an email;
-that zone alerts only when one client keeps tripping it. A refused upstream
+emails per hour with the overflow delivered as one digest. nginx rate-limit
+blocks never email: the limiter returning 429 is the defence working, and the
+fail2ban nginx-limit-req jail bans a client that keeps tripping it. They are
+still counted in the weekly heartbeat. A refused upstream
 while bearcats is restarting (unattended upgrades, the nightly auto-reboot) is
 dropped too, as is a closed upstream when uvicorn just recycled a hung
 worker — the health probe still catches a real outage. Secrets that show up
@@ -77,8 +78,6 @@ HEALTH_FAILURES_TO_ALERT = 3 # consecutive probe failures before "site down"
 TB_IDLE_FLUSH = 1.5          # a traceback is complete after this long with no new lines
 ASGI_DUP_WINDOW = 10         # uvicorn re-logs what our middleware already reported
 ACCESS_HOLD = 3              # wait this long before mailing a bare 5xx access line
-AUTH_LIMIT_TRIPS = 5         # cap_auth rate-limit hits from one client before alerting
-AUTH_LIMIT_WINDOW = 600      # ...within this many seconds (one crawler burst = 1 trip)
 DENY_TRIPS = 10              # deny-rule 403s from one client before alerting
 DENY_WINDOW = 600            # ...within this many seconds (a drive-by .bak probe = 1 trip)
 BODY_TRIPS = 5               # nginx oversized-body rejections from one client before alerting
@@ -743,11 +742,9 @@ def tail_file(path: str):
         time.sleep(2)
 
 
-_auth_limit_hits: dict = {}   # client ip -> [timestamps of cap_auth rate-limit trips]
 _deny_hits: dict = {}         # client ip -> [timestamps of deny-rule 403s]
 _body_hits: dict = {}         # client ip -> [timestamps of nginx oversized-body 413s]
 _app_body_hits: dict = {}     # client ip -> [timestamps of anon app 413s on non-upload routes]
-_rate_hits: dict = {}         # (zone, client) -> rate-limit streak
 
 
 def _tripped(bucket: dict, client: str, trips: int, window: int, now: float) -> bool:
@@ -767,18 +764,6 @@ def _tripped(bucket: dict, client: str, trips: int, window: int, now: float) -> 
     bucket[client] = []                         # alert once per streak, then re-arm
     return True
 
-
-def auth_limit_worth_alerting(line: str, now: float = None) -> bool:
-    """A nginx rate-limit line is only alert-worthy for the `cap_auth` zone once
-    the same client has tripped it AUTH_LIMIT_TRIPS times inside
-    AUTH_LIMIT_WINDOW. A link crawler walking every /signup?tier=... variant
-    trips it once and is gone; a credential-stuffer keeps coming back. Other
-    zones and non-rate-limit lines are untouched (returns True)."""
-    m = LIMIT_REQ_RE.search(line)
-    if not m or m.group(1) != "cap_auth":
-        return True
-    return _tripped(_auth_limit_hits, m.group(2), AUTH_LIMIT_TRIPS,
-                    AUTH_LIMIT_WINDOW, time.time() if now is None else now)
 
 
 def deny_worth_alerting(line: str, now: float = None) -> bool:
@@ -888,11 +873,10 @@ def file_watcher(events: queue.Queue, source: str, path: str):
                 continue
             lm = LIMIT_REQ_RE.search(line)
             if lm and lm.group(1).startswith("cap_"):
-                zone, client = lm.groups()
-                sustained = _tripped(_rate_hits, (zone, client), AUTH_LIMIT_TRIPS,
-                                     AUTH_LIMIT_WINDOW, time.time())
+                zone = lm.group(1)
+                # Counted for the weekly heartbeat only; fail2ban bans offenders.
                 emit(events, "nginx", f"Requests rate-limited ({zone})", line,
-                     "warning", notify=sustained, category="rate_limit",
+                     "warning", notify=False, category="rate_limit",
                      event_signature=f"nginx|rate_limit|{zone}")
                 continue
             if not deny_worth_alerting(line):
